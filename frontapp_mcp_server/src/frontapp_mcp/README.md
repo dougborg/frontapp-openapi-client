@@ -1,0 +1,1 @@
+# Frontapp MCP Server

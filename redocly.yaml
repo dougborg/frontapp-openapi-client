@@ -1,0 +1,27 @@
+apis:
+  frontapp@v1:
+    root: docs/frontapp-openapi.yaml
+extends:
+  - minimal
+# The Front spec is vendored from frontapp/front-api-specs. We keep only the
+# rules that affect correctness of generated code (unresolved refs, ambiguous
+# paths, enum/type mismatches). Style-level rules that Front's spec violates
+# (missing summaries, missing 4XX responses, etc.) are set to warn so they
+# don't block regeneration — we can't fix upstream.
+rules:
+  # Correctness — block regeneration if violated.
+  no-unresolved-refs: error
+  no-enum-type-mismatch: error
+  no-identical-paths: error
+  no-ambiguous-paths: error
+  operation-operationId: error
+  # Style-only, turned off because Front's spec violates them and we can't
+  # edit upstream. Redocly exits non-zero on any diagnostic (including warn),
+  # so these have to be fully off, not warn.
+  tag-description: "off"
+  operation-summary: "off"
+  operation-4xx-response: "off"
+  operation-2xx-response: "off"
+  operation-singular-tag: "off"
+  no-unused-components: "off"
+  no-ambiguous-paths: error

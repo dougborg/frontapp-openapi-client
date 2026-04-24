@@ -1,0 +1,29 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.14",
+  "include": [
+    "frontapp_mcp_server",
+    "frontapp_public_api_client",
+    "tests",
+    "scripts"
+  ],
+  "exclude": [
+    ".venv",
+    ".claude/worktrees",
+    "**/__pycache__",
+    "**/node_modules",
+    "frontapp_public_api_client/api",
+    "frontapp_public_api_client/models",
+    "frontapp_public_api_client/client.py",
+    "frontapp_public_api_client/models_pydantic/_generated"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "frontapp_mcp_server",
+      "extraPaths": ["."]
+    }
+  ],
+  "reportMissingImports": "error",
+  "reportMissingTypeStubs": "none"
+}
