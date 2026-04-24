@@ -1,0 +1,82 @@
+{
+  "name": "frontapp-client",
+  "version": "0.1.0",
+  "description": "TypeScript client for the Frontapp API with automatic retries, rate-limit awareness, and pagination",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "require": "./dist/types.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "generate": "openapi-ts",
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check src tests",
+    "lint:fix": "biome check --write src tests",
+    "format": "biome format --write src tests",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "frontapp",
+    "order-status",
+    "api",
+    "client",
+    "openapi",
+    "typescript"
+  ],
+  "author": "Doug Borg",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dougborg/frontapp-openapi-client.git",
+    "directory": "packages/frontapp-client"
+  },
+  "bugs": {
+    "url": "https://github.com/dougborg/frontapp-openapi-client/issues"
+  },
+  "homepage": "https://github.com/dougborg/frontapp-openapi-client/tree/main/packages/frontapp-client#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "@hey-api/openapi-ts": "^0.96.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
+    "semantic-release": "^25.0.3",
+    "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  },
+  "sideEffects": false
+}

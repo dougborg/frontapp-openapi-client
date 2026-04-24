@@ -1,0 +1,193 @@
+from http import HTTPStatus
+from typing import Any
+
+import httpx
+
+from ... import errors
+from ...client import AuthenticatedClient, Client
+from ...client_types import UNSET, Response, Unset
+from ...models.create_shared_message_template import CreateSharedMessageTemplate
+from ...models.message_template_response import MessageTemplateResponse
+
+
+def _get_kwargs(
+    *,
+    body: CreateSharedMessageTemplate | Unset = UNSET,
+) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+
+    _kwargs: dict[str, Any] = {
+        "method": "post",
+        "url": "/message_templates",
+    }
+
+    if not isinstance(body, Unset):
+        _kwargs["json"] = body.to_dict()
+
+    headers["Content-Type"] = "application/json"
+
+    _kwargs["headers"] = headers
+    return _kwargs
+
+
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> MessageTemplateResponse | None:
+    if response.status_code == 201:
+        response_201 = MessageTemplateResponse.from_dict(response.json())
+
+        return response_201
+
+    if client.raise_on_unexpected_status:
+        raise errors.UnexpectedStatus(response.status_code, response.content)
+    else:
+        return None
+
+
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[MessageTemplateResponse]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    *,
+    client: AuthenticatedClient | Client,
+    body: CreateSharedMessageTemplate | Unset = UNSET,
+) -> Response[MessageTemplateResponse]:
+    """Create message template
+
+     Create a new message template in the oldest active workspace that the token has access to. If you
+    need to specify the workspace, we recommend using the [Create team message
+    template](https://dev.frontapp.com/reference/create-team-message-template) endpoint instead.
+
+    Required scope: `message_templates:write`
+
+    Args:
+        body (CreateSharedMessageTemplate | Unset): A message template that is used for pre-
+            written responses
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+
+    Returns:
+        Response[MessageTemplateResponse]
+    """
+
+    kwargs = _get_kwargs(
+        body=body,
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+
+def sync(
+    *,
+    client: AuthenticatedClient | Client,
+    body: CreateSharedMessageTemplate | Unset = UNSET,
+) -> MessageTemplateResponse | None:
+    """Create message template
+
+     Create a new message template in the oldest active workspace that the token has access to. If you
+    need to specify the workspace, we recommend using the [Create team message
+    template](https://dev.frontapp.com/reference/create-team-message-template) endpoint instead.
+
+    Required scope: `message_templates:write`
+
+    Args:
+        body (CreateSharedMessageTemplate | Unset): A message template that is used for pre-
+            written responses
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+
+    Returns:
+        MessageTemplateResponse
+    """
+
+    return sync_detailed(
+        client=client,
+        body=body,
+    ).parsed
+
+
+async def asyncio_detailed(
+    *,
+    client: AuthenticatedClient | Client,
+    body: CreateSharedMessageTemplate | Unset = UNSET,
+) -> Response[MessageTemplateResponse]:
+    """Create message template
+
+     Create a new message template in the oldest active workspace that the token has access to. If you
+    need to specify the workspace, we recommend using the [Create team message
+    template](https://dev.frontapp.com/reference/create-team-message-template) endpoint instead.
+
+    Required scope: `message_templates:write`
+
+    Args:
+        body (CreateSharedMessageTemplate | Unset): A message template that is used for pre-
+            written responses
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+
+    Returns:
+        Response[MessageTemplateResponse]
+    """
+
+    kwargs = _get_kwargs(
+        body=body,
+    )
+
+    response = await client.get_async_httpx_client().request(**kwargs)
+
+    return _build_response(client=client, response=response)
+
+
+async def asyncio(
+    *,
+    client: AuthenticatedClient | Client,
+    body: CreateSharedMessageTemplate | Unset = UNSET,
+) -> MessageTemplateResponse | None:
+    """Create message template
+
+     Create a new message template in the oldest active workspace that the token has access to. If you
+    need to specify the workspace, we recommend using the [Create team message
+    template](https://dev.frontapp.com/reference/create-team-message-template) endpoint instead.
+
+    Required scope: `message_templates:write`
+
+    Args:
+        body (CreateSharedMessageTemplate | Unset): A message template that is used for pre-
+            written responses
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+
+    Returns:
+        MessageTemplateResponse
+    """
+
+    return (
+        await asyncio_detailed(
+            client=client,
+            body=body,
+        )
+    ).parsed

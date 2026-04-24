@@ -1,0 +1,41 @@
+from enum import StrEnum
+
+
+class EventResponseType(StrEnum):
+    ARCHIVE = "archive"
+    ASSIGN = "assign"
+    CALL_ABANDONED = "call_abandoned"
+    CALL_CONNECTED = "call_connected"
+    CALL_HANGUP = "call_hangup"
+    CALL_MISSED = "call_missed"
+    CALL_ON_HOLD = "call_on_hold"
+    CALL_QUEUED = "call_queued"
+    CALL_RESUMED = "call_resumed"
+    CALL_STARTED = "call_started"
+    CALL_TRANSFERRED = "call_transferred"
+    COMMENT = "comment"
+    CONVERSATIONS_MERGED = "conversations_merged"
+    CUSTOM_FIELD_UPDATED = "custom_field_updated"
+    FORWARD = "forward"
+    INBOUND = "inbound"
+    LINK_ADDED = "link_added"
+    LINK_REMOVED = "link_removed"
+    MACRO_TRIGGERED = "macro_triggered"
+    MENTION = "mention"
+    MESSAGE_BOUNCE_ERROR = "message_bounce_error"
+    MOVE = "move"
+    OUTBOUND = "outbound"
+    OUT_REPLY = "out_reply"
+    REMINDER = "reminder"
+    REOPEN = "reopen"
+    RESTORE = "restore"
+    SENDING_ERROR = "sending_error"
+    TAG = "tag"
+    TICKET_STATUS_UPDATE = "ticket_status_update"
+    TOPIC_IDENTIFIED = "topic_identified"
+    TRASH = "trash"
+    UNASSIGN = "unassign"
+    UNTAG = "untag"
+
+    def __str__(self) -> str:
+        return str(self.value)

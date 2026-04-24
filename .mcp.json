@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "frontapp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "frontapp_mcp_server",
+        "frontapp-mcp-server"
+      ]
+    }
+  }
+}
