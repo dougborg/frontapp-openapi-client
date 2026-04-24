@@ -28,16 +28,23 @@ case "$file_path" in
   */frontapp_public_api_client/models/*.py | \
   */frontapp_public_api_client/client.py | \
   */frontapp_public_api_client/client_types.py | \
-  */frontapp_public_api_client/errors.py)
+  */frontapp_public_api_client/errors.py | \
+  */docs/frontapp-openapi.yaml | \
+  */docs/api-facts.yaml)
     cat >&2 <<EOF
-STOP — "$file_path" is a generated file (openapi-python-client output).
+STOP — "$file_path" is a generated or vendored file.
 
-Do not edit generated files directly. To change them, edit the source and regenerate:
+Do not edit it directly. To change it, edit the source and regenerate:
 
-  • OpenAPI spec       docs/frontapp-openapi.yaml          (vendored — never edit in place)
-  • Refresh from upstream  uv run python scripts/vendor_spec.py
-  • Sanitization rules  scripts/vendor_spec.py             (patch here for upstream quirks)
-  • Regenerate client  uv run poe regenerate-client        (~1-2 min, NEVER cancel)
+  • api/, models/, client.py, client_types.py, errors.py
+                           ↳ openapi-python-client output
+                             uv run poe regenerate-client     (~1-2 min, NEVER cancel)
+  • docs/frontapp-openapi.yaml
+                           ↳ vendored from frontapp/front-api-specs
+                             uv run python scripts/vendor_spec.py
+                             (patch sanitization rules in scripts/vendor_spec.py)
+  • docs/api-facts.yaml    ↳ machine-derived agent knowledge index
+                             uv run poe facts
 
 For ergonomic wrappers around generated endpoints, edit hand-written modules:
   frontapp_public_api_client/helpers/<resource>.py
