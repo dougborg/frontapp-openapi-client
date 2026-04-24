@@ -6,7 +6,9 @@ boilerplate for common workflows. Each helper is accessed as an attribute on
 """
 
 from frontapp_public_api_client.helpers.base import Base
+from frontapp_public_api_client.helpers.conversations import Conversations
 
 __all__ = [
     "Base",
+    "Conversations",
 ]

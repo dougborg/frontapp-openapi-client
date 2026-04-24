@@ -18,8 +18,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 if TYPE_CHECKING:
-    from .helpers.orders import Orders
-    from .helpers.statuses import Statuses
+    from .helpers.conversations import Conversations
 
 import httpx
 from dotenv import load_dotenv
@@ -1025,8 +1024,7 @@ class FrontappClient(AuthenticatedClient):
             )
 
         # Domain helper instances (lazy-loaded via properties)
-        self._orders: Orders | None = None
-        self._statuses: Statuses | None = None
+        self._conversations: Conversations | None = None
         self._api_namespace: ApiNamespace | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
@@ -1098,22 +1096,13 @@ class FrontappClient(AuthenticatedClient):
 
     # Domain properties for ergonomic access
     @property
-    def orders(self) -> "Orders":
-        """Access order operations (list, lookup, get, update status, etc.)."""
-        from .helpers.orders import Orders
+    def conversations(self) -> "Conversations":
+        """Ergonomic operations over ``/conversations*`` endpoints."""
+        from .helpers.conversations import Conversations
 
-        if self._orders is None:
-            self._orders = Orders(self)
-        return self._orders
-
-    @property
-    def statuses(self) -> "Statuses":
-        """Access status catalog operations."""
-        from .helpers.statuses import Statuses
-
-        if self._statuses is None:
-            self._statuses = Statuses(self)
-        return self._statuses
+        if self._conversations is None:
+            self._conversations = Conversations(self)
+        return self._conversations
 
     @property
     def api(self) -> ApiNamespace:

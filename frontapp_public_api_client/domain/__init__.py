@@ -16,10 +16,22 @@ Example:
 """
 
 from .base import FrontappBaseModel
+from .conversation import (
+    Conversation,
+    ConversationPageCursor,
+    RecipientSummary,
+    TagSummary,
+    TeammateSummary,
+)
 from .converters import to_unset, unwrap_unset
 
 __all__ = [
+    "Conversation",
+    "ConversationPageCursor",
     "FrontappBaseModel",
+    "RecipientSummary",
+    "TagSummary",
+    "TeammateSummary",
     "to_unset",
     "unwrap_unset",
 ]

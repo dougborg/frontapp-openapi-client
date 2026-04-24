@@ -172,60 +172,69 @@ _auth = _build_auth()
 
 # Initialize FastMCP server with lifespan management
 mcp = FastMCP(
-    name="frontapp-erp",
+    name="frontapp",
     version=__version__,
     lifespan=lifespan,
     auth=_auth,
     instructions="""\
-Frontapp MCP Server — Read and update order status via the Frontapp API.
+Frontapp MCP Server — Read and act on Front customer-communication data.
 
 ## Domain Model
 
-- **Orders** are identified by a large integer `id` (e.g. 6110375248088) and have a human-readable `name` (e.g. "#1188") and an `order_number`.
-- Each order has one **status** (a `Status` code + display name) plus `due_date` and `due_date_to` timestamps.
-- **Statuses** are defined per-tenant with a unique 8-char `code` (e.g. "st000002"), a color, and optional public name/description.
-- Not every status is a valid transition from the current order state — call `get_viable_statuses` before calling `update_order_status`.
+- **Conversations** (`cnv_*`) are email/SMS/chat threads. Each has a `status`
+  (`open`, `archived`, `deleted`, `spam`), optional `assignee` (teammate),
+  `tags`, and a `recipient` (customer handle). Conversations belong to an
+  `inbox` and flow on a `channel`.
+- **Messages** are individual emails/SMS/chat posts inside a conversation.
+  Replying appends a message on the conversation's original channel.
+- **Comments** are teammate-only internal notes on a conversation — never
+  sent to the customer.
+- **Teammates** (`tea_*`) are human users; **Contacts** are external parties.
+- **Tags**, **inboxes**, and **teammates** are workspace-level reference data.
 
 ## Tool Selection Guide
 
-**Finding orders:**
-  list_orders (filter by status, date range, tags) | lookup_order (by order number + customer email) | get_order (by id)
+**Finding conversations:**
+  list_conversations (reverse-chronological, with q= search) |
+  search_conversations (when q is the main filter) |
+  get_conversation (full detail by id)
 
-**Changing status:**
-  get_viable_statuses → update_order_status
-  bulk_update_order_status (up to 50 orders at once)
+**Reading inside a conversation:**
+  list_conversation_messages | list_conversation_comments
 
-**Other updates:**
-  add_order_comment | update_order_due_date
+**Responding (all use two-step confirm):**
+  reply_to_conversation — outbound message to the customer
+  add_conversation_comment — internal note, teammates only
+  update_conversation — archive/reopen, reassign, retag, move inbox
+
+## Front Search Syntax (q parameter)
+
+  status:open | status:archived | tag:urgent | assignee:me |
+  is:unassigned | inbox:support | after:2024-01-01 | before:2024-12-31
+
+Combine with AND / OR: `status:open AND tag:urgent`
 
 ## Safety Pattern
 
-All mutation tools use a two-step confirm pattern:
+All mutation tools use a two-step confirm:
 1. Call with confirm=false — returns a preview (no changes made)
-2. Call with confirm=true — executes the operation (prompts for user confirmation)
+2. Call with confirm=true — executes and prompts for explicit user approval
+   via elicitation
 
 ## Rate Limits
 
-Frontapp documents rate limits per-endpoint in its API reference:
-- Most endpoints: 60 requests/minute
-- `add_order_comment` and `bulk_update_order_status`: 5 requests/minute
-
-The client automatically retries with exponential backoff on 429 responses.
-
-## Resources
-
-- frontapp://statuses — full status catalog with codes and colors
-- frontapp://help — tool reference
+Front enforces per-endpoint rate limits; the client retries 429 responses
+automatically with exponential backoff. Expect ~60 req/min on most endpoints.
 """,
 )
 
 # Add response caching middleware with TTLs for read-only tools
 _READ_ONLY_TOOLS = [
-    "list_orders",
-    "get_order",
-    "lookup_order",
-    "list_statuses",
-    "get_viable_statuses",
+    "list_conversations",
+    "get_conversation",
+    "search_conversations",
+    "list_conversation_messages",
+    "list_conversation_comments",
 ]
 
 mcp.add_middleware(
