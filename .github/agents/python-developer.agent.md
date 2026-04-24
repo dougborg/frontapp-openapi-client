@@ -49,33 +49,49 @@ Use Pydantic domain models from `frontapp_public_api_client/domain/` for busines
 
 ### UNSET Sentinel Pattern
 
-Use the `UNSET` sentinel value for optional parameters to distinguish between "not
-provided" and "explicitly set to None".
+Generated attrs models use the `UNSET` sentinel for optional fields. Don't compare
+with `isinstance(x, type(UNSET))` or `hasattr` — use the helpers in
+`frontapp_public_api_client.domain.converters`:
 
 ```python
-from frontapp_public_api_client.client_types import UNSET
+from frontapp_public_api_client.domain.converters import unwrap_unset, to_unset
 
-def update_product(name: str = UNSET, price: float = UNSET):
-    if name is not UNSET:
-        # User explicitly provided a name
-        pass
+# Reading: unwrap UNSET → default
+tags = unwrap_unset(conversation.tags, [])
+status = unwrap_unset(conversation.status, None)
+
+# Writing: convert None → UNSET when building request models
+body = UpdateConversation(
+    assignee_id=to_unset(assignee_id),
+    status=to_unset(status),
+)
 ```
 
 ### Preview/Confirm Pattern
 
-For destructive operations, implement preview first, then require confirmation:
+For destructive operations, take a `confirm: bool = False` parameter; `confirm=False`
+returns a preview, `confirm=True` executes (and elicits explicit user approval via
+`ctx.elicit` in MCP tools). See `frontapp_mcp_server/src/frontapp_mcp/tools/schemas.py`
+for the shared `require_confirmation` helper.
 
 ```python
-@mcp.tool()
-async def delete_order(order_id: str, confirm: bool = False) -> str:
-    """Delete an order."""
-    if not confirm:
-        # Preview mode: show what would be deleted
-        return f"Preview: Would delete order {order_id}"
+from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
 
-    # Confirmed: actually delete
-    result = await delete_order_api_call(order_id)
-    return f"Deleted order {order_id}"
+@mcp.tool()
+async def archive_conversation(
+    context: Context,
+    conversation_id: str,
+    confirm: bool = False,
+) -> ConfirmationResult:
+    if not confirm:
+        return ConfirmationResult.preview(
+            action=f"Archive conversation {conversation_id}",
+            details={"conversation_id": conversation_id},
+        )
+    await require_confirmation(context, f"Archive {conversation_id}?")
+    services = get_services(context)
+    await services.client.conversations.update(conversation_id, status="archived")
+    return ConfirmationResult.executed(action=f"Archived {conversation_id}")
 ```
 
 ### MCP Server Architecture (ADR-010)
@@ -137,53 +153,67 @@ uv run poe check
 **Always use comprehensive type hints:**
 
 ```python
-from typing import Optional, List
-from frontapp_public_api_client.client_types import Response
-from pydantic import BaseModel
+from frontapp_public_api_client import FrontappClient
+from frontapp_public_api_client.domain import Conversation
 
-async def get_products(
+
+async def list_open_conversations(
     client: FrontappClient,
     limit: int = 50,
-    category: Optional[str] = None
-) -> Response[List[Product]]:
-    """Get products with optional category filter."""
-    ...
+    inbox_id: str | None = None,
+) -> list[Conversation]:
+    """List open conversations, optionally filtered by inbox."""
+    q = "status:open"
+    if inbox_id:
+        q = f"{q} inbox:{inbox_id}"
+    return await client.conversations.list(q=q, limit=limit)
 ```
 
 **Import types correctly:**
 
-- ✅ `from frontapp_public_api_client.client_types import ...`
-- ❌ `from frontapp_public_api_client.types import ...` (wrong)
+- ✅ `from frontapp_public_api_client.client_types import UNSET, Response`
+- ❌ `from frontapp_public_api_client.types import ...` (wrong package name)
+- ✅ `from frontapp_public_api_client.domain import Conversation` (Pydantic projections)
+- ❌ `from frontapp_public_api_client.models import ...` (these are generated attrs
+  models — fine for low-level calls, but prefer domain models for business logic)
 
 **Run type checking:**
 
 ```bash
-uv run poe lint  # Includes mypy type checking
+uv run poe typecheck  # Hand-written paths only; api/, models/, client.py are
+                       # excluded — see CLAUDE.md "typecheck skips generated code"
 ```
 
-### Error Handling
+### Response Handling
 
-**Catch specific exceptions with informative messages:**
+**Don't write `if response.status_code == 200`.** Use the helpers in
+`frontapp_public_api_client.utils`, which raise typed exceptions
+(`AuthenticationError`, `ValidationError`, `RateLimitError`, `ServerError`,
+`APIError`) on non-success responses.
 
 ```python
-from httpx import HTTPStatusError
-import logging
+from frontapp_public_api_client.utils import (
+    is_success,
+    unwrap,
+    unwrap_as,
+    unwrap_data,
+)
+from frontapp_public_api_client.models.conversation_response import ConversationResponse
 
-logger = logging.getLogger(__name__)
+# Single-object 200 response
+response = await get_conversation.asyncio_detailed(client=client, conversation_id=cid)
+conversation = unwrap_as(response, ConversationResponse)
 
-try:
-    response = await api_call.asyncio_detailed(client=client)
+# Paginated list — note the field_results rename (Front's _results → field_results
+# because openapi-python-client prefixes leading-underscore fields)
+response = await list_conversations.asyncio_detailed(client=client, limit=50)
+parsed = unwrap(response)
+results = getattr(parsed, "field_results", None) or []
 
-    if response.status_code != 200:
-        logger.error(f"API error: {response.status_code}")
-        return f"Error: Failed to fetch data (HTTP {response.status_code})"
-
-except HTTPStatusError as e:
-    logger.error(f"HTTP error occurred: {e}")
-    return f"Error: {str(e)}"
-except Exception as e:
-    logger.error(f"Unexpected error: {e}")
-    return f"Error: {str(e)}"
+# 202 Accepted / 204 No Content
+response = await archive_conversation.asyncio_detailed(client=client, conversation_id=cid)
+if is_success(response):
+    logger.info("conversation %s archived", cid)
 ```
 
 **Logging levels:**
@@ -206,27 +236,39 @@ uv run poe test-coverage
 # Target: 87%+ coverage on core logic
 ```
 
-**Test structure (AAA pattern):**
+**Test structure (AAA pattern):** mock the httpx transport, not the helper methods —
+that way the response-helper logic (`unwrap_as`, status-code dispatch) is exercised
+end-to-end.
 
 ```python
+import httpx
 import pytest
 from frontapp_public_api_client import FrontappClient
 
-@pytest.mark.asyncio
-async def test_get_product_success():
-    # Arrange
-    async with FrontappClient(api_key="test") as client:
-        expected_id = "prod_123"
 
+@pytest.mark.asyncio
+async def test_get_conversation_success() -> None:
+    # Arrange
+    expected_id = "cnv_abc123"
+    payload = {
+        "id": expected_id,
+        "subject": "Hello",
+        "status": "open",
+        "_links": {"self": "https://api2.frontapp.com/conversations/cnv_abc123"},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith(f"/conversations/{expected_id}")
+        return httpx.Response(200, json=payload)
+
+    transport = httpx.MockTransport(handler)
+    async with FrontappClient(api_key="test", transport=transport) as client:
         # Act
-        response = await get_product.asyncio_detailed(
-            client=client,
-            product_id=expected_id
-        )
+        conversation = await client.conversations.get(expected_id)
 
         # Assert
-        assert response.status_code == 200
-        assert response.parsed.id == expected_id
+        assert conversation.id == expected_id
+        assert conversation.subject == "Hello"
 ```
 
 ### File Organization Rules
@@ -261,95 +303,96 @@ uv run poe regenerate-client  # ~2+ minutes
 
 ### MCP Tool Implementation
 
-Follow the pattern from `purchase_orders.py`:
+The canonical template is **`frontapp_mcp_server/src/frontapp_mcp/tools/conversations.py`**.
+Mirror its structure when adding a new vertical:
+
+- Reads (`list_*`, `get_*`, `search_*`) return small `*Summary` Pydantic projections
+  to keep the LLM context window tight; use the full `Conversation`/`Contact`/etc.
+  domain model only when the caller requested full detail.
+- Mutations take `confirm: bool = False` and return a `ConfirmationResult`. Preview
+  with `confirm=False`, execute (and `ctx.elicit`) with `confirm=True`.
+- All tools call `get_services(context).client.<resource>.<method>(...)` — never
+  reach into the generated `api/` modules from a tool.
 
 ```python
-from frontapp_mcp.server import ServerContext, get_services
-from pydantic import BaseModel, Field
-import logging
+from typing import Annotated
 
-logger = logging.getLogger(__name__)
+from fastmcp import Context, FastMCP
+from pydantic import Field
 
-class CreateOrderParams(BaseModel):
-    """Parameters for creating an order."""
-    customer_id: str = Field(description="Customer ID")
-    items: list[str] = Field(description="List of item IDs")
-    confirm: bool = Field(default=False, description="Confirm creation")
+from frontapp_mcp.services import get_services
+from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
 
-@mcp.tool()
-async def create_order(params: CreateOrderParams) -> str:
-    """Create a new sales order.
 
-    Args:
-        params: Order creation parameters
-
-    Returns:
-        Success message or error description
-    """
-    services = get_services()
-
-    # Preview mode
-    if not params.confirm:
-        logger.info(f"Preview: Creating order for customer {params.customer_id}")
-        return f"Preview: Would create order with {len(params.items)} items"
-
-    # Actual operation
-    try:
-        logger.info(f"Creating order for customer {params.customer_id}")
-
-        response = await create_sales_order_api.asyncio_detailed(
-            client=services.frontapp_client,
-            customer_id=params.customer_id,
-            items=params.items
+def register_tools(mcp: FastMCP) -> None:
+    @mcp.tool(
+        name="reply_to_conversation",
+        description="Reply to a conversation. Preview first; confirm=True to send.",
+    )
+    async def reply_to_conversation(
+        context: Context,
+        conversation_id: Annotated[str, Field(description="e.g. 'cnv_abc123'")],
+        body: Annotated[str, Field(description="Reply body in plain text or HTML")],
+        channel_id: Annotated[
+            str | None,
+            Field(description="Optional channel id; defaults to conversation channel"),
+        ] = None,
+        confirm: Annotated[
+            bool, Field(description="False = preview only, True = send")
+        ] = False,
+    ) -> ConfirmationResult:
+        services = get_services(context)
+        if not confirm:
+            return ConfirmationResult.preview(
+                action=f"Reply to {conversation_id}",
+                details={"body_preview": body[:200], "channel_id": channel_id},
+            )
+        await require_confirmation(
+            context, f"Send reply to conversation {conversation_id}?"
         )
-
-        if response.status_code == 201:
-            order_id = response.parsed.id
-            logger.info(f"Order {order_id} created successfully")
-            return f"✓ Created order {order_id}"
-        else:
-            logger.error(f"Failed to create order: HTTP {response.status_code}")
-            return f"Error: Failed to create order (HTTP {response.status_code})"
-
-    except Exception as e:
-        logger.error(f"Error creating order: {e}")
-        return f"Error: {str(e)}"
+        await services.client.conversations.reply(
+            conversation_id, body=body, channel_id=channel_id
+        )
+        return ConfirmationResult.executed(
+            action=f"Replied to conversation {conversation_id}"
+        )
 ```
 
 ### Helper Function Pattern
 
+The canonical template is **`frontapp_public_api_client/helpers/conversations.py`**.
+Helpers wrap the generated `api/` modules, unwrap with the response helpers, and
+return Pydantic domain models.
+
 ```python
-from typing import Optional, AsyncIterator
-from frontapp_public_api_client import FrontappClient
-from frontapp_public_api_client.api.conversations import list_conversations
-from frontapp_public_api_client.domain.product import Product
+from __future__ import annotations
 
-async def get_products_by_category(
-    client: FrontappClient,
-    category: str,
-    limit: Optional[int] = None
-) -> AsyncIterator[Product]:
-    """Get all products in a category.
+from frontapp_public_api_client.helpers.base import Base
 
-    Automatically handles pagination via FrontappClient.
 
-    Args:
-        client: Authenticated FrontappClient instance
-        category: Product category filter
-        limit: Optional limit on number of products
+class Tags(Base):
+    """Ergonomic operations over Frontapp's /tags endpoints."""
 
-    Yields:
-        Product objects matching the category
-    """
-    response = await list_conversations.asyncio_detailed(
-        client=client,
-        category=category,
-        limit=limit or 100
-    )
+    async def list(
+        self,
+        *,
+        limit: int | None = None,
+        page_token: str | None = None,
+    ) -> list[Tag]:
+        from frontapp_public_api_client.api.tags import list_tags
+        from frontapp_public_api_client.domain import Tag
+        from frontapp_public_api_client.utils import unwrap
 
-    if response.status_code == 200 and response.parsed:
-        for product_data in response.parsed.data:
-            yield Product.from_api_model(product_data)
+        kwargs: dict[str, Any] = {"client": self._client}
+        if limit is not None:
+            kwargs["limit"] = limit
+        if page_token is not None:
+            kwargs["page_token"] = page_token
+
+        response = await list_tags.asyncio_detailed(**kwargs)
+        parsed = unwrap(response)
+        results = getattr(parsed, "field_results", None) or []
+        return [Tag.model_validate(t.to_dict()) for t in results]
 ```
 
 ## On-Demand Resources
