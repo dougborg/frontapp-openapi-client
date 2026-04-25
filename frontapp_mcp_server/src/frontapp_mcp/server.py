@@ -225,6 +225,20 @@ All mutation tools use a two-step confirm:
 
 Front enforces per-endpoint rate limits; the client retries 429 responses
 automatically with exponential backoff. Expect ~60 req/min on most endpoints.
+
+## Resources (read these before mutating tools)
+
+  frontapp://help                  — full tool reference + workflow recipes
+  frontapp://tags                  — all workspace tags (translate name → id)
+  frontapp://inboxes               — all inboxes (translate name → id)
+  frontapp://teammates             — all teammates (translate name/email → id)
+  frontapp://conversations/recent  — 20 most recent conversations as summaries
+
+Resources are slow-changing reference data, cached for 60 seconds. Read
+them at session start to translate human-readable names ("Support" inbox,
+"Alice Cooper" assignee) into the `inb_*` / `tea_*` / `tag_*` ids that
+mutating tools require, instead of burning tool calls on `list_teammates`
+or `list_tags`.
 """,
 )
 

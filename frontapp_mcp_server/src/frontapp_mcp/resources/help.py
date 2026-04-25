@@ -5,7 +5,20 @@ from __future__ import annotations
 from fastmcp import FastMCP
 
 _HELP_MARKDOWN = """\
-# Frontapp MCP Server — Tool Reference
+# Frontapp MCP Server — Tool & Resource Reference
+
+## Resources (slow-changing reference data, cached 60s)
+
+| URI                              | Use it to…                                                       |
+| -------------------------------- | ---------------------------------------------------------------- |
+| `frontapp://help`                | Read this reference (you're reading it).                         |
+| `frontapp://tags`                | Translate tag names ("urgent", "vip") into `tag_*` ids.          |
+| `frontapp://inboxes`             | Translate inbox names ("Support", "Sales") into `inb_*` ids.     |
+| `frontapp://teammates`           | Translate a teammate name or email into a `tea_*` id.            |
+| `frontapp://conversations/recent`| Orient at session start — 20 most recent conversations.          |
+
+Read resources before calling mutating tools, so you don't waste tool calls
+on `list_tags` / `list_teammates` for every name lookup.
 
 ## Conversations
 
