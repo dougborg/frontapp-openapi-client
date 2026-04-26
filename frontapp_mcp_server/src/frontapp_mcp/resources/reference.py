@@ -19,8 +19,9 @@ from collections.abc import Callable
 from typing import Any
 
 from fastmcp import Context, FastMCP
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
+from frontapp_mcp.projections import to_summary
 from frontapp_mcp.services import get_services
 from frontapp_public_api_client.utils import unwrap
 
@@ -46,19 +47,6 @@ class TeammateRef(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     is_available: bool | None = None
-
-
-class RecentConversationRef(BaseModel):
-    id: str
-    subject: str | None = None
-    status: str | None = None
-    assignee_name: str | None = None
-    recipient: str | None = None
-    tags: list[str] = Field(default_factory=list)
-    is_private: bool | None = None
-    created_at: str | None = None
-    updated_at: str | None = None
-    waiting_since: str | None = None
 
 
 def _project(model: type[BaseModel], item: Any) -> dict[str, Any]:
@@ -87,16 +75,6 @@ async def _list_field_results(
     parsed = unwrap(response)
     results = getattr(parsed, "field_results", None) or []
     return _dump([_project(model, item) for item in results])
-
-
-def _format_name(assignee: Any) -> str | None:
-    """First+last (joined and stripped), falling back to username."""
-    parts = [
-        getattr(assignee, "first_name", None),
-        getattr(assignee, "last_name", None),
-    ]
-    full = " ".join(p.strip() for p in parts if p and p.strip())
-    return full or getattr(assignee, "username", None)
 
 
 def register_resources(mcp: FastMCP) -> None:
@@ -157,25 +135,8 @@ def register_resources(mcp: FastMCP) -> None:
     async def recent_conversations_resource(context: Context) -> str:
         # Goes through the helper (`client.conversations.list`) rather than the
         # raw api module — the helper returns Pydantic domain models, so we
-        # re-project to the compact ref shape rather than calling _project.
+        # share the same ConversationSummary projection used by the conversations
+        # tool surface (frontapp_mcp.projections).
         services = get_services(context)
         conversations = await services.client.conversations.list(limit=20)
-        return _dump(
-            [
-                RecentConversationRef(
-                    id=c.id,
-                    subject=c.subject,
-                    status=c.status,
-                    assignee_name=_format_name(c.assignee) if c.assignee else None,
-                    recipient=c.recipient.handle if c.recipient else None,
-                    tags=[t.name for t in c.tags if t.name],
-                    is_private=c.is_private,
-                    created_at=c.created_at.isoformat() if c.created_at else None,
-                    updated_at=c.updated_at.isoformat() if c.updated_at else None,
-                    waiting_since=(
-                        c.waiting_since.isoformat() if c.waiting_since else None
-                    ),
-                ).model_dump(mode="json")
-                for c in conversations
-            ]
-        )
+        return _dump([to_summary(c).model_dump(mode="json") for c in conversations])

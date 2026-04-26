@@ -59,8 +59,8 @@ frontapp_public_api_client/
 4. **Projection over copy** — domain models carry only the fields humans/agents actually
    reference. The full API object is always available one layer down if needed.
 5. **Summary types for LLM responses** — MCP tool response types (e.g.
-   `ConversationSummary` in `tools/conversations.py`) are even more compact projections,
-   built specifically for LLM context economy.
+   `ConversationSummary` in `frontapp_mcp.projections`) are even more compact
+   projections, built specifically for LLM context economy.
 
 ### Convention for naming
 

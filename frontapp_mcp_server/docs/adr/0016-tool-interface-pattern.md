@@ -120,9 +120,10 @@ with a consistent shape:
 }
 ```
 
-Projection models (`ConversationSummary`) live in the same tool module that produces
-them, not in the public domain package — they're LLM-context-optimized views of the
-richer domain types.
+Projection models (`ConversationSummary`) live in `frontapp_mcp.projections` — a shared
+module imported by both the tool surface and any reference resource that returns the
+same shape. They're LLM-context-optimized views of the richer domain types and are
+deliberately separate from the public domain package.
 
 #### 4. Two-step confirm pattern (safety-critical operations)
 
