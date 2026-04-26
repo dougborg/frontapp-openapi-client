@@ -8,7 +8,7 @@ id from a webhook, audit log, or external system.
 - 1 mutation (two-step confirm): ``mark_message_seen``
 
 Outbound replies do **not** live here — use the drafts vertical
-(``create_draft_reply``) or the conversations vertical's ``reply_to_conversation``.
+(``create_draft_reply``) or the conversations vertical's reply flow.
 """
 
 from __future__ import annotations

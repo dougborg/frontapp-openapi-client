@@ -15,8 +15,8 @@ Scope is intentionally narrow:
 Out of scope (use other helpers / channels instead):
 
 - ``create_message`` / ``create_message_reply`` — outbound replies go
-  through the drafts vertical (``client.drafts``); the conversations
-  vertical exposes ``reply_to_conversation`` for direct send.
+  through the drafts vertical (``client.drafts``); for direct sends via
+  conversations, use ``client.conversations.reply(...)``.
 - ``import_inbox_message`` / ``receive_custom_messages`` — Channel API
   surface for partner integrations, not the agent surface.
 
