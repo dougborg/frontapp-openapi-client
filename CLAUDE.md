@@ -215,7 +215,9 @@ etc. Bearer auth on every endpoint.
 
 The `.claude/hooks/block-generated-edits.sh` PreToolUse hook enforces the generated-file
 boundary; an attempted Edit/Write/MultiEdit on any file in the "DO NOT EDIT" row exits 2
-with regen-flow guidance.
+with regen-flow guidance. The canonical glob list lives in
+`.claude/hooks/_lib/generated-paths.sh` and is shared with `format-on-edit.sh` — adding
+a new generated path means changing it once.
 
 | Regenerate                | Command                                | Time    |
 | ------------------------- | -------------------------------------- | ------- |
