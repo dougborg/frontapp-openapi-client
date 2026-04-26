@@ -19,7 +19,7 @@ Example Usage:
     from frontapp_mcp.logging import get_logger
 
     logger = get_logger()
-    logger.info("tool_executed", tool_name="search_items", result_count=15)
+    logger.info("tool_completed", tool_name="list_conversations", result_count=15)
 """
 
 from __future__ import annotations
