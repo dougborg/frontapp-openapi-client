@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T04:29:53+00:00'
-generated_from_commit: 81034d56326816527400482993b5f1de33ac87e2
+generated_at: '2026-04-26T04:37:33+00:00'
+generated_from_commit: c458f8fa352683a727bc46189b6a0d917ef155fa
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
