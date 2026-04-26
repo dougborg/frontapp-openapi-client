@@ -242,6 +242,25 @@ custom). Same person on three channels = one contact with three handles.
 Workflow tip: "this customer just emailed us — what else do we have on
 them?" → lookup_contact_by_email(email) → list_contact_conversations.
 
+## Messages
+
+Use these when you have a `msg_*` id from a webhook, audit log, or
+external system and want to read or acknowledge the message without
+first looking up its parent conversation. For browsing inside a known
+conversation, prefer `list_conversation_messages`.
+
+**Reading one message:**
+  get_message — full detail by id
+  get_message_seen_status — list seen receipts for an outbound message
+
+**Acknowledging:**
+  mark_message_seen — RATE LIMITED to 10 req/msg/hour. Front intends
+  this as a response to an actual end-user view, not a backfill job;
+  the two-step confirm protects against accidental re-firing.
+
+There is no `create_message` tool here — outbound goes through the
+drafts vertical (`create_draft_reply` / `create_draft_on_channel`).
+
 ## Front Search Syntax (q parameter)
 
   status:open | status:archived | tag:urgent | assignee:me |
@@ -293,6 +312,8 @@ _READ_ONLY_TOOLS = [
     "list_teammate_contacts",
     "list_contact_conversations",
     "list_contact_notes",
+    "get_message",
+    "get_message_seen_status",
 ]
 
 mcp.add_middleware(

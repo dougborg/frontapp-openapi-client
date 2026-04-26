@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from .helpers.contacts import Contacts
     from .helpers.conversations import Conversations
     from .helpers.drafts import Drafts
+    from .helpers.messages import Messages
 
 import httpx
 from dotenv import load_dotenv
@@ -1028,6 +1029,7 @@ class FrontappClient(AuthenticatedClient):
         self._conversations: Conversations | None = None
         self._contacts: Contacts | None = None
         self._drafts: Drafts | None = None
+        self._messages: Messages | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
         # Event hooks for observability - start with our defaults
@@ -1133,6 +1135,21 @@ class FrontappClient(AuthenticatedClient):
         if self._contacts is None:
             self._contacts = Contacts(self)
         return self._contacts
+
+    @property
+    def messages(self) -> "Messages":
+        """Ergonomic operations over Frontapp's ``/messages/{id}`` surface.
+
+        Read-side companion to the conversations and drafts verticals: get
+        a message by id and manage seen receipts. Outbound replies live on
+        ``client.drafts`` (preferred) or ``client.conversations.reply`` —
+        not here.
+        """
+        from .helpers.messages import Messages
+
+        if self._messages is None:
+            self._messages = Messages(self)
+        return self._messages
 
     # Event hooks for observability
     async def _capture_pagination_metadata(self, response: httpx.Response) -> None:

@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T19:14:12+00:00'
-generated_from_commit: 37c22eeeece886d5650f2a7c449cc066542a4b68
+generated_at: '2026-04-26T21:04:22+00:00'
+generated_from_commit: 2f4d09b4b756b612dad5089dbc67f9d9554506f9
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -244,6 +244,7 @@ summary:
     - contacts
     - conversations
     - drafts
+    - messages
   tags_with_domain:
     - contacts
     - conversations
@@ -1487,9 +1488,9 @@ tags:
     spec_tag: Messages
     api_dir: frontapp_public_api_client/api/messages
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/messages.py
+      class: Messages
     domain:
       built: false
       path: null

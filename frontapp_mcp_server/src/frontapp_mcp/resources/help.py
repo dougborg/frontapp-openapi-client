@@ -76,6 +76,21 @@ Spans three sibling Front tags: `contacts`, `contact_handles`, `contact_notes`.
 | `merge_contacts` | `POST /contacts/merge` | **DESTRUCTIVE / irreversible.** Merge contacts; conversations move to target. Two-step confirm. |
 | `delete_contact` | `DELETE /contacts/{id}` | **DESTRUCTIVE / permanent.** Delete contact + all handles. Two-step confirm. |
 
+## Messages
+
+Operations on individual messages by `msg_*` id. Use these when the id
+comes from a webhook, audit log, or external system; for browsing inside
+a known conversation prefer `list_conversation_messages`.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `get_message` | `GET /messages/{id}` | Full detail for one message (compact dict). |
+| `get_message_seen_status` | `GET /messages/{id}/seen` | Seen receipts for an outbound message (`first_seen_at` is an ISO string, not epoch). |
+| `mark_message_seen` | `POST /messages/{id}/seen` | Acknowledge that the message was seen. **Rate limited: 10 req/msg/hour.** Optional `teammate_id` attribution. Two-step confirm. |
+
+Outbound replies do not live here — use `create_draft_reply` (drafts
+vertical) instead. Front exposes no programmatic `send_message`.
+
 ### Workflow recipe — "what else do we have on this customer?"
 
 ```
