@@ -153,8 +153,8 @@ ensuring the tools list stays synchronized with actual implementations.
     "description": "Archive, reassign, or retag a conversation (two-step confirm)."
   },
   {
-    "name": "reply_to_conversation",
-    "description": "Send an outbound reply to the customer (two-step confirm)."
+    "name": "create_draft_reply",
+    "description": "Draft a reply on an existing conversation; the human reviews and sends in Front (two-step confirm)."
   }
 ]
 ```

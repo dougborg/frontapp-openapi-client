@@ -32,9 +32,25 @@ resources.)
 | `search_conversations` | `GET /conversations/search/{query}` | Front search syntax as the primary filter. |
 | `list_conversation_messages` | `GET /conversations/{id}/messages` | Messages in a conversation (most recent first). |
 | `list_conversation_comments` | `GET /conversations/{id}/comments` | Internal teammate comments on a conversation. |
-| `reply_to_conversation` | `POST /conversations/{id}/messages` | Send outbound reply on the conversation's channel. Two-step confirm. |
 | `update_conversation` | `PATCH /conversations/{id}` | Archive/reopen, reassign, retag, move inbox. Two-step confirm. |
 | `add_conversation_comment` | `POST /conversations/{id}/comments` | Teammate-only internal note. Two-step confirm. |
+
+There is intentionally no direct "send a reply" tool — outbound replies go
+through the drafts vertical below. Agents draft, humans send.
+
+## Drafts (drafts-first outbound)
+
+Drafts are the safe-by-default outbound path. An agent creates a draft, the
+human reviews it in Front's UI, and the human clicks send. Front exposes no
+programmatic ``send_draft``.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `list_conversation_drafts` | `GET /conversations/{id}/drafts` | Existing drafts on a conversation. |
+| `create_draft_on_channel` | `POST /channels/{channel_id}/drafts` | Brand-new outbound draft on a channel. Two-step confirm. |
+| `create_draft_reply` | `POST /conversations/{id}/drafts` | Draft a reply on an existing conversation (`channel_id` required). Two-step confirm. |
+| `edit_draft` | `PATCH /drafts/{id}/` | Full-replacement edit of an existing draft (`body` + `channel_id` required). Two-step confirm. |
+| `delete_draft` | `DELETE /drafts/{id}` | Discard a draft. Two-step confirm. |
 
 ## Front search syntax (`q=` parameter)
 
@@ -51,7 +67,7 @@ resources.)
 
 Combine with `AND` / `OR`: `status:open AND tag:urgent`.
 
-## Recommended workflow: triaging and replying
+## Recommended workflow: triaging and drafting a reply
 
 ```
 list_conversations(q="status:open is:unassigned", limit=25)
@@ -63,12 +79,14 @@ list_conversation_messages(conversation_id="cnv_abc")
 update_conversation(conversation_id="cnv_abc", assignee_id="tea_xyz", confirm=True)
   → assign it to a teammate (two-step confirm)
 
-reply_to_conversation(
+create_draft_reply(
     conversation_id="cnv_abc",
     body="Thanks for reaching out…",
+    channel_id="cha_xyz",
     confirm=False,   # preview
 )
-reply_to_conversation(..., confirm=True)   # actually send
+create_draft_reply(..., confirm=True)
+  → draft is created in Front; tell the user to review and click send
 ```
 
 ## Mutations are always two-step

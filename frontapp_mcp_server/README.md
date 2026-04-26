@@ -120,6 +120,8 @@ frontapp-mcp-server
 Mutations use a two-step confirm pattern: call with `confirm=false` first to get a
 preview, then `confirm=true` to execute.
 
+### Conversations
+
 | Tool                         | Mutation? | Endpoint                            | Purpose                                                 |
 | ---------------------------- | --------- | ----------------------------------- | ------------------------------------------------------- |
 | `list_conversations`         | no        | `GET /conversations`                | Cursor-paginated list; supports Front `q=` syntax       |
@@ -127,14 +129,26 @@ preview, then `confirm=true` to execute.
 | `search_conversations`       | no        | `GET /conversations/search/{query}` | Front search syntax as the primary filter               |
 | `list_conversation_messages` | no        | `GET /conversations/{id}/messages`  | Messages inside a conversation                          |
 | `list_conversation_comments` | no        | `GET /conversations/{id}/comments`  | Internal teammate comments                              |
-| `reply_to_conversation`      | yes       | `POST /conversations/{id}/messages` | Send outbound reply on the conversation's channel       |
 | `update_conversation`        | yes       | `PATCH /conversations/{id}`         | Archive/reopen, reassign, retag, move inbox             |
 | `add_conversation_comment`   | yes       | `POST /conversations/{id}/comments` | Internal note (teammates only — never reaches customer) |
+
+### Drafts (drafts-first outbound)
+
+There is no direct "send a reply" tool — outbound replies always go through drafts.
+Agents draft, humans review and click send in Front's UI.
+
+| Tool                       | Mutation? | Endpoint                             | Purpose                                          |
+| -------------------------- | --------- | ------------------------------------ | ------------------------------------------------ |
+| `list_conversation_drafts` | no        | `GET /conversations/{id}/drafts`     | Existing drafts on a conversation                |
+| `create_draft_on_channel`  | yes       | `POST /channels/{channel_id}/drafts` | New outbound draft on a channel                  |
+| `create_draft_reply`       | yes       | `POST /conversations/{id}/drafts`    | Draft a reply on an existing conversation        |
+| `edit_draft`               | yes       | `PATCH /drafts/{id}/`                | Full-replacement edit (body + channel_id needed) |
+| `delete_draft`             | yes       | `DELETE /drafts/{id}`                | Discard a draft                                  |
 
 More verticals (contacts, tags, inboxes, teammates, messages, analytics) are tracked as
 open issues on the repo.
 
-### Example: find, read, and reply to a conversation
+### Example: find, read, and draft a reply to a conversation
 
 ```
 list_conversations(q="status:open tag:urgent", limit=10)
@@ -143,13 +157,17 @@ list_conversations(q="status:open tag:urgent", limit=10)
 list_conversation_messages(conversation_id="cnv_abc")
   → [{body: "Hi, my order hasn't arrived…", author: …}, …]
 
-reply_to_conversation(
+create_draft_reply(
   conversation_id="cnv_abc",
   body="Thanks for reaching out — we're tracking it down now.",
+  channel_id="cha_xyz",
   confirm=False
 )
-  → Preview: reply on cnv_abc (body previewed, no send)
-  → ...confirm=true to send
+  → Preview: draft reply on cnv_abc (body previewed, no draft created)
+  → ...confirm=true to create the draft
+
+# The human reviews the draft in Front and clicks send. There is no
+# programmatic send_draft.
 ```
 
 ### Front search syntax

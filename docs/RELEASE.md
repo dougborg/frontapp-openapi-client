@@ -98,7 +98,7 @@ feat(client): add Contacts domain helper class
 **MCP Server Release:**
 
 ```bash
-feat(mcp): implement reply_to_conversation tool
+feat(mcp): implement create_draft_reply tool
 
 - Add ReplyRequest model with two-step confirm
 - Wire to ctx.elicit for explicit user approval

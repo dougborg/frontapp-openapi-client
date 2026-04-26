@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T14:36:09+00:00'
-generated_from_commit: 83e48da725104198a3058ddf101704b2f9d27525
+generated_at: '2026-04-26T16:02:33+00:00'
+generated_from_commit: f321651f4a668bab94a0b8e1bd23ad774e3a65c3
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -242,8 +242,10 @@ summary:
     - teammate_groups.update_a_company_teammate_group
   tags_with_helper:
     - conversations
+    - drafts
   tags_with_domain:
     - conversations
+    - drafts
 tags:
   accounts:
     spec_tag: Accounts
@@ -915,13 +917,13 @@ tags:
     spec_tag: Drafts
     api_dir: frontapp_public_api_client/api/drafts
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/drafts.py
+      class: Drafts
     domain:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/domain/draft.py
+      class: Draft
     endpoints:
       - module: create_draft
         method: POST

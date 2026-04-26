@@ -42,27 +42,32 @@ Model:
   → [ConversationSummary(…), …]
 ```
 
-## Replying to a customer (two-step confirm)
+## Drafting a reply to a customer (drafts-first, two-step confirm)
+
+There is no direct-send tool — outbound replies always go through drafts. The agent
+drafts; the human reviews the draft in Front's UI and clicks send.
 
 ```
 User: "Let the customer on cnv_abc know we've shipped their replacement"
 
 Model:
-  # 1. Preview — confirm=False, no send.
-  reply_to_conversation(
+  # 1. Preview — confirm=False, no draft created.
+  create_draft_reply(
     conversation_id="cnv_abc",
     body="Hi! We've shipped your replacement — tracking 1Z999AA10123456784.",
+    channel_id="cha_xyz",
     confirm=False,
   )
-  → {"preview": {"action": "reply_to_conversation", "body_preview": "…"}, "confirmed": False}
+  → {"preview": {"action": "create_draft_reply", "body_preview": "…"}, "confirmed": False}
 
-  # 2. Send — confirm=True triggers ctx.elicit to ask the user to approve.
-  reply_to_conversation(
+  # 2. Create draft — confirm=True triggers ctx.elicit to ask the user to approve.
+  create_draft_reply(
     conversation_id="cnv_abc",
     body="Hi! We've shipped your replacement — tracking 1Z999AA10123456784.",
+    channel_id="cha_xyz",
     confirm=True,
   )
-  → {"confirmed": True, "status_code": 202, "note": "…message enqueued."}
+  → {"confirmed": True, "status_code": 202, "note": "Draft created. The human reviews in Front and clicks send."}
 ```
 
 ## Reassigning and re-tagging

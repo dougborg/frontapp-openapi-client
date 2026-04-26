@@ -32,11 +32,12 @@ truth, with automated extraction for discovery and reference documentation.
 Every tool carries a Google-style docstring:
 
 ```python
-@mcp.tool(name="reply_to_conversation", description="...")
-async def reply_to_conversation(
+@mcp.tool(name="create_draft_reply", description="...")
+async def create_draft_reply(
     context: Context,
     conversation_id: str,
     body: str,
+    channel_id: str,
     author_id: str | None = None,
     subject: str | None = None,
     to: list[str] | None = None,
@@ -44,22 +45,25 @@ async def reply_to_conversation(
     bcc: list[str] | None = None,
     confirm: bool = False,
 ) -> dict[str, Any]:
-    """Send an outbound reply on an existing Front conversation.
+    """Create a draft reply on an existing Front conversation.
 
-    🔴 HIGH-RISK OPERATION: customer-facing message. Requires two-step
+    🟡 MEDIUM-RISK OPERATION: creates Front-side state, but the human
+    reviews the draft and clicks send themselves. Requires two-step
     confirmation via ``ctx.elicit``.
 
     **Workflow**:
-    1. Call with ``confirm=False`` — returns a preview of what would be
-       sent (body, recipients, subject). No side effects.
+    1. Call with ``confirm=False`` — returns a preview of the draft. No
+       side effects.
     2. Call with ``confirm=True`` — elicits explicit user approval, then
-       POSTs to ``/conversations/{id}/messages``. Front replies 202 Accepted;
-       the message is enqueued for delivery on the conversation's channel.
+       POSTs to ``/conversations/{id}/drafts``. The draft appears in Front
+       for the human to review and send. There is no programmatic
+       ``send_draft``.
 
     **Related tools**:
+    - ``edit_draft`` — full-replacement edit of an existing draft
+    - ``delete_draft`` — discard a draft
     - ``add_conversation_comment`` — internal teammate note (never reaches
       the customer)
-    - ``update_conversation`` — archive/reassign without sending a reply
 
     **Related resources**:
     - ``frontapp://teammates`` — look up ``author_id`` values
@@ -69,11 +73,13 @@ async def reply_to_conversation(
         context: FastMCP context for services + elicitation
         conversation_id: Front conversation id, e.g. ``"cnv_abc123"``
         body: Reply body (HTML or plain text)
-        author_id: Teammate id to send as; defaults to the token owner
+        channel_id: Channel to send through, e.g. ``"cha_xyz"`` (required
+            so Front knows which channel the eventual send goes through)
+        author_id: Teammate id to author as; defaults to the token owner
         subject: Override subject (rarely needed)
         to / cc / bcc: Override recipients; defaults to the conversation's
             existing participants
-        confirm: Must be True to actually send
+        confirm: Must be True to create the draft
 
     Returns:
         dict with ``confirmed``, ``status_code``, and a ``preview`` on the
@@ -81,9 +87,9 @@ async def reply_to_conversation(
 
     Example:
         Preview:
-            {"conversation_id": "cnv_abc", "body": "Thanks!", "confirm": false}
-        Send:
-            {"conversation_id": "cnv_abc", "body": "Thanks!", "confirm": true}
+            {"conversation_id": "cnv_abc", "body": "Thanks!", "channel_id": "cha_xyz", "confirm": false}
+        Create draft:
+            {"conversation_id": "cnv_abc", "body": "Thanks!", "channel_id": "cha_xyz", "confirm": true}
     """
 ```
 
@@ -262,7 +268,7 @@ tool responses are small JSON objects and a Pydantic projection model
 - Example query using Front search syntax
 - Cursor pagination explained
 
-**Destructive tool** (`reply_to_conversation`):
+**Destructive tool** (`create_draft_reply`):
 
 - 🔴 indicator (customer-facing mutation)
 - Two-step confirm workflow documented

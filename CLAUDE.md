@@ -199,9 +199,12 @@ etc. Bearer auth on every endpoint.
   `from frontapp_public_api_client.api.<tag> import <operation>` access to every
   generated endpoint, plus hand-written `client.<resource>.…` facades that return
   Pydantic domain models for the most-used resources.
-- **Two-step confirm on MCP mutations** — tools like `reply_to_conversation` take a
-  `confirm: bool = False` parameter; `confirm=False` returns a preview, `confirm=True`
-  both executes and elicits explicit user approval via `ctx.elicit`.
+- **Two-step confirm on MCP mutations** — tools like `update_conversation` and
+  `create_draft_reply` take a `confirm: bool = False` parameter; `confirm=False` returns
+  a preview, `confirm=True` both executes and elicits explicit user approval via
+  `ctx.elicit`. Outbound replies always go through the drafts vertical
+  (`create_draft_reply`, `create_draft_on_channel`, etc.) — there is no direct-send
+  tool. See ADR-0016 → "Drafts-first outbound".
 - **Spec sanitization at vendor time** — Front's upstream OpenAPI spec has a few quirks
   that break openapi-python-client (`example` values on required path params,
   allOf-inherited defaults, binary `*/*` attachment downloads). `scripts/vendor_spec.py`

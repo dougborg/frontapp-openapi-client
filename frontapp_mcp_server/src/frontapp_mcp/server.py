@@ -200,12 +200,22 @@ Frontapp MCP Server — Read and act on Front customer-communication data.
   get_conversation (full detail by id)
 
 **Reading inside a conversation:**
-  list_conversation_messages | list_conversation_comments
+  list_conversation_messages | list_conversation_comments |
+  list_conversation_drafts (unsent drafts awaiting human send)
 
-**Responding (all use two-step confirm):**
-  reply_to_conversation — outbound message to the customer
-  add_conversation_comment — internal note, teammates only
+**Responding to the customer (drafts-first — human still clicks send):**
+  create_draft_reply — draft a reply on an existing conversation
+  create_draft_on_channel — draft a brand-new outbound message
+  edit_draft — full-replacement edit of an existing draft (clobbers)
+  delete_draft — discard a draft
+
+**Internal-only updates:**
+  add_conversation_comment — teammate-only note (NOT sent to customer)
   update_conversation — archive/reopen, reassign, retag, move inbox
+
+There is no programmatic "send a reply now" tool. By design — agents draft;
+humans send. To respond to a customer, call create_draft_reply, then tell
+the user to review and send the draft in Front's UI.
 
 ## Front Search Syntax (q parameter)
 
@@ -250,6 +260,7 @@ _READ_ONLY_TOOLS = [
     "search_conversations",
     "list_conversation_messages",
     "list_conversation_comments",
+    "list_conversation_drafts",
 ]
 
 mcp.add_middleware(

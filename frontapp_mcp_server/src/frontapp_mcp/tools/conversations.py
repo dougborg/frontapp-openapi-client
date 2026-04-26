@@ -1,10 +1,12 @@
 """MCP tools for Frontapp conversations.
 
-Exposes 8 tools covering the common read paths and the three mutations that
-matter for agent workflows (reply, update status/assignee/tags, add internal
-comment). Mutations use the two-step confirm pattern: call with
-``confirm=False`` to preview, ``confirm=True`` to execute (which also elicits
-explicit user approval via ``ctx.elicit``).
+Exposes 7 tools: 5 read-side (list / get / search / list_messages /
+list_comments) and 2 internal-only mutations (update_conversation,
+add_conversation_comment) using the standard two-step confirm pattern.
+
+There is no direct ``reply_to_conversation`` tool — outbound replies happen
+via the drafts vertical (``create_draft_reply`` etc.). Agents draft, humans
+send. See ADR-0016 → "Drafts-first outbound" for the rationale.
 """
 
 from __future__ import annotations
@@ -127,70 +129,11 @@ def register_tools(mcp: FastMCP) -> None:
         return [c.to_dict() for c in comments]
 
     # -- mutations (two-step confirm) ---------------------------------------
-
-    @mcp.tool(
-        name="reply_to_conversation",
-        description=(
-            "Send an outbound reply on an existing conversation. Uses the "
-            "channel the conversation was opened on. Two-step confirm: "
-            "confirm=False returns a preview; confirm=True executes."
-        ),
-    )
-    async def reply_to_conversation(
-        context: Context,
-        conversation_id: str,
-        body: Annotated[str, Field(description="Reply body (HTML or plain text)")],
-        author_id: Annotated[
-            str | None,
-            Field(description="Teammate id to send as; defaults to token owner"),
-        ] = None,
-        subject: Annotated[
-            str | None, Field(description="Override subject (rarely needed)")
-        ] = None,
-        to: Annotated[
-            list[str] | None, Field(description="Override To recipients")
-        ] = None,
-        cc: Annotated[list[str] | None, Field(description="CC recipients")] = None,
-        bcc: Annotated[list[str] | None, Field(description="BCC recipients")] = None,
-        confirm: Annotated[
-            bool, Field(description="Must be true to send the reply")
-        ] = False,
-    ) -> dict[str, Any]:
-        services = get_services(context)
-
-        preview = {
-            "action": "reply_to_conversation",
-            "conversation_id": conversation_id,
-            "body_preview": body[:200] + ("…" if len(body) > 200 else ""),
-            "author_id": author_id,
-            "subject": subject,
-            "to": to,
-            "cc": cc,
-            "bcc": bcc,
-        }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Send reply to conversation {conversation_id}?"
-        )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
-
-        response = await services.client.conversations.reply(
-            conversation_id,
-            body=body,
-            author_id=author_id,
-            subject=subject,
-            to=to,
-            cc=cc,
-            bcc=bcc,
-        )
-        return {
-            "confirmed": True,
-            "status_code": response.status_code,
-            "note": "Front returns 202 Accepted; the message is enqueued for delivery.",
-        }
+    #
+    # Outbound replies are NOT exposed here — the conversations vertical has
+    # no direct-send tool. Use ``create_draft_reply`` (in the drafts vertical)
+    # to draft a reply that the human reviews and sends in Front's UI. See
+    # ADR-0016 → "Drafts-first outbound" for the rationale.
 
     @mcp.tool(
         name="update_conversation",

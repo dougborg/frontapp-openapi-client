@@ -134,13 +134,14 @@ channels, rules, custom fields, drafts, message templates, analytics, and more. 
 Hand-written ergonomic helpers (Python `client.<resource>.…`) and MCP tools wrap the
 highest-value subset. Current status:
 
-| Resource                 | Python helper (`client.X.…`) | MCP tools                                                                          |
-| ------------------------ | ---------------------------- | ---------------------------------------------------------------------------------- |
-| Conversations            | ✅ `.conversations`          | list / get / search / list_messages / list_comments / reply / update / add_comment |
-| Contacts                 | ⏳ planned                   | ⏳ planned                                                                         |
-| Messages                 | ⏳ planned                   | ⏳ planned                                                                         |
-| Tags, Inboxes, Teammates | ⏳ planned                   | ⏳ planned (also as `frontapp://` resources)                                       |
-| Analytics                | ⏳ planned                   | ⏳ planned (create→poll recipe)                                                    |
+| Resource                 | Python helper (`client.X.…`) | MCP tools                                                                                           |
+| ------------------------ | ---------------------------- | --------------------------------------------------------------------------------------------------- |
+| Conversations            | ✅ `.conversations`          | list / get / search / list_messages / list_comments / update / add_comment                          |
+| Drafts                   | ✅ `.drafts`                 | list_conversation_drafts / create_draft_on_channel / create_draft_reply / edit_draft / delete_draft |
+| Contacts                 | ⏳ planned                   | ⏳ planned                                                                                          |
+| Messages                 | ⏳ planned                   | ⏳ planned                                                                                          |
+| Tags, Inboxes, Teammates | ⏳ planned                   | ⏳ planned (also as `frontapp://` resources)                                                        |
+| Analytics                | ⏳ planned                   | ⏳ planned (create→poll recipe)                                                                     |
 
 See the [issue tracker](https://github.com/dougborg/frontapp-openapi-client/issues) for
 the roadmap. The full generated surface is usable today via direct imports from
@@ -164,10 +165,14 @@ Conversation list/search endpoints accept Front's `q=` search syntax:
 
 Combine with `AND` / `OR`: `status:open AND tag:urgent`.
 
-## MCP Tools (conversations vertical)
+## MCP Tools
 
 Mutations use a two-step confirm pattern — call with `confirm=false` for a preview, then
 `confirm=true` to apply (which also elicits explicit user approval via `ctx.elicit`).
+Customer-facing replies always go through the drafts vertical: agents draft, humans
+send.
+
+### Conversations
 
 | Tool                         | Mutation? | Description                                              |
 | ---------------------------- | --------- | -------------------------------------------------------- |
@@ -176,9 +181,21 @@ Mutations use a two-step confirm pattern — call with `confirm=false` for a pre
 | `search_conversations`       | no        | Full Front search syntax as the primary filter           |
 | `list_conversation_messages` | no        | Messages inside a conversation (most recent first)       |
 | `list_conversation_comments` | no        | Internal teammate comments on a conversation             |
-| `reply_to_conversation`      | yes       | Send an outbound reply (uses the conversation's channel) |
 | `update_conversation`        | yes       | Archive/reopen, reassign, retag, move inbox              |
 | `add_conversation_comment`   | yes       | Add a teammate-only comment (never reaches the customer) |
+
+### Drafts (drafts-first outbound)
+
+| Tool                       | Mutation? | Description                                        |
+| -------------------------- | --------- | -------------------------------------------------- |
+| `list_conversation_drafts` | no        | Existing drafts on a conversation                  |
+| `create_draft_on_channel`  | yes       | Brand-new outbound draft on a channel              |
+| `create_draft_reply`       | yes       | Draft a reply on an existing conversation          |
+| `edit_draft`               | yes       | Full-replacement edit (body + channel_id required) |
+| `delete_draft`             | yes       | Discard a draft                                    |
+
+Front exposes no programmatic `send_draft` — drafts are reviewed and sent by a human in
+Front's UI. There is intentionally no `reply_to_conversation` tool.
 
 Reads are cached for 30s via `ResponseCachingMiddleware`.
 

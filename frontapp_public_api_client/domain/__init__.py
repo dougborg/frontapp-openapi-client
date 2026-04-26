@@ -23,10 +23,13 @@ from .conversation import (
     TeammateSummary,
 )
 from .converters import to_unset, unwrap_unset
+from .draft import AttachmentSummary, Draft
 
 __all__ = [
+    "AttachmentSummary",
     "Conversation",
     "ConversationPageCursor",
+    "Draft",
     "RecipientSummary",
     "TagSummary",
     "TeammateSummary",
