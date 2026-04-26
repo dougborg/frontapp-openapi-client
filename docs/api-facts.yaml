@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T22:42:31+00:00'
-generated_from_commit: fd5ac1040479d1e4df9467e6643d0067e2154de5
+generated_at: '2026-04-26T22:43:24+00:00'
+generated_from_commit: ef58d8d6aed55813d6a573962f7acf7310afdfce
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -84,6 +84,12 @@ summary:
     - signatures.list_team_signatures
     - signatures.list_teammate_signatures
     - statuses.list_company_ticket_statuses
+    - tags.list_company_tags
+    - tags.list_tag_children
+    - tags.list_tagged_conversations
+    - tags.list_tags
+    - tags.list_team_tags
+    - tags.list_teammate_tags
     - teammate_groups.list_company_teammate_group_team_inboxes
     - teammate_groups.list_company_teammate_group_teammates
     - teammate_groups.list_company_teammate_group_teams
@@ -192,6 +198,13 @@ summary:
     - signatures.create_teammate_signature
     - signatures.delete_signature
     - signatures.update_signature
+    - tags.create_child_tag
+    - tags.create_company_tag
+    - tags.create_tag
+    - tags.create_team_tag
+    - tags.create_teammate_tag
+    - tags.delete_tag
+    - tags.update_a_tag
     - teammate_groups.add_company_teammate_group_team_inboxes
     - teammate_groups.add_company_teammate_group_teammates
     - teammate_groups.add_company_teammate_group_teams
@@ -225,6 +238,7 @@ summary:
     - knowledge_bases.get_a_knowledge_base_with_content_in_default_locale
     - knowledge_bases.get_a_knowledge_base_with_content_in_specified_locale
     - links.update_a_link
+    - tags.update_a_tag
     - teammate_groups.update_a_company_teammate_group
   tags_with_helper:
     - contacts
@@ -1731,7 +1745,93 @@ tags:
       built: true
       path: frontapp_public_api_client/domain/tag.py
       class: Tag
-    endpoints: []
+    endpoints:
+      - module: create_child_tag
+        method: POST
+        path: /tags/{tag_id}/children
+        response_type: TagResponse
+        list_shape: mutation
+        category: create
+      - module: create_company_tag
+        method: POST
+        path: /company/tags
+        response_type: TagResponse
+        list_shape: mutation
+        category: create
+      - module: create_tag
+        method: POST
+        path: /tags
+        response_type: TagResponse
+        list_shape: mutation
+        category: create
+      - module: create_team_tag
+        method: POST
+        path: /teams/{team_id}/tags
+        response_type: TagResponse
+        list_shape: mutation
+        category: create
+      - module: create_teammate_tag
+        method: POST
+        path: /teammates/{teammate_id}/tags
+        response_type: TagResponse
+        list_shape: mutation
+        category: create
+      - module: delete_tag
+        method: DELETE
+        path: /tags/{tag_id}
+        response_type: Any
+        list_shape: mutation
+        category: delete
+      - module: get_tag
+        method: GET
+        path: /tags/{tag_id}
+        response_type: TagResponse
+        list_shape: single
+        category: get
+      - module: list_company_tags
+        method: GET
+        path: /company/tags
+        response_type: ListCompanyTagsResponse200
+        list_shape: field_results
+        category: list
+      - module: list_tag_children
+        method: GET
+        path: /tags/{tag_id}/children
+        response_type: ListTagChildrenResponse200
+        list_shape: field_results
+        category: list
+      - module: list_tagged_conversations
+        method: GET
+        path: /tags/{tag_id}/conversations
+        response_type: ListTaggedConversationsResponse200
+        list_shape: field_results
+        category: list
+      - module: list_tags
+        method: GET
+        path: /tags
+        response_type: ListTagsResponse200
+        list_shape: field_results
+        category: list
+      - module: list_team_tags
+        method: GET
+        path: /teams/{team_id}/tags
+        response_type: ListTeamTagsResponse200
+        list_shape: field_results
+        category: list
+      - module: list_teammate_tags
+        method: GET
+        path: /teammates/{teammate_id}/tags
+        response_type: ListTeammateTagsResponse200
+        list_shape: field_results
+        category: list
+      - module: update_a_tag
+        method: PATCH
+        path: /tags/{tag_id}
+        response_type: Any
+        list_shape: mutation
+        category: update
+        quirks:
+          - _a_infix
   teammate_groups:
     spec_tag: Teammate Groups
     api_dir: frontapp_public_api_client/api/teammate_groups
