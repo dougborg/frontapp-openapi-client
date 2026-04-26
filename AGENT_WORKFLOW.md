@@ -95,7 +95,14 @@ primary recurring unit of work. The harness encodes it as a five-step motion:
 3. **Validate** — `uv run poe full-check` (Tier 4) before requesting review. See
    "Validation tiers" below.
 4. **Open PR** — `/open-pr` self-reviews, pushes, opens the PR, waits for CI.
-5. **Address feedback** — `/review-pr` handles review comments.
+5. **Self-review with `/simplify`** — once CI is green, run `/simplify` to spawn three
+   parallel review agents (reuse, quality, efficiency) on the diff. Catches real bugs
+   (broken type annotations, DRY misses, unused imports) before an external reviewer
+   flags them. Fold any findings into a `fixup!` commit.
+6. **Address feedback** — `/review-pr` handles external review comments.
+
+Steps 5 + 6 are routine for every vertical / feature PR — not optional polish. The
+`/open-pr` skill encodes this as Phase 7 (`/simplify`) and Phase 8 (`/review-pr`).
 
 If something doesn't fit the canonical template (drafts inverts the two-step-confirm,
 reference-only resources go through `resources/` not `tools/`), the planner flags it

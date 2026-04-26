@@ -217,6 +217,31 @@ There is no programmatic "send a reply now" tool. By design — agents draft;
 humans send. To respond to a customer, call create_draft_reply, then tell
 the user to review and send the draft in Front's UI.
 
+## Contacts
+
+A contact is a person identified by one or more handles (email, phone,
+custom). Same person on three channels = one contact with three handles.
+
+**Finding contacts:**
+  list_contacts (q= partial-match) | get_contact (full detail) |
+  lookup_contact_by_email (best-effort wrapper over list_contacts) |
+  list_team_contacts | list_teammate_contacts
+
+**Reading around a contact:**
+  list_contact_conversations (full history with this customer) |
+  list_contact_notes (internal teammate notes)
+
+**Mutating a contact (all two-step confirm):**
+  create_contact / create_team_contact / create_teammate_contact |
+  update_contact (does NOT change handles — use add/delete_contact_handle) |
+  add_contact_handle / delete_contact_handle |
+  add_contact_note (author_id required — Front needs explicit attribution) |
+  merge_contacts (DESTRUCTIVE: irreversible) |
+  delete_contact (DESTRUCTIVE: permanent)
+
+Workflow tip: "this customer just emailed us — what else do we have on
+them?" → lookup_contact_by_email(email) → list_contact_conversations.
+
 ## Front Search Syntax (q parameter)
 
   status:open | status:archived | tag:urgent | assignee:me |
@@ -261,6 +286,13 @@ _READ_ONLY_TOOLS = [
     "list_conversation_messages",
     "list_conversation_comments",
     "list_conversation_drafts",
+    "list_contacts",
+    "get_contact",
+    "lookup_contact_by_email",
+    "list_team_contacts",
+    "list_teammate_contacts",
+    "list_contact_conversations",
+    "list_contact_notes",
 ]
 
 mcp.add_middleware(

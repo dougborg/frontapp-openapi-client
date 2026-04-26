@@ -15,6 +15,13 @@ Example:
     ```
 """
 
+from .contact import (
+    Contact,
+    ContactGroupRef,
+    ContactHandle,
+    ContactHandleSource,
+    ContactNote,
+)
 from .conversation import (
     Conversation,
     ConversationPageCursor,
@@ -27,6 +34,11 @@ from .draft import AttachmentSummary, Draft
 
 __all__ = [
     "AttachmentSummary",
+    "Contact",
+    "ContactGroupRef",
+    "ContactHandle",
+    "ContactHandleSource",
+    "ContactNote",
     "Conversation",
     "ConversationPageCursor",
     "Draft",

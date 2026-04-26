@@ -205,7 +205,19 @@ uv run poe check
 1. **If timeout (15 min) with no comments** — tell the user "CI is green, PR is open, no
    review comments yet" and stop.
 
-## Phase 7: Address review comments
+## Phase 7: Self-review with `/simplify`
+
+Once CI is green, run `/simplify` against the PR diff before (or alongside) handling
+review comments. The skill spawns three parallel review agents (reuse, quality,
+efficiency) on the changed code and surfaces any findings as a single triage list.
+
+Catching issues here — *before* an external reviewer flags them — keeps PR rounds
+short. Fold any genuine findings into a `fixup!` commit + `git rebase --autosquash` so
+the history stays clean (same flow `/review-pr` uses).
+
+If the agents find nothing actionable (the common case), say so and move on.
+
+## Phase 8: Address review comments
 
 Invoke the `/review-pr` skill to handle all review comments:
 
@@ -218,7 +230,7 @@ replying.
 
 **Do not duplicate this workflow** — always delegate to `/review-pr`.
 
-## Phase 8: Final summary
+## Phase 9: Final summary
 
 Print an overall summary:
 

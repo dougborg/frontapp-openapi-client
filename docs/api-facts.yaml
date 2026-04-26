@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T16:02:33+00:00'
-generated_from_commit: f321651f4a668bab94a0b8e1bd23ad774e3a65c3
+generated_at: '2026-04-26T18:04:31+00:00'
+generated_from_commit: f5909c27791b3f1f484bf88389d4453ada52affb
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -241,9 +241,11 @@ summary:
     - tags.update_a_tag
     - teammate_groups.update_a_company_teammate_group
   tags_with_helper:
+    - contacts
     - conversations
     - drafts
   tags_with_domain:
+    - contacts
     - conversations
     - drafts
 tags:
@@ -661,13 +663,13 @@ tags:
     spec_tag: Contacts
     api_dir: frontapp_public_api_client/api/contacts
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/contacts.py
+      class: Contacts
     domain:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/domain/contact.py
+      class: Contact
     endpoints:
       - module: create_contact
         method: POST

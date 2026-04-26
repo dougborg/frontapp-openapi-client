@@ -60,15 +60,15 @@ async with FrontappClient() as client:
 
 ## Available helpers today
 
-| Helper                 | Status     | Covers                                                           |
-| ---------------------- | ---------- | ---------------------------------------------------------------- |
-| `client.conversations` | ✅ shipped | list/get/search/update/list_messages/list_comments/add_comment   |
-| `client.drafts`        | ✅ shipped | list_for_conversation/create_on_channel/create_reply/edit/delete |
-| `client.contacts`      | ⏳ planned | See issue tracker                                                |
-| `client.messages`      | ⏳ planned | See issue tracker                                                |
-| `client.tags`          | ⏳ planned | See issue tracker                                                |
-| `client.inboxes`       | ⏳ planned | See issue tracker                                                |
-| `client.teammates`     | ⏳ planned | See issue tracker                                                |
+| Helper                 | Status     | Covers                                                                                                                                                               |
+| ---------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client.conversations` | ✅ shipped | list/get/search/update/list_messages/list_comments/add_comment                                                                                                       |
+| `client.drafts`        | ✅ shipped | list_for_conversation/create_on_channel/create_reply/edit/delete                                                                                                     |
+| `client.contacts`      | ✅ shipped | list/get/search_by_email/list_for_team/list_for_teammate/list_conversations/list_notes/create (+team/teammate)/update/merge/delete/add_note/add_handle/delete_handle |
+| `client.messages`      | ⏳ planned | See issue tracker                                                                                                                                                    |
+| `client.tags`          | ⏳ planned | See issue tracker                                                                                                                                                    |
+| `client.inboxes`       | ⏳ planned | See issue tracker                                                                                                                                                    |
+| `client.teammates`     | ⏳ planned | See issue tracker                                                                                                                                                    |
 
 Outbound replies go through `client.drafts.create_reply(...)` rather than
 `client.conversations.reply(...)` — the latter still exists at the helper level for
