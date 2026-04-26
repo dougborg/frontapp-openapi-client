@@ -134,14 +134,16 @@ channels, rules, custom fields, drafts, message templates, analytics, and more. 
 Hand-written ergonomic helpers (Python `client.<resource>.…`) and MCP tools wrap the
 highest-value subset. Current status:
 
-| Resource                 | Python helper (`client.X.…`) | MCP tools                                                                                                                                                                                        |
-| ------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Conversations            | ✅ `.conversations`          | list / get / search / list_messages / list_comments / update / add_comment                                                                                                                       |
-| Drafts                   | ✅ `.drafts`                 | list_conversation_drafts / create_draft_on_channel / create_draft_reply / edit_draft / delete_draft                                                                                              |
-| Contacts                 | ✅ `.contacts`               | list / get / lookup_by_email / list_team / list_teammate / list_conversations / list_notes / create (+ team/teammate variants) / update / merge / delete / add_note / add_handle / delete_handle |
-| Messages                 | ✅ `.messages`               | get / seen_status / mark_seen                                                                                                                                                                    |
-| Tags, Inboxes, Teammates | ⏳ planned                   | ⏳ planned (also as `frontapp://` resources)                                                                                                                                                     |
-| Analytics                | ⏳ planned                   | ⏳ planned (create→poll recipe)                                                                                                                                                                  |
+| Resource      | Python helper (`client.X.…`) | MCP tools                                                                                                                                                                                        |
+| ------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Conversations | ✅ `.conversations`          | list / get / search / list_messages / list_comments / update / add_comment                                                                                                                       |
+| Drafts        | ✅ `.drafts`                 | list_conversation_drafts / create_draft_on_channel / create_draft_reply / edit_draft / delete_draft                                                                                              |
+| Contacts      | ✅ `.contacts`               | list / get / lookup_by_email / list_team / list_teammate / list_conversations / list_notes / create (+ team/teammate variants) / update / merge / delete / add_note / add_handle / delete_handle |
+| Messages      | ✅ `.messages`               | get / seen_status / mark_seen                                                                                                                                                                    |
+| Tags          | ✅ `.tags`                   | list (+ company/team/teammate scopes) / get / list_children / list_tagged_conversations / add_tag_to_conversation / remove_tag_from_conversation / create / create_child / update / delete       |
+| Inboxes       | ✅ `.inboxes`                | list (+ team/teammate scopes) / get / list_conversations / list_channels / list_access / create (+ team) / grant_access / revoke_access                                                          |
+| Teammates     | ⏳ planned                   | ⏳ planned (currently `frontapp://teammates` resource)                                                                                                                                           |
+| Analytics     | ⏳ planned                   | ⏳ planned (create→poll recipe)                                                                                                                                                                  |
 
 See the [issue tracker](https://github.com/dougborg/frontapp-openapi-client/issues) for
 the roadmap. The full generated surface is usable today via direct imports from

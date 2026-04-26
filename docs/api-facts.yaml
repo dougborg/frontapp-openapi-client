@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T21:04:22+00:00'
-generated_from_commit: 2f4d09b4b756b612dad5089dbc67f9d9554506f9
+generated_at: '2026-04-26T22:43:24+00:00'
+generated_from_commit: ef58d8d6aed55813d6a573962f7acf7310afdfce
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -244,11 +244,15 @@ summary:
     - contacts
     - conversations
     - drafts
+    - inboxes
     - messages
+    - tags
   tags_with_domain:
     - contacts
     - conversations
     - drafts
+    - inboxes
+    - tags
 tags:
   accounts:
     spec_tag: Accounts
@@ -986,13 +990,13 @@ tags:
     spec_tag: Inboxes
     api_dir: frontapp_public_api_client/api/inboxes
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/inboxes.py
+      class: Inboxes
     domain:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/domain/inbox.py
+      class: Inbox
     endpoints:
       - module: add_inbox_access
         method: POST
@@ -1734,13 +1738,13 @@ tags:
     spec_tag: Tags
     api_dir: frontapp_public_api_client/api/tags
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/tags.py
+      class: Tags
     domain:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/domain/tag.py
+      class: Tag
     endpoints:
       - module: create_child_tag
         method: POST

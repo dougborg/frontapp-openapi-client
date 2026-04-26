@@ -177,3 +177,8 @@ tools.json
 # Node.js / TypeScript packages
 node_modules/
 *.tsbuildinfo
+
+# Override global ~/.config/git/ignore patterns that match generated subdirs.
+# Some users have `tags` (ctags) globally ignored, which silently drops the
+# generated `api/tags/` package — this negation keeps it tracked.
+!frontapp_public_api_client/api/tags/
