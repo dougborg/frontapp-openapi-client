@@ -316,5 +316,5 @@ follow the same pattern.
 ## References
 
 - [ADR-0017: Automated Tool Documentation](0017-automated-tool-documentation.md)
-- [ADR-0011: Pydantic Domain Models](../../../frontapp_public_api_client/docs/adr/0011-pydantic-domain-models.md)
+- [ADR-0011: Pydantic Domain Models](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/adr/0011-pydantic-domain-models.md)
 - [FastMCP](https://github.com/jlowin/fastmcp) — elicitation API

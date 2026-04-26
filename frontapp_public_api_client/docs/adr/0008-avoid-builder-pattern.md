@@ -197,7 +197,7 @@ result = await convs.list(q="status:open")
 **Adopted** — this is exactly what the `client.conversations` helper is. Bound clients
 give us the builder-like ergonomics of "set context once, call many times" without the
 method-chaining surface. See
-[`helpers/conversations.py`](../../helpers/conversations.py).
+[`helpers/conversations.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/helpers/conversations.py).
 
 ## What we do instead
 
@@ -256,5 +256,6 @@ the bar for reintroducing a second API layer.
   layer
 - [Front search syntax](https://dev.frontapp.com/docs/search-syntax) — Front's built-in
   DSL
-- [`helpers/conversations.py`](../../helpers/conversations.py) — example of the pattern
+- [`helpers/conversations.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/helpers/conversations.py)
+  — example of the pattern
 - [`cookbook.md`](../cookbook.md)

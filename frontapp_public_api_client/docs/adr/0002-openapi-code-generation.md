@@ -223,8 +223,9 @@ Custom enhancements live in clearly-separated files that the regeneration never 
 - [Front Developer Portal](https://dev.frontapp.com/reference/introduction)
 - [frontapp/front-api-specs](https://github.com/frontapp/front-api-specs) — upstream
   OpenAPI spec
-- [`scripts/vendor_spec.py`](../../../scripts/vendor_spec.py) — upstream download +
-  sanitization
-- [`scripts/regenerate_client.py`](../../../scripts/regenerate_client.py) — generator
-  driver
-- [`docs/frontapp-openapi.yaml`](../../../docs/frontapp-openapi.yaml) — vendored spec
+- [`scripts/vendor_spec.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/scripts/vendor_spec.py)
+  — upstream download + sanitization
+- [`scripts/regenerate_client.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/scripts/regenerate_client.py)
+  — generator driver
+- [`docs/frontapp-openapi.yaml`](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/frontapp-openapi.yaml)
+  — vendored spec

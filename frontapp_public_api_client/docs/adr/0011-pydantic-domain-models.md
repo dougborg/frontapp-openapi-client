@@ -221,4 +221,5 @@ objects.
 - [ADR-002: Generate Client from OpenAPI Specification](0002-openapi-code-generation.md)
 - [ADR-006: Response Unwrapping Utilities](0006-response-unwrapping-utilities.md)
 - [Pydantic v2 Documentation](https://docs.pydantic.dev/latest/)
-- [`domain/conversation.py`](../../domain/conversation.py) — current implementation
+- [`domain/conversation.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/domain/conversation.py)
+  — current implementation

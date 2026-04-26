@@ -282,4 +282,5 @@ Link users to:
 - [httpx Advanced Features](https://www.python-httpx.org/advanced/)
 - [httpx Event Hooks](https://www.python-httpx.org/advanced/#event-hooks)
 - [OpenTelemetry httpx Instrumentation](https://opentelemetry-python-contrib.readthedocs.io/en/latest/instrumentation/httpx/httpx.html)
-- [`_logging.py`](../../_logging.py) — sensitive-data redaction filter
+- [`_logging.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/_logging.py)
+  — sensitive-data redaction filter

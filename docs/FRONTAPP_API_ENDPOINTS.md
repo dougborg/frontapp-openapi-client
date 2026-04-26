@@ -13,7 +13,7 @@ can be incorporated into the MCP Server.
 This inventory was imported from an earlier single-file MCP prototype; the status
 markers reflect that prototype's coverage, not this repo's. For the authoritative status
 of each vertical in this repo, see the API Coverage table in the
-[top-level README](../README.md).
+[top-level README](https://github.com/dougborg/frontapp-openapi-client/blob/main/README.md).
 
 The current MCP server exposes **8 conversation tools** today; contacts, messages, tags,
 inboxes, teammates, and analytics are tracked as open issues.
@@ -730,5 +730,7 @@ Each endpoint should follow the existing pattern:
   [frontapp_public_api_client/](../frontapp_public_api_client/) (Python client),
   [frontapp_mcp_server/](../frontapp_mcp_server/) (MCP server), and
   [packages/frontapp-client/](../packages/frontapp-client/) (TS client)
-- **Project Documentation**: [CLAUDE.md](../CLAUDE.md) and
-  [top-level README](../README.md)
+- **Project Documentation**:
+  [CLAUDE.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/CLAUDE.md)
+  and
+  [top-level README](https://github.com/dougborg/frontapp-openapi-client/blob/main/README.md)

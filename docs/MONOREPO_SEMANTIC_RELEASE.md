@@ -141,7 +141,7 @@ No API tokens needed - authentication via GitHub OIDC.
 
 The MCP server package depends on the client library. When the client releases a new
 version, the MCP dependency is **automatically updated** via the
-[Update MCP Client Dependency workflow](../.github/workflows/update-mcp-dependency.yml).
+[Update MCP Client Dependency workflow](https://github.com/dougborg/frontapp-openapi-client/blob/main/.github/workflows/update-mcp-dependency.yml).
 
 **How it works:**
 
@@ -299,7 +299,7 @@ scopes
 dependency should be updated.
 
 **Solution**: This is now **automated**! The
-[Update MCP Client Dependency workflow](../.github/workflows/update-mcp-dependency.yml)
+[Update MCP Client Dependency workflow](https://github.com/dougborg/frontapp-openapi-client/blob/main/.github/workflows/update-mcp-dependency.yml)
 automatically:
 
 1. Detects when a new client release is published

@@ -141,8 +141,9 @@ for a specific workflow stage:
 
 ## References
 
-- [AGENT_WORKFLOW.md](../../../AGENT_WORKFLOW.md) — complete agent workflow guide
-- [CLAUDE.md](../../../CLAUDE.md) — Essential Commands table referencing the validation
-  tiers
-- [ADR-009: Migrate from Poetry to uv](../../../docs/adr/0009-migrate-from-poetry-to-uv.md)
+- [AGENT_WORKFLOW.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/AGENT_WORKFLOW.md)
+  — complete agent workflow guide
+- [CLAUDE.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/CLAUDE.md) —
+  Essential Commands table referencing the validation tiers
+- [ADR-009: Migrate from Poetry to uv](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/adr/0009-migrate-from-poetry-to-uv.md)
   — package manager choice that enabled fast validation

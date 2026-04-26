@@ -261,9 +261,11 @@ per-field details; 429 carries `Retry-After` in headers rather than the body).
 
 ## References
 
-- [`utils.py`](../../utils.py) — implementation
+- [`utils.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/utils.py)
+  — implementation
 - [ADR-001: Transport-Layer Resilience](0001-transport-layer-resilience.md) — retries
   layer underneath
 - [ADR-0011: Pydantic Domain Models](0011-pydantic-domain-models.md) — domain layer on
   top
-- [CLAUDE.md](../../../CLAUDE.md) — Known Pitfalls including `field_results` gotcha
+- [CLAUDE.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/CLAUDE.md) —
+  Known Pitfalls including `field_results` gotcha

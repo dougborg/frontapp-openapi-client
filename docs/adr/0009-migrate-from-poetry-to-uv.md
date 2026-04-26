@@ -134,5 +134,5 @@ slow; no workspace support.
 - [uv documentation](https://docs.astral.sh/uv/)
 - [Astral blog — announcing uv](https://astral.sh/blog/uv)
 - [PEP 621 — Storing project metadata in pyproject.toml](https://peps.python.org/pep-0621/)
-- [ADR-0012: Validation Tiers for Agent Workflows](../../frontapp_public_api_client/docs/adr/0012-validation-tiers-for-agent-workflows.md)
+- [ADR-0012: Validation Tiers for Agent Workflows](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/adr/0012-validation-tiers-for-agent-workflows.md)
   — uv's speed enables the quick-check tier

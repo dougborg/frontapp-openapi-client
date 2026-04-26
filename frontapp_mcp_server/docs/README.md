@@ -6,7 +6,8 @@ This directory contains all documentation specific to the `frontapp-mcp-server` 
 
 ### Getting Started
 
-- **[README](README.md)** — installation, tools, and configuration overview
+- **[Package README](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/README.md)**
+  — installation, tools, and configuration overview
 - **[Development Guide](development.md)** — setup and development workflow
 - **[Deployment Guide](deployment.md)** — production deployment strategies
 - **[Docker Guide](docker.md)** — container deployment
@@ -19,8 +20,10 @@ This directory contains all documentation specific to the `frontapp-mcp-server` 
 
 ## Quick Links
 
-- **[Main Repository README](../../README.md)** — project overview
-- **[Contributing Guide](../../docs/CONTRIBUTING.md)** — how to contribute
+- **[Main Repository README](https://github.com/dougborg/frontapp-openapi-client/blob/main/README.md)**
+  — project overview
+- **[Contributing Guide](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/CONTRIBUTING.md)**
+  — how to contribute
 - **[PyPI Package](https://pypi.org/project/frontapp-mcp-server/)**
 
 ## Package Information
@@ -32,5 +35,5 @@ This directory contains all documentation specific to the `frontapp-mcp-server` 
 
 ## Related Packages
 
-- **[frontapp-openapi-client](../../frontapp_public_api_client/docs/README.md)** —
-  Python client for the Frontapp API
+- **[frontapp-openapi-client](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/README.md)**
+  — Python client for the Frontapp API
