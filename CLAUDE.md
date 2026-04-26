@@ -119,6 +119,13 @@ Common mistakes to avoid:
   `field_` when they'd otherwise collide with Python (leading-underscore names). So
   `_results` becomes `field_results`, `_pagination` becomes `field_pagination`. Always
   use `getattr(parsed, "field_results", None) or []` when unwrapping list responses.
+  Which list endpoints use `field_results` vs return raw arrays is enumerated in
+  `docs/api-facts.yaml` under `summary.list_endpoints_with_field_results` and
+  `summary.list_endpoints_returning_raw_array` — read that file rather than guessing by
+  tag name. Notably `/teammates` and `/tags` use `field_results` (despite older
+  intuition); the raw-array set is small and includes some conversation sub-resource
+  lists plus `statuses.list_company_ticket_statuses` — see the facts file for the
+  current authoritative list.
 - **Front error responses have no single schema** — Front doesn't define a canonical
   `ErrorResponse` type; each endpoint models errors inline. `utils.unwrap()` dispatches
   on HTTP status code, not on parsed-type `isinstance` checks. Don't try to import an
@@ -201,12 +208,21 @@ etc. Bearer auth on every endpoint.
 
 ## File Rules
 
-| Category      | Files                                         | Action          |
-| ------------- | --------------------------------------------- | --------------- |
-| **EDITABLE**  | `frontapp_client.py`, tests/, scripts/, docs/ | Can modify      |
-| **GENERATED** | `api/**/*.py`, `models/**/*.py`, `client.py`  | **DO NOT EDIT** |
+| Category                    | Files                                                                                                                                                                                                                                                                                                                                                                              | Action          |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| **EDITABLE**                | `frontapp_public_api_client/{frontapp_client.py, helpers/**, domain/**, utils.py, api_wrapper/**}`, `frontapp_mcp_server/src/**`, `packages/frontapp-client/src/**`, `tests/**`, `frontapp_mcp_server/tests/**`, `scripts/**`, `docs/**` (except the YAMLs below), `.claude/**`, `.github/**`                                                                                      | Can modify      |
+| **GENERATED — DO NOT EDIT** | `frontapp_public_api_client/api/**/*.py`, `frontapp_public_api_client/models/**/*.py`, `frontapp_public_api_client/client.py`, `frontapp_public_api_client/client_types.py`, `frontapp_public_api_client/errors.py`, `docs/frontapp-openapi.yaml` (vendored from upstream), `docs/api-facts.yaml` (generated from the api/ tree), `packages/frontapp-client/src/generated/**` (TS) | **DO NOT EDIT** |
 
-Regenerate client: `uv run poe regenerate-client` (2+ min)
+The `.claude/hooks/block-generated-edits.sh` PreToolUse hook enforces the generated-file
+boundary; an attempted Edit/Write/MultiEdit on any file in the "DO NOT EDIT" row exits 2
+with regen-flow guidance.
+
+| Regenerate                | Command                                | Time    |
+| ------------------------- | -------------------------------------- | ------- |
+| Python client             | `uv run poe regenerate-client`         | ~1-2min |
+| Vendored OpenAPI spec     | `uv run python scripts/vendor_spec.py` | ~3s     |
+| API facts index           | `uv run poe facts`                     | ~3s     |
+| Full pipeline (all three) | `uv run poe regenerate-all`            | ~1-2min |
 
 ## Commit Standards
 
@@ -247,14 +263,20 @@ tags = unwrap_unset(conv.tags, [])  # Returns [] if UNSET
 
 ### When to Use Each Pattern
 
-| Scenario                       | Pattern                                            | Example                       |
-| ------------------------------ | -------------------------------------------------- | ----------------------------- |
-| Single object (200)            | `unwrap_as(response, Type)`                        | Get/update by id              |
-| Paginated list (200)           | `unwrap(response)` + `getattr(…, "field_results")` | List conversations/messages/… |
-| Raw-array list (200)           | `unwrap(response)` (parsed is a `list` directly)   | `/statuses`, `/teammates`     |
-| Create (201)                   | `is_success(response)`                             | POST with no body             |
-| Accepted (202) / Deleted (204) | `is_success(response)`                             | Replies, archives             |
-| attrs UNSET field              | `unwrap_unset(field, default)`                     | Optional API fields           |
+| Scenario                       | Pattern                                            | Example                                                       |
+| ------------------------------ | -------------------------------------------------- | ------------------------------------------------------------- |
+| Single object (200)            | `unwrap_as(response, Type)`                        | Get/update by id                                              |
+| Paginated list (200)           | `unwrap(response)` + `getattr(…, "field_results")` | Most list endpoints (see `docs/api-facts.yaml` summary block) |
+| Raw-array list (200)           | `unwrap(response)` (parsed is a `list` directly)   | A handful of conversation sub-resource lists; see facts file  |
+| Create (201)                   | `is_success(response)`                             | POST with no body                                             |
+| Accepted (202) / Deleted (204) | `is_success(response)`                             | Replies, archives                                             |
+| attrs UNSET field              | `unwrap_unset(field, default)`                     | Optional API fields                                           |
+
+For the authoritative per-endpoint shape (which list returns `field_results` vs a raw
+array vs a single object), consult `docs/api-facts.yaml` —
+`summary.list_endpoints_with_field_results`,
+`summary.list_endpoints_returning_raw_array`, and
+`tags.<resource>.endpoints[].list_shape` are CI-validated and cannot drift.
 
 ### Anti-Patterns to Avoid
 
@@ -292,27 +314,35 @@ status = unwrap_unset(conv.status, None)
 
 Project slash commands in `.claude/commands/` and skills in `.claude/skills/`:
 
-| Command          | Purpose                                      |
-| ---------------- | -------------------------------------------- |
-| `/techdebt`      | Scan for tech debt and anti-patterns         |
-| `/review`        | Structured code review of current branch     |
-| `/write-tests`   | Write comprehensive tests for target code    |
-| `/generate-docs` | Generate or update documentation             |
-| `/verify`        | Skeptically validate implementation quality  |
-| `/pre-commit`    | Quick pre-flight check before committing     |
-| `/review-pr`     | Address PR review comments, fix, push, reply |
-| `/open-pr`       | Open PR with self-review, CI wait, feedback  |
+| Command             | Purpose                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------- |
+| `/new-vertical`     | Scaffold a new resource vertical (helper + domain + MCP tools + tests + docs)          |
+| `/vendor-and-regen` | Refresh the vendored Front OpenAPI spec from upstream and regenerate the client safely |
+| `/review-pr`        | Address PR review comments — fetch, fix, validate, push, reply                         |
+| `/open-pr`          | Open PR with self-review, CI wait, feedback                                            |
+| `/review`           | Structured code review of current branch                                               |
+| `/techdebt`         | Scan for tech debt and anti-patterns                                                   |
+| `/write-tests`      | Write comprehensive tests for target code                                              |
+| `/generate-docs`    | Generate or update documentation                                                       |
+| `/verify`           | Skeptically validate implementation quality                                            |
+| `/pre-commit`       | Quick pre-flight check before committing                                               |
 
 ## Claude Code Agents
 
 Sub-agents in `.claude/agents/` that can be spawned for delegated work during complex
 tasks:
 
-| Agent             | Purpose                                              |
-| ----------------- | ---------------------------------------------------- |
-| `spec-auditor`    | Audit local OpenAPI spec against upstream for drift  |
-| `code-modernizer` | Simplify code using repo-specific patterns and rules |
-| `pr-preparer`     | Validate branch readiness for pull request           |
+| Agent              | Purpose                                                                                                                          |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `vertical-planner` | Plan a new resource vertical (helper + domain + MCP tools) BEFORE any code is written. Sonnet, Read+Bash+Grep+Glob.              |
+| `domain-advisor`   | Read-only oracle for Front API factual questions (response shape, module names, helper status). Haiku, Read+Grep+Glob (no Bash). |
+| `code-modernizer`  | Simplify code using repo-specific patterns (UNSET helpers, response unwrap, etc.)                                                |
+| `pr-preparer`      | Validate branch readiness for pull request                                                                                       |
+| `spec-auditor`     | Audit local OpenAPI spec against upstream for drift                                                                              |
+
+The `vertical-planner` and `domain-advisor` both consult `docs/api-facts.yaml` as their
+primary knowledge source. When you have a one-off factual question about the API surface
+mid-task, prefer `domain-advisor` over grep+ls.
 
 ## Detailed Documentation
 
