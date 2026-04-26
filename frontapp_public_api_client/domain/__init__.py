@@ -31,6 +31,8 @@ from .conversation import (
 )
 from .converters import to_unset, unwrap_unset
 from .draft import AttachmentSummary, Draft
+from .inbox import Inbox
+from .tag import Tag
 
 __all__ = [
     "AttachmentSummary",
@@ -42,7 +44,9 @@ __all__ = [
     "Conversation",
     "ConversationPageCursor",
     "Draft",
+    "Inbox",
     "RecipientSummary",
+    "Tag",
     "TagSummary",
     "TeammateSummary",
     "to_unset",

@@ -91,6 +91,61 @@ a known conversation prefer `list_conversation_messages`.
 Outbound replies do not live here — use `create_draft_reply` (drafts
 vertical) instead. Front exposes no programmatic `send_message`.
 
+## Tags
+
+Workspace-level reference data. The `frontapp://tags` resource is the
+preferred name-to-id lookup at session start; the tools below are for
+programmatic listing, single-tag deltas on a conversation, and
+catalog mutations.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `list_tags` | `GET /tags` | All workspace tags. |
+| `list_company_tags` | `GET /company/tags` | Company-scoped tags (visible across teams). |
+| `list_team_tags` | `GET /teams/{team_id}/tags` | Team-scoped tags. |
+| `list_teammate_tags` | `GET /teammates/{teammate_id}/tags` | Teammate-scoped tags. |
+| `get_tag` | `GET /tags/{id}` | Full detail for one tag. |
+| `list_tag_children` | `GET /tags/{id}/children` | Child tags of a parent (no pagination). |
+| `list_tagged_conversations` | `GET /tags/{id}/conversations` | Conversations bearing this tag. Returns `ConversationSummary`s. |
+| `add_tag_to_conversation` | `POST /conversations/{id}/tags` | **DELTA** — adds one tag, leaves others. Two-step confirm. |
+| `remove_tag_from_conversation` | `DELETE /conversations/{id}/tags` | **DELTA** — removes one tag, leaves others. Two-step confirm. |
+| `create_tag` | `POST /tags` | Create workspace tag. WORKSPACE-WIDE. Two-step confirm. |
+| `create_child_tag` | `POST /tags/{id}/children` | Create a child under a parent. Two-step confirm. |
+| `update_tag` | `PATCH /tags/{id}` | Update name/highlight/parent. WORKSPACE-WIDE. Two-step confirm. |
+| `delete_tag` | `DELETE /tags/{id}` | **DESTRUCTIVE.** Removes from every conversation. Two-step confirm. |
+
+### Delta vs replace — important
+
+`add_tag_to_conversation` and `remove_tag_from_conversation` operate on
+a single tag without touching the others. `update_conversation(tag_ids=[…])`
+in the conversations vertical REPLACES the entire tag set. Use the
+delta tools when you want to nudge a single tag.
+
+## Inboxes
+
+Channel containers. Every conversation belongs to one. The
+`frontapp://inboxes` resource is the preferred name-to-id lookup;
+the tools below cover programmatic listing, per-inbox lookups, and
+mutations.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `list_inboxes` | `GET /inboxes` | All visible inboxes (no pagination). |
+| `list_team_inboxes` | `GET /teams/{team_id}/inboxes` | Inboxes owned by a team. |
+| `list_teammate_private_inboxes` | `GET /teammates/{id}/private_inboxes` | A teammate's private inboxes. |
+| `get_inbox` | `GET /inboxes/{id}` | Full detail for one inbox. |
+| `list_inbox_conversations` | `GET /inboxes/{id}/conversations` | Conversations in this inbox. Returns `ConversationSummary`s. |
+| `list_inbox_channels` | `GET /inboxes/{id}/channels` | Channels routing into this inbox. |
+| `list_inbox_access` | `GET /inboxes/{id}/teammates` | Teammates with access. |
+| `create_inbox` | `POST /inboxes` | Create workspace inbox. Two-step confirm. |
+| `create_team_inbox` | `POST /teams/{team_id}/inboxes` | Create team inbox. Two-step confirm. |
+| `grant_inbox_access` | `POST /inboxes/{id}/teammates` | Grant access to teammates (preview shows count + ids). Two-step confirm. |
+| `revoke_inbox_access` | `DELETE /inboxes/{id}/teammates` | Revoke access from teammates. Two-step confirm. |
+
+Front exposes no inbox PATCH endpoint — name and visibility are immutable
+post-creation. The only post-create mutations are the access grant/revoke
+pair.
+
 ### Workflow recipe — "what else do we have on this customer?"
 
 ```

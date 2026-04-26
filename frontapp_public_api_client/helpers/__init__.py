@@ -9,12 +9,16 @@ from frontapp_public_api_client.helpers.base import Base
 from frontapp_public_api_client.helpers.contacts import Contacts
 from frontapp_public_api_client.helpers.conversations import Conversations
 from frontapp_public_api_client.helpers.drafts import Drafts
+from frontapp_public_api_client.helpers.inboxes import Inboxes
 from frontapp_public_api_client.helpers.messages import Messages
+from frontapp_public_api_client.helpers.tags import Tags
 
 __all__ = [
     "Base",
     "Contacts",
     "Conversations",
     "Drafts",
+    "Inboxes",
     "Messages",
+    "Tags",
 ]

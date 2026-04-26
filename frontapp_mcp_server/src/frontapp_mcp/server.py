@@ -261,6 +261,50 @@ conversation, prefer `list_conversation_messages`.
 There is no `create_message` tool here — outbound goes through the
 drafts vertical (`create_draft_reply` / `create_draft_on_channel`).
 
+## Tags
+
+Tags are workspace-level reference data. Read the `frontapp://tags`
+resource at session start to translate names ("urgent", "vip") into
+`tag_*` ids without burning tool calls.
+
+**Listing & detail:**
+  list_tags / list_company_tags / list_team_tags / list_teammate_tags |
+  get_tag | list_tag_children | list_tagged_conversations
+
+**IMPORTANT — delta vs replace:** there are TWO ways to change the tags
+on a conversation. They have different semantics:
+
+  add_tag_to_conversation(conversation_id, tag_id)   # DELTA: adds one
+  remove_tag_from_conversation(conversation_id, tag_id)  # DELTA: removes one
+  update_conversation(conversation_id, tag_ids=[…])  # REPLACE: full set
+
+Use the delta tools when you want to nudge a single tag without
+clobbering the rest. Use update_conversation when you intentionally
+want to set the entire tag set.
+
+**Tag catalog mutations (all WORKSPACE-WIDE, two-step confirm):**
+  create_tag / create_child_tag |
+  update_tag (a rename ripples instantly) |
+  delete_tag (DESTRUCTIVE: removes from every conversation that had it)
+
+## Inboxes
+
+Inboxes are channel containers. Every conversation belongs to one. Read
+`frontapp://inboxes` at session start to translate inbox names
+("Support", "Sales") into `inb_*` ids.
+
+**Listing & detail:**
+  list_inboxes / list_team_inboxes / list_teammate_private_inboxes |
+  get_inbox | list_inbox_conversations | list_inbox_channels |
+  list_inbox_access
+
+**Mutations (all two-step confirm):**
+  create_inbox / create_team_inbox |
+  grant_inbox_access / revoke_inbox_access (preview includes count + ids)
+
+Front exposes no general inbox PATCH — name and visibility are immutable
+post-creation. Only access can be changed after that.
+
 ## Front Search Syntax (q parameter)
 
   status:open | status:archived | tag:urgent | assignee:me |
@@ -314,6 +358,20 @@ _READ_ONLY_TOOLS = [
     "list_contact_notes",
     "get_message",
     "get_message_seen_status",
+    "list_tags",
+    "list_company_tags",
+    "list_team_tags",
+    "list_teammate_tags",
+    "get_tag",
+    "list_tag_children",
+    "list_tagged_conversations",
+    "list_inboxes",
+    "list_team_inboxes",
+    "list_teammate_private_inboxes",
+    "get_inbox",
+    "list_inbox_conversations",
+    "list_inbox_channels",
+    "list_inbox_access",
 ]
 
 mcp.add_middleware(

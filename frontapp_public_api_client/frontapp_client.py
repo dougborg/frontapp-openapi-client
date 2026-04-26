@@ -21,7 +21,9 @@ if TYPE_CHECKING:
     from .helpers.contacts import Contacts
     from .helpers.conversations import Conversations
     from .helpers.drafts import Drafts
+    from .helpers.inboxes import Inboxes
     from .helpers.messages import Messages
+    from .helpers.tags import Tags
 
 import httpx
 from dotenv import load_dotenv
@@ -1030,6 +1032,8 @@ class FrontappClient(AuthenticatedClient):
         self._contacts: Contacts | None = None
         self._drafts: Drafts | None = None
         self._messages: Messages | None = None
+        self._tags: Tags | None = None
+        self._inboxes: Inboxes | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
         # Event hooks for observability - start with our defaults
@@ -1150,6 +1154,37 @@ class FrontappClient(AuthenticatedClient):
         if self._messages is None:
             self._messages = Messages(self)
         return self._messages
+
+    @property
+    def tags(self) -> "Tags":
+        """Ergonomic operations over Frontapp's workspace tag surface.
+
+        Covers the workspace tag catalog (``/tags*``) plus the
+        conversation-tag delta endpoints. Use the delta methods
+        (``apply_to_conversation`` / ``remove_from_conversation``) when
+        you want to add or remove a single tag without clobbering the
+        rest of the conversation's tag set.
+        """
+        from .helpers.tags import Tags
+
+        if self._tags is None:
+            self._tags = Tags(self)
+        return self._tags
+
+    @property
+    def inboxes(self) -> "Inboxes":
+        """Ergonomic operations over Frontapp's inbox surface.
+
+        Covers the workspace inbox catalog (``/inboxes*``). Front exposes
+        no general inbox PATCH — inbox name and visibility are immutable
+        after creation; only access (``grant_access`` / ``revoke_access``)
+        can be changed.
+        """
+        from .helpers.inboxes import Inboxes
+
+        if self._inboxes is None:
+            self._inboxes = Inboxes(self)
+        return self._inboxes
 
     # Event hooks for observability
     async def _capture_pagination_metadata(self, response: httpx.Response) -> None:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from frontapp_public_api_client.domain import Contact, Conversation, Draft
+from frontapp_public_api_client.domain import Contact, Conversation, Draft, Inbox, Tag
 
 
 class ConversationSummary(BaseModel):
@@ -135,11 +135,74 @@ def to_contact_summary(contact: Contact) -> ContactSummary:
     )
 
 
+class TagSummary(BaseModel):
+    """Compact projection of a workspace tag for LLM responses.
+
+    Distinct from the conversation-nested ``TagSummary`` in
+    ``frontapp_public_api_client.domain.conversation`` — that one only
+    carries id/name/highlight/is_private. This MCP projection adds
+    catalog-level fields (``is_visible_in_conversation_lists``,
+    timestamps) that are useful when surfacing tags from the tag
+    management surface rather than from a conversation.
+    """
+
+    id: str
+    name: str
+    description: str | None = None
+    highlight: str | None = None
+    is_private: bool = False
+    is_visible_in_conversation_lists: bool = False
+    created_at: str | None = None
+    updated_at: str | None = None
+
+
+def to_tag_summary(tag: Tag) -> TagSummary:
+    """Project a ``Tag`` domain model to a ``TagSummary``."""
+    return TagSummary(
+        id=tag.id,
+        name=tag.name,
+        description=tag.description,
+        highlight=tag.highlight,
+        is_private=tag.is_private,
+        is_visible_in_conversation_lists=tag.is_visible_in_conversation_lists,
+        created_at=tag.created_at.isoformat() if tag.created_at else None,
+        updated_at=tag.updated_at.isoformat() if tag.updated_at else None,
+    )
+
+
+class InboxSummary(BaseModel):
+    """Compact projection of an inbox for LLM responses.
+
+    Inbox responses from Front are already thin (id, name, two visibility
+    flags) so this projection is essentially a typed re-shape with
+    consistent serialization.
+    """
+
+    id: str | None = None
+    name: str | None = None
+    is_private: bool | None = None
+    is_public: bool | None = None
+
+
+def to_inbox_summary(inbox: Inbox) -> InboxSummary:
+    """Project an ``Inbox`` domain model to an ``InboxSummary``."""
+    return InboxSummary(
+        id=inbox.id,
+        name=inbox.name,
+        is_private=inbox.is_private,
+        is_public=inbox.is_public,
+    )
+
+
 __all__ = [
     "ContactSummary",
     "ConversationSummary",
     "DraftSummary",
+    "InboxSummary",
+    "TagSummary",
     "to_contact_summary",
     "to_draft_summary",
+    "to_inbox_summary",
     "to_summary",
+    "to_tag_summary",
 ]
