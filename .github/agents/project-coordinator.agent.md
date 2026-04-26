@@ -57,13 +57,17 @@ identifying blockers, and ensuring quality standards are met before merging.
 - Debugging test issues
 - Adding integration tests
 
-**Delegation Pattern:**
+**Delegation Pattern** (illustrative — uses an aspirational test file per
+[issue #7](https://github.com/dougborg/frontapp-openapi-client/issues/7);
+adapt to whatever exists today under `tests/` and
+`frontapp_mcp_server/tests/`):
 
 ```
-@tdd-specialist PR #125 has failing tests in test_inventory.py:
-- test_check_stock_empty_sku is failing
-- test_pagination needs update for new API response format
-Please fix these tests and verify coverage remains above 87%
+@tdd-specialist PR #125 has failing tests after the spec refresh:
+- the unwrap path is asserting on the old response shape
+- specifically broken on the conversations list endpoint after `field_results`
+  rename surfaced
+Please fix the test fixture and verify coverage doesn't regress vs main.
 ```
 
 ### @documentation-writer - Documentation
@@ -79,11 +83,12 @@ Please fix these tests and verify coverage remains above 87%
 **Delegation Pattern:**
 
 ```
-@documentation-writer PR #120 adds new sales_orders tool:
-- Add docstrings to all public functions
-- Update frontapp_mcp_server/README.md with new tool
-- Add usage example to docs/COOKBOOK.md
-- Create ADR if architectural decision made
+@documentation-writer PR #120 adds the drafts vertical:
+- Add docstrings to client.drafts.* helper methods
+- Update frontapp_mcp_server/src/frontapp_mcp/resources/help.py with the
+  new tools (it's hand-maintained, see CLAUDE.md "Help resource drift")
+- Update README.md "API Coverage" table row from ⏳ to ✅
+- Create ADR if the inverted-confirm pattern is worth recording
 ```
 
 ### @code-reviewer - Code Review
@@ -294,23 +299,26 @@ Manage multiple independent workstreams:
 ```markdown
 ## Parallel Workstreams
 
-**Stream 1: MCP v0.1.0 Release**
-- PR #130: Sales orders tool (@python-developer)
-- PR #131: Manufacturing orders tool (@python-developer)
-- PR #132: Documentation updates (@documentation-writer)
-- Dependency: 130 → 131 → 132
+**Stream 1: New verticals (MCP)**
+- PR #X: Drafts vertical (@python-developer)
+- PR #Y: Contacts vertical (@python-developer)
+- PR #Z: Tags/inboxes vertical (@python-developer)
+- Dependency: each vertical is independent of the others, but all assume
+  the harness PRs (#18, #19, #22) have landed
 
-**Stream 2: Client Enhancements**
-- PR #140: Domain model improvements (@python-developer)
-- PR #141: Helper utilities (@python-developer)
+**Stream 2: Test coverage ramp-up**
+- PR #A: Conversations test fixtures (@tdd-specialist)
+- PR #B: Helper test patterns (@tdd-specialist)
 - No dependencies, can merge independently
 
 **Stream 3: Infrastructure**
-- PR #150: CI/CD improvements (@ci-cd-specialist)
-- PR #151: Test coverage ratchet (@tdd-specialist)
+- PR #C: CI/CD improvements (@ci-cd-specialist)
+- PR #D: Documentation refresh (@documentation-writer)
 - No dependencies, can merge independently
 
-**Coordination**: Track each stream separately, merge when ready
+**Coordination**: Track each stream separately, merge when ready. For
+stacked PRs (one depends on another) follow the `/review-pr` skill's
+"Stacked PRs" section to avoid auto-close cascades.
 ```
 
 ### Sequential Execution Pattern
@@ -353,7 +361,7 @@ Before merging, verify:
 ### Quality Gates
 
 - [ ] `uv run poe check` passes
-- [ ] Test coverage maintained (87%+)
+- [ ] Test coverage doesn't regress vs `main` (the project's coverage baseline is still firming up — see [issue #7](https://github.com/dougborg/frontapp-openapi-client/issues/7))
 - [ ] No security vulnerabilities (CodeQL clean)
 - [ ] Documentation updated
 

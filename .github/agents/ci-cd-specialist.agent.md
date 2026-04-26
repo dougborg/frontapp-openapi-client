@@ -206,10 +206,12 @@ When you need detailed guidance, use the `read` tool:
 
 1. **Determine ownership**
 
-   - Lint failures → `@agent-dev` to fix formatting
-   - Test failures → `@agent-test` to fix tests
-   - Build failures → Handle yourself
-   - Security issues → `@agent-dev` to address vulnerabilities
+   - Lint failures → run `uv run poe fix` or hand off to `python-developer.agent.md` /
+     `code-modernizer`
+   - Test failures → hand off to `tdd-specialist.agent.md` (or `/write-tests`)
+   - Build failures → handle yourself
+   - Security issues → hand off to `python-developer.agent.md` for the fix;
+     `dependency-review` workflow output indicates the affected package
 
 1. **Fix and verify**
 
@@ -267,7 +269,7 @@ When you need detailed guidance, use the `read` tool:
 
    - Ensure `!` marker on breaking commits
    - Verify BREAKING CHANGE: footers
-   - Coordinate migration guide with `@agent-docs`
+   - Coordinate migration guide with `documentation-writer.agent.md`
    - Plan deprecation timeline
 
 1. **Rollback if needed**
@@ -300,19 +302,27 @@ Before considering infrastructure work complete:
 1. **Don't regenerate client without validation** - OpenAPI spec must be valid
 1. **Don't optimize workflows without measuring** - Know the baseline first
 
-## Agent Coordination
+## Coordinating with other agents
 
-### Delegate to Specialists
+For Claude Code sessions, point requesters at the appropriate specialist:
 
-- **`@agent-dev`** - Implementation fixes, code changes
-- **`@agent-test`** - Test failures, coverage improvements
-- **`@agent-docs`** - Documentation updates, migration guides
-- **`@agent-review`** - Code quality issues, pattern violations
-- **`@agent-coordinator`** - Multi-agent work orchestration
+- Code fix requested → `code-modernizer` agent or `/new-vertical` skill
+- Test coverage gap → `tdd-specialist.agent.md` (Copilot) or `/write-tests` skill
+- Documentation update → `documentation-writer.agent.md` (Copilot) or
+  `/generate-docs` skill
+- PR review-comment loop → `/review-pr` skill
 
-### Handle Yourself
+For Copilot sessions, the other `.github/agents/*.agent.md` files cover:
 
-- CI/CD configuration and optimization
+- `python-developer.agent.md` — Python implementation
+- `tdd-specialist.agent.md` — test-first development
+- `code-reviewer.agent.md` — structured code reviews
+- `documentation-writer.agent.md` — ADRs, MkDocs, cookbook
+- `task-planner.agent.md` — multi-phase implementation planning
+
+### Handle yourself (CI/CD scope)
+
+- CI/CD workflow configuration and optimization
 - Workflow debugging and fixes
 - Dependency updates and management
 - Release coordination and monitoring

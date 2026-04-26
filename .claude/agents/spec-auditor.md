@@ -16,14 +16,21 @@ an upstream URL, update this file with the URL and switch to full drift-detectio
 
 ## Knowledge
 
-- Local spec lives at `docs/frontapp-openapi.yaml`
-- Generated files (`api/**/*.py`, `models/**/*.py`, `client.py`) are derived from the
-  spec via `uv run poe regenerate-client` followed by `uv run poe generate-pydantic`
-- Pydantic models inherit from `FrontappPydanticBase`, which uses `extra="forbid"`; the
-  attrs models tolerate unknown fields via `additional_properties`
-- Most list endpoints wrap data in `{"data": [...], "meta": {...}}` (page/per_page
-  pagination). Two endpoints return raw arrays: `GET /statuses` and
-  `GET /orders/{id}/viable-statuses`
+- **Upstream source**: `frontapp/front-api-specs` → `core-api/core-api.json`. Vendored
+  locally at `docs/frontapp-openapi.yaml` by `scripts/vendor_spec.py`, which sanitizes a
+  few quirks (`PATHS_TO_STRIP` for binary downloads, `PROPERTY_DEFAULTS_TO_STRIP` for
+  allOf-inheritance breakages, Unicode confusables) before writing.
+- **Generated files** (`api/**/*.py`, `models/**/*.py`, `client.py`, `client_types.py`,
+  `errors.py`) are produced by `uv run poe regenerate-client`. After regen, also run
+  `uv run poe facts` so `docs/api-facts.yaml` matches. The full pipeline is
+  `uv run poe regenerate-all`.
+- **Pagination shape**: Front uses cursor-based pagination. List responses wrap results
+  in `_results` (renamed by openapi-python-client to `field_results`) plus
+  `_pagination.next` (renamed `field_pagination`) containing the next-page URL with a
+  `page_token` query param. There is no `total` count.
+- **Per-endpoint shape**: which endpoints use `field_results` vs return raw arrays vs
+  return single objects is enumerated in `docs/api-facts.yaml` under
+  `summary.list_endpoints_*`. Read that file before making claims about response shape.
 
 ## Audit Process
 
@@ -58,7 +65,12 @@ For each endpoint with differences:
 
 ## Important
 
-- NEVER edit generated files directly — only modify `docs/frontapp-openapi.yaml`
-- After spec changes, the pipeline is: edit spec → `uv run poe regenerate-client` →
-  `uv run poe generate-pydantic` → `uv run poe agent-check`
+- NEVER edit generated files directly. The PreToolUse hook will block.
+- NEVER edit the vendored `docs/frontapp-openapi.yaml` directly either — patch the
+  sanitization rules in `scripts/vendor_spec.py` so the change survives the next
+  refresh.
+- After spec changes, the pipeline is: patch `scripts/vendor_spec.py` →
+  `uv run python scripts/vendor_spec.py` → `uv run poe regenerate-client` →
+  `uv run poe facts` → `uv run poe agent-check`. Or in one shot:
+  `uv run poe regenerate-all`.
 - Never include real user names or emails from API responses in reports or examples

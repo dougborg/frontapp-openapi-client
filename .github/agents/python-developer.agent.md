@@ -36,7 +36,7 @@ layer in `FrontappClient`, **not** in individual API methods. This means:
 - Rate limiting is handled transparently
 - Pagination is automatic when using FrontappClient
 
-**Read for details**: `docs/adr/0001-transport-layer-resilience.md`
+**Read for details**: `frontapp_public_api_client/docs/adr/0001-transport-layer-resilience.md`
 
 ### Pydantic Domain Models (ADR-011)
 
@@ -45,7 +45,7 @@ Use Pydantic domain models from `frontapp_public_api_client/domain/` for busines
 
 **Why**: Pydantic provides better validation, serialization, and developer experience.
 
-**Read for details**: `docs/adr/0011-pydantic-domain-models.md`
+**Read for details**: `frontapp_public_api_client/docs/adr/0011-pydantic-domain-models.md`
 
 ### UNSET Sentinel Pattern
 
@@ -109,17 +109,26 @@ async def archive_conversation(
     return {"preview": preview, "confirmed": True}
 ```
 
-### MCP Server Architecture (ADR-010)
+### MCP Server Architecture
 
 When working on `frontapp_mcp_server`:
 
-- **ServerContext Pattern**: Use `get_services()` to access FrontappClient
-- **Tool Organization**: Foundation tools in `foundation/`, workflows in `workflows/`
-- **Resource Management**: Use async context managers
-- **Type-Safe Parameters**: All tool parameters use Pydantic models
-- **Progress Reporting**: Report progress for long-running operations
+- **Services injection**: tools take `context: Context` and call
+  `get_services(context).client` to access the `FrontappClient`. See
+  `frontapp_mcp_server/src/frontapp_mcp/services/dependencies.py`.
+- **Tool organization**: one module per resource under
+  `frontapp_mcp_server/src/frontapp_mcp/tools/<resource>.py`. Each module
+  exports `register_tools(mcp)`. The canonical example is
+  `tools/conversations.py`.
+- **Reads vs mutations**: read-only tools are added to `_READ_ONLY_TOOLS` in
+  `server.py` and cached for 30s by the existing `ResponseCachingMiddleware`.
+  Mutations take `confirm: bool = False` and return a dict with `preview` and
+  `confirmed` keys (see Preview/Confirm Pattern above).
+- **Type-safe parameters**: tool parameters use `Annotated[<type>, Field(...)]`
+  for both validation and LLM-facing descriptions.
 
-**Read for details**: `docs/adr/0010-frontapp-mcp-server.md`
+**Read for details**: see `frontapp_mcp_server/docs/adr/` (the per-package ADR
+directory). A monorepo-level MCP-server ADR is tracked in a follow-up issue.
 
 ## Development Workflow
 
@@ -401,11 +410,23 @@ When you need detailed guidance, use the `read` tool:
 
 ### Architecture Decisions
 
-- `docs/adr/0001-transport-layer-resilience.md` - Resilience patterns
-- `docs/adr/0007-domain-helper-classes.md` - Domain model patterns
-- `docs/adr/0010-frontapp-mcp-server.md` - MCP server architecture
-- `docs/adr/0011-pydantic-domain-models.md` - Pydantic usage
-- `docs/adr/0012-validation-tiers-for-agent-workflows.md` - Validation workflow
+ADRs live per-package: `docs/adr/` is the monorepo level,
+`frontapp_public_api_client/docs/adr/` is the Python client, and
+`frontapp_mcp_server/docs/adr/` is the MCP server.
+
+Highlights:
+
+- `frontapp_public_api_client/docs/adr/0001-transport-layer-resilience.md` — resilience patterns
+- `frontapp_public_api_client/docs/adr/0006-response-unwrapping-utilities.md` — `unwrap_as` / `unwrap` helpers
+- `frontapp_public_api_client/docs/adr/0011-pydantic-domain-models.md` — Pydantic projection pattern
+- `frontapp_public_api_client/docs/adr/0012-validation-tiers-for-agent-workflows.md` — validation tier rationale
+- `frontapp_mcp_server/docs/adr/0016-tool-interface-pattern.md` — MCP tool shape
+- `frontapp_mcp_server/docs/adr/0017-automated-tool-documentation.md` — tool docs pattern
+- `docs/adr/0009-migrate-from-poetry-to-uv.md` — uv dependency manager
+- `docs/adr/0013-module-local-documentation.md` — per-package docs split
+- `docs/adr/0014-github-copilot-custom-agents.md` — Copilot agent format
+
+For the full list, see each `docs/adr/README.md`.
 
 ### Configuration & Tools
 
@@ -449,15 +470,24 @@ Before considering your work complete:
 1. **Preview before destroy** - Use confirm pattern for destructive ops
 1. **Log appropriately** - INFO for user actions, ERROR for failures
 1. **Use Pydantic domain models** - Not generated attrs models
-1. **Coordinate with other agents** - Tag @agent-test, @agent-docs as needed
 1. **Document as you go** - Update docstrings and comments
 
-## Agent Coordination
+## Coordinating with other agents
 
-Work with specialized agents:
+For Claude Code sessions, the harness in `.claude/agents/` and `.claude/skills/`
+provides specialized agents and workflows. Most-used:
 
-- `@agent-test` - Request comprehensive tests for new features
-- `@agent-docs` - Request documentation updates
-- `@agent-review` - Request code review
-- `@agent-plan` - Get implementation plans broken down
-- `@agent-coordinator` - Coordinate multi-agent workflows
+- `vertical-planner` - plan a new resource vertical before writing code
+- `domain-advisor` - one-off factual questions about Front's API surface
+- `code-modernizer` - refactor hand-written code to current patterns
+- `pr-preparer` - branch-readiness check before opening a PR
+- `/new-vertical` skill - end-to-end vertical scaffolding
+- `/review-pr` skill - address PR review comments
+
+For Copilot sessions in this repo, work alongside the other Copilot agent
+files in `.github/agents/` (each is a focused specialist):
+
+- `task-planner.agent.md` - planning and ADR-driven design
+- `tdd-specialist.agent.md` - test-first development with `httpx.MockTransport`
+- `code-reviewer.agent.md` - structured code reviews
+- `documentation-writer.agent.md` - ADRs, MkDocs, cookbook entries

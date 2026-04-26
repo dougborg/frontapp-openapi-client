@@ -115,14 +115,25 @@ Use project priority labels based on time estimates:
 
 ### 8. Coordinate Agent Handoffs
 
-Specify which agents handle each phase:
+Specify which agent handles each phase. For **Copilot** sessions, the
+`.github/agents/*.agent.md` files are:
 
-- `@agent-dev` - Implementation, bug fixes, refactoring
-- `@agent-test` - Test coverage, debugging, validation
-- `@agent-docs` - Documentation, ADRs, examples
-- `@agent-review` - Code review, quality checks
-- `@agent-devops` - CI/CD, releases, dependencies
-- `@agent-coordinator` - Multi-agent orchestration
+- `python-developer.agent.md` - Implementation, bug fixes, refactoring
+- `tdd-specialist.agent.md` - Test coverage, debugging, validation
+- `documentation-writer.agent.md` - Documentation, ADRs, examples
+- `code-reviewer.agent.md` - Code review, quality checks
+- `ci-cd-specialist.agent.md` - CI/CD, releases, dependencies
+
+For **Claude Code** sessions, the `.claude/` harness provides:
+
+- `vertical-planner` (sub-agent) - Plan a new resource vertical
+- `domain-advisor` (sub-agent) - Read-only API factual oracle
+- `code-modernizer` (sub-agent) - Refactor to current patterns
+- `pr-preparer` (sub-agent) - Branch-readiness check
+- `/new-vertical` (skill) - End-to-end vertical scaffolding
+- `/vendor-and-regen` (skill) - Spec refresh + client regen
+- `/open-pr` / `/review-pr` (skills) - PR lifecycle
+- `/write-tests`, `/generate-docs`, `/review`, `/verify` (skills) - focused tasks
 
 ## Project Context
 
@@ -205,26 +216,36 @@ When you need detailed guidance, use the `read` tool to access:
 
 ## Planning Examples
 
-### Example 1: Sales Order MCP Tools
+### Example 1: Drafts MCP Vertical (issue #14)
 
-**Task**: Implement Sales Order domain tools for MCP server
+**Task**: Ship the drafts vertical — `client.drafts.{create,list,update,delete}`
+plus matching MCP tools.
 
 **Approach**:
 
-1. Review ADR-010 (MCP architecture) for server patterns
-1. Read `guides/plan/PLANNING_PROCESS.md` § "Creating Phased Plans"
-1. Study existing `frontapp_mcp_server/tools/purchase_orders.py` as pattern
+1. Read `frontapp_public_api_client/docs/adr/0011-pydantic-domain-models.md`
+   and `frontapp_mcp_server/docs/adr/0016-tool-interface-pattern.md` for
+   architectural baselines.
+1. Read the canonical templates: `frontapp_public_api_client/helpers/conversations.py`,
+   `frontapp_public_api_client/domain/conversation.py`,
+   `frontapp_mcp_server/src/frontapp_mcp/tools/conversations.py`.
+1. Invoke the `vertical-planner` Claude sub-agent (or do its job manually
+   here): consult `docs/api-facts.yaml` for `tags.drafts.endpoints[]`,
+   record list-shape (`field_results`), helper/domain wiring (`built: false`
+   today), and the inverted-confirm exception (drafts don't take a
+   `confirm` flag — the draft IS the review step).
 1. Create 4-phase plan:
-   - **Phase 1: Foundation** (p2-medium) - list_sales_orders, get_sales_order_details
-     tools
-   - **Phase 2: Core** (p1-high) - create_sales_order, update_sales_order operations
-   - **Phase 3: Enhancements** (p2-medium) - fulfill_order, cancel_order workflow
-     helpers
-   - **Phase 4: Documentation** (p3-low) - cookbook recipes, usage examples
-1. Use `guides/plan/EFFORT_ESTIMATION.md` for p1/p2/p3 labels
-1. Create issues with `guides/plan/ISSUE_TEMPLATES.md` templates
-1. Assign implementation phases to `@agent-dev`
-1. Assign testing to `@agent-test`, docs to `@agent-docs`
+   - **Phase 1: Foundation** (p2-medium) — `Draft` domain + `client.drafts.list/get`
+   - **Phase 2: Core** (p1-high) — `client.drafts.create/update/delete` + MCP tools
+   - **Phase 3: Attachments** (p1-high) — wire-format research (issue #12)
+     before helper code; multipart upload + binary download paths
+   - **Phase 4: Documentation** (p3-low) — cookbook recipe, README coverage row,
+     resources/help.py update
+1. Use `guides/plan/EFFORT_ESTIMATION.md` for p1/p2/p3 labels.
+1. Create issues with `guides/plan/ISSUE_TEMPLATES.md` templates.
+1. Hand the plan to `/new-vertical` (Claude skill) or `python-developer.agent.md`
+   (Copilot agent) for the implementation phases. Tests via `tdd-specialist.agent.md`
+   or `/write-tests`. Docs via `documentation-writer.agent.md` or `/generate-docs`.
 
 ### Example 2: Migration Strategy
 
@@ -246,7 +267,7 @@ When you need detailed guidance, use the `read` tool to access:
    - Type system complexity
    - Performance implications
 1. Create detailed issues with mitigation strategies for each risk
-1. Coordinate with `@agent-review` for migration checklist review
+1. Coordinate with `code-reviewer.agent.md` (or the `/review` skill) for migration checklist review
 
 ## Critical Reminders
 

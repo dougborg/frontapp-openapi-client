@@ -13,8 +13,8 @@ quality through test-driven development practices.
 
 ## Mission
 
-Write thorough, maintainable tests that verify both success and error paths, achieve
-high coverage (87%+ on core logic), and provide confidence in code correctness.
+Write thorough, maintainable tests that verify both success and error paths, avoid
+regressions in core-logic coverage, and provide confidence in code correctness.
 
 ## Your Expertise
 
@@ -115,29 +115,30 @@ uv run pytest tests/test_specific.py::test_function -v
 
 ### Directory Structure
 
+The test infrastructure is still ramping up
+([issue #7](https://github.com/dougborg/frontapp-openapi-client/issues/7)).
+
+**Today (April 2026):**
+
 ```
 tests/
-├── conftest.py                    # Shared fixtures
-├── test_frontapp_client.py          # Client tests
-├── test_pagination.py             # Pagination tests
-├── test_retry_logic.py            # Retry tests
-├── integration/                   # Integration tests (@pytest.mark.integration)
-│   ├── conftest.py
-│   └── test_api_integration.py
-├── unit/                          # Unit tests
-│   ├── test_domain_models.py
-│   └── test_helpers.py
-└── schema/                        # Schema validation
-    └── test_openapi_validation.py
+├── conftest.py
+└── test_documentation.py             # docs / link validation
 
 frontapp_mcp_server/tests/
 ├── conftest.py
-├── test_server.py
 ├── test_logging.py
-└── tools/
-    ├── test_inventory.py
-    └── test_purchase_orders.py
+├── test_observability_decorators.py
+├── test_package.py
+└── test_unpack.py
 ```
+
+**After #7 lands** the layout will fill out toward the canonical shape — a per-area
+file at the root (`test_unwrap_helpers.py`, `test_pagination.py`,
+`test_retry_logic.py`) plus a per-vertical file (`test_conversations.py`,
+`test_drafts.py`, etc.) and a `frontapp_mcp_server/tests/tools/` subdir mirroring
+`frontapp_mcp_server/src/frontapp_mcp/tools/`. Until then, new tests can land at
+the appropriate root and be reorganized when #7 ships.
 
 ### Test File Naming Conventions
 
@@ -150,37 +151,40 @@ frontapp_mcp_server/tests/
 
 ### AAA Pattern (Arrange-Act-Assert)
 
-```python
-def test_get_product_by_id():
-    # Arrange - Setup test data and conditions
-    client = FrontappClient(api_key="test-key")
-    product_id = "prod_123"
-    expected_name = "Test Product"
-
-    # Act - Execute the code under test
-    product = client.get_product(product_id)
-
-    # Assert - Verify the outcome
-    assert product.id == product_id
-    assert product.name == expected_name
-```
-
-### Async Tests
+Mock at the **httpx transport layer** (via `httpx.MockTransport`) so the
+response-helper logic (`unwrap_as`, status-code dispatch) is exercised
+end-to-end. Don't mock the helper methods directly.
 
 ```python
+import httpx
 import pytest
 
-@pytest.mark.asyncio
-async def test_async_get_products():
-    """Test async product fetching."""
-    async with FrontappClient() as client:
-        response = await list_conversations.asyncio_detailed(
-            client=client,
-            limit=10
-        )
+from frontapp_public_api_client import FrontappClient
 
-        assert response.status_code == 200
-        assert len(response.parsed.data) <= 10
+
+@pytest.mark.asyncio
+async def test_get_conversation_by_id() -> None:
+    # Arrange
+    expected_id = "cnv_abc123"
+    payload = {
+        "id": expected_id,
+        "subject": "Hello",
+        "status": "open",
+        "_links": {"self": f"https://api2.frontapp.com/conversations/{expected_id}"},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith(f"/conversations/{expected_id}")
+        return httpx.Response(200, json=payload)
+
+    transport = httpx.MockTransport(handler)
+    async with FrontappClient(api_key="test", transport=transport) as client:
+        # Act
+        conv = await client.conversations.get(expected_id)
+
+        # Assert
+        assert conv.id == expected_id
+        assert conv.subject == "Hello"
 ```
 
 ### Parametrized Tests
@@ -188,83 +192,89 @@ async def test_async_get_products():
 Test multiple scenarios efficiently:
 
 ```python
-@pytest.mark.parametrize("input_sku,expected_valid", [
-    ("VALID-SKU", True),
-    ("invalid", False),
-    ("", False),
-    (None, False),
-])
-def test_sku_validation(input_sku, expected_valid):
-    """Test SKU validation with various inputs."""
-    result = validate_sku(input_sku)
-    assert result == expected_valid
+@pytest.mark.parametrize(
+    "query,expected_path_query",
+    [
+        ("status:open", "status%3Aopen"),
+        ("tag:urgent assignee:me", "tag%3Aurgent+assignee%3Ame"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_list_conversations_query(query, expected_path_query) -> None:
+    """Front search syntax round-trips into the q= parameter."""
+    seen_url: list[httpx.URL] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_url.append(request.url)
+        return httpx.Response(200, json={"_results": [], "_pagination": {}})
+
+    transport = httpx.MockTransport(handler)
+    async with FrontappClient(api_key="test", transport=transport) as client:
+        await client.conversations.list(q=query)
+
+    assert expected_path_query in str(seen_url[0])
 ```
 
 ### Mocking HTTP Requests
 
-Use `httpx.MockTransport` with fixtures from `tests/conftest.py`:
+Pass `transport=httpx.MockTransport(handler)` to the `FrontappClient`
+constructor. The transport replaces the resilient transport stack for the
+test, so calls go straight to your handler:
 
 ```python
+import httpx
+import pytest
+
+from frontapp_public_api_client import FrontappClient
+
+
 @pytest.mark.asyncio
-async def test_get_products_success(frontapp_client_with_mock_transport):
-    """Test successful product retrieval using the mock transport fixture."""
-    # Arrange - fixture provides FrontappClient with MockTransport pre-configured
-    client = frontapp_client_with_mock_transport
+async def test_list_conversations_success() -> None:
+    payload = {
+        "_results": [
+            {
+                "id": "cnv_1",
+                "subject": "Test",
+                "status": "open",
+                "_links": {"self": "https://api2.frontapp.com/conversations/cnv_1"},
+            }
+        ],
+        "_pagination": {},
+    }
 
-    # Act
-    response = await list_conversations.asyncio_detailed(client=client._client)
-
-    # Assert
-    assert response.status_code == 200
-    assert response.parsed is not None
-```
-
-For custom response handlers, create a handler and wire it into a FrontappClient:
-
-```python
-@pytest.mark.asyncio
-async def test_api_with_custom_handler(mock_api_credentials):
-    """Test with a custom mock transport handler."""
-    # Arrange - custom handler returning specific data
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"data": [{"id": 1, "name": "Test"}]})
+        return httpx.Response(200, json=payload)
 
     transport = httpx.MockTransport(handler)
-    client = FrontappClient(**mock_api_credentials)
-    client._client._async_client = httpx.AsyncClient(
-        transport=transport, base_url=mock_api_credentials["base_url"]
-    )
+    async with FrontappClient(api_key="test", transport=transport) as client:
+        conversations = await client.conversations.list()
 
-    # Act
-    response = await list_conversations.asyncio_detailed(client=client._client)
-
-    # Assert
-    assert response.status_code == 200
+    assert len(conversations) == 1
+    assert conversations[0].id == "cnv_1"
 ```
 
 ### Testing Error Paths
 
-Always test error scenarios with complete examples:
+`unwrap()` raises typed exceptions on non-success responses. Test against
+the exception class rather than the status code directly:
 
 ```python
+import httpx
+import pytest
+
+from frontapp_public_api_client import FrontappClient
+from frontapp_public_api_client.utils import AuthenticationError
+
+
 @pytest.mark.asyncio
-async def test_api_unauthorized_error(mock_api_credentials):
-    """Test handling of 401 Unauthorized."""
-    # Arrange - handler returning 401
+async def test_get_conversation_unauthorized() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"error": "Unauthorized"})
 
     transport = httpx.MockTransport(handler)
-    client = FrontappClient(**mock_api_credentials)
-    client._client._async_client = httpx.AsyncClient(
-        transport=transport, base_url=mock_api_credentials["base_url"]
-    )
-
-    # Act
-    response = await list_conversations.asyncio_detailed(client=client._client)
-
-    # Assert
-    assert response.status_code == 401
+    async with FrontappClient(api_key="bad", transport=transport) as client:
+        with pytest.raises(AuthenticationError):
+            await client.conversations.get("cnv_1")
 ```
 
 ### Testing Edge Cases
@@ -308,14 +318,14 @@ async def async_client():
         yield client
 
 @pytest.fixture
-def mock_product_data():
-    """Provide sample product data."""
+def mock_conversation_data():
+    """Sample conversation payload, shaped like Front's ConversationResponse."""
     return {
-        "id": "prod_123",
-        "name": "Test Product",
-        "sku": "TEST-001",
-        "price": 99.99,
-        "category": "Electronics"
+        "id": "cnv_abc123",
+        "subject": "Re: order question",
+        "status": "open",
+        "is_private": False,
+        "_links": {"self": "https://api2.frontapp.com/conversations/cnv_abc123"},
     }
 
 @pytest.fixture
@@ -331,12 +341,12 @@ def mock_error_response():
 ### Reusable Test Utilities
 
 ```python
-def assert_valid_product(product):
-    """Assert product has required fields with correct types."""
-    assert "id" in product
-    assert "name" in product
-    assert "sku" in product
-    assert isinstance(product.get("price"), (int, float))
+def assert_valid_conversation(conversation):
+    """Assert conversation has required fields per Front's schema."""
+    assert "id" in conversation
+    assert conversation["id"].startswith("cnv_")
+    assert "status" in conversation
+    assert conversation["status"] in {"open", "archived", "deleted", "spam"}
 
 def create_mock_handler(status_code: int, data: dict):
     """Create a mock transport handler returning the given response."""
@@ -349,10 +359,19 @@ def create_mock_handler(status_code: int, data: dict):
 
 ### Target Coverage
 
-- **Core logic**: 87%+ coverage (required)
-- **Helper functions**: 90%+ coverage
-- **Critical paths**: 95%+ coverage
-- **Error handling**: 80%+ coverage
+The project's test infrastructure is still ramping up
+([issue #7](https://github.com/dougborg/frontapp-openapi-client/issues/7)).
+Until that lands and a baseline is set, the coverage gate is **no regression
+vs. main**. Aim for these directional targets when writing new tests:
+
+- **Hand-written core paths** (`helpers/`, `domain/`, `utils.py`,
+  `frontapp_client.py`) — high coverage; touch every public method and the
+  error paths it can raise.
+- **Generated `api/`** — typically not unit-tested directly; covered
+  transitively through helper tests.
+- **Critical paths** (auth, retries, pagination) — exhaustive coverage of
+  success + every typed-exception branch (`AuthenticationError`,
+  `ValidationError`, `RateLimitError`, `ServerError`, `APIError`).
 
 ### Checking Coverage
 
@@ -606,21 +625,27 @@ Tests are often the first place you discover undocumented behavior:
 
 1. **Test before implementing** (TDD approach when possible)
 1. **One test at a time** - Focus on single behavior
-1. **Mock external dependencies** - Don't hit real APIs in unit tests
-1. **Test error paths** - Not just success scenarios
-1. **Achieve 87%+ coverage** - Required for core logic
-1. **Use parallel execution** - Default for speed
-1. **Mark integration tests** - Separate from unit tests
-1. **Provide helpful assertions** - Include failure messages
-1. **Keep tests fast** - Optimize slow tests or mark them
-1. **Improve the system** - Codify discoveries into project docs
+1. **Mock at the transport layer** (`httpx.MockTransport`) - exercises the
+   helper unwrap logic end-to-end; don't hit real APIs in unit tests
+1. **Test error paths** - assert the typed exceptions from `unwrap()`, not
+   just success
+1. **Use parallel execution** - `uv run poe test` runs `-n 4` by default
+1. **Mark integration tests** - separate from unit tests via `@pytest.mark.integration`
+1. **Provide helpful assertions** - include failure messages
+1. **Keep tests fast** - optimize slow tests or mark them
+1. **Improve the system** - codify discoveries into project docs
 
-## Agent Coordination
+## Coordinating with other agents
 
-Work with specialized agents:
+For Claude Code sessions:
 
-- `@agent-dev` - Request code changes to improve testability
-- `@agent-plan` - Get testing requirements in implementation plans
-- `@agent-docs` - Document testing patterns and coverage
-- `@agent-review` - Get test reviews for completeness
-- `@agent-coordinator` - Report on test coverage and CI failures
+- Code change required to make something testable → `code-modernizer` agent
+  or `/new-vertical` skill
+- Implementation plan needed → `vertical-planner` agent
+- Documentation of testing patterns → `/generate-docs` skill
+- Test review → `/review` skill or the `code-reviewer.agent.md` Copilot agent
+
+For Copilot sessions, see the other `.github/agents/*.agent.md` files
+(`python-developer.agent.md`, `code-reviewer.agent.md`,
+`documentation-writer.agent.md`, `task-planner.agent.md`,
+`ci-cd-specialist.agent.md`).
