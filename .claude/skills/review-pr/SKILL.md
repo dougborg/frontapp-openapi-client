@@ -28,62 +28,55 @@ allowed-tools:
 Address all unresolved PR review comments: fix the code, validate, commit, push, and
 reply.
 
-## Phase 1: Identify the PR
+## Phase 1: Identify the PR + check its state
 
-If `$ARGUMENTS` is provided and non-empty, use it as the PR number. Otherwise,
-auto-detect from the current branch:
-
-```bash
-gh pr view --json number,url,title,baseRefName
-```
-
-Determine the repo owner/name:
+Fetch everything needed in **one** call:
 
 ```bash
+gh pr view ${ARGUMENTS:-} --json \
+  number,url,title,headRefName,baseRefName,mergeable,mergeStateStatus,statusCheckRollup
 gh repo view --json nameWithOwner --jq '.nameWithOwner'
 ```
 
+If `$ARGUMENTS` is empty, `gh pr view` auto-detects from the current branch.
 If no PR is found, tell the user and stop.
 
-Store the PR's base branch (from `baseRefName`) — use `origin/<baseRefName>` as the
-rebase/log target throughout the workflow. Do **not** assume `main`.
+Store:
 
-## Phase 1b: Check for merge conflicts and CI failures
+- `headRefName` — the PR's branch. **You must be on this branch** before any commits.
+  If `git rev-parse --abbrev-ref HEAD` doesn't match, run
+  `git checkout <headRefName>` (stash dirty work first if needed).
+- `baseRefName` — use `origin/<baseRefName>` as the rebase/log target throughout.
+  Do **not** assume `main`.
 
-Before reviewing comments, check if the PR is mergeable and if CI is passing:
+### Detect stacked PRs early
 
-```bash
-gh pr view {number} --json mergeable,mergeStateStatus,statusCheckRollup
-```
+If `<baseRefName>` is **not** the repo's default branch (e.g. it's another feature
+branch like `chore/harness-phase-a`), this PR is **stacked** on another PR.
+That changes how rebases and force-pushes propagate — see the "Stacked PR" call-out
+in Phase 5.
 
-### If there are merge conflicts (`mergeable: CONFLICTING`):
+### If `mergeable: CONFLICTING`
 
-1. Fetch the latest base branch and attempt a merge:
-   ```bash
-   git fetch origin <baseRefName>
-   git merge origin/<baseRefName>
-   ```
-1. Resolve conflicts by reading each conflicted file, understanding both sides, and
-   keeping the correct resolution (usually our branch's intent integrated with the base
-   branch's changes).
-1. After resolving, stage the files and continue the merge:
-   ```bash
-   git add <resolved files>
-   git commit -m "merge: resolve conflicts with <baseRefName>"
-   ```
+1. `git fetch origin <baseRefName>`
+2. `git merge origin/<baseRefName>`
+3. Resolve each conflicted file by reading both sides; keep our branch's intent
+   integrated with the base's changes.
+4. `git add <resolved files>` then continue the merge.
 
-### If CI is failing (`mergeStateStatus: not SUCCESS`):
+### If `mergeStateStatus` is not `CLEAN` / `HAS_HOOKS`
 
-1. Check what's failing:
-   ```bash
-   gh pr checks {number}
-   ```
-1. If it's a code issue (lint, type-check, test failure), fix it as part of Phase 4.
-1. If it's an infrastructure issue (flaky CI, timeout), note it in the summary but don't
-   block on it.
+`statusCheckRollup` already lists every check (no need for a second `gh pr checks`
+call). Triage by failure type:
 
-**Always resolve conflicts and build failures before addressing review comments** —
-review comments may no longer apply after a conflict resolution.
+- **Code issue** (lint / type-check / test) → fix as part of Phase 4.
+- **Flaky CI** (timeout, transient network) → note in the summary, don't block.
+- **Repo-config issue** (Dependency Graph disabled, missing secret, deprecated
+  action) → note in the summary, link the GitHub-org-or-repo settings page that
+  needs the change, and don't block on it. These aren't fixable from a PR.
+
+**Resolve conflicts before addressing review comments** — comments may no longer
+apply after the resolution.
 
 ## Phase 2: Fetch all review comments
 
@@ -141,9 +134,17 @@ For each unresolved comment:
    - **already fixed** — issue was addressed in a prior commit, just needs a reply
    - **acknowledge** — valid point but deferring, or explaining why current approach is
      correct
+   - **disagree** — the comment is wrong (e.g. an automated reviewer hallucinated a
+     missing import, or claims a file doesn't exist when it does). Verify with
+     `ls` / `grep` / a small smoke test, then reply with the citation that proves
+     the comment wrong. Don't silently dismiss.
 
 If a comment has prior replies, check whether the replies actually resolved the concern.
 If not, treat it as still needing action.
+
+**Automated reviewers (Copilot, etc.) produce false positives often enough that
+"disagree" is a routine outcome — not an exception.** Don't bend the code to satisfy a
+hallucinated finding.
 
 ## Phase 4: Fix all issues
 
@@ -188,7 +189,7 @@ fixup! <original commit subject line this fix belongs to>
 - Description of fix 1
 - Description of fix 2
 
-Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -228,44 +229,109 @@ Use `--force-with-lease` (not `--force`) to avoid overwriting changes pushed by 
 
 **NEVER reply to comments before pushing.** Replies confirm the fix is live.
 
+### Stacked PRs (this PR's base is another feature branch)
+
+If Phase 1 detected `<baseRefName>` is **not** the default branch (e.g. it's
+`chore/harness-phase-a` for a PR that stacks on PR #18), force-pushing this branch
+is fine — but force-pushing the **parent** in a separate `/review-pr` run rewrites
+this branch's base, breaking the chain. Two scenarios:
+
+**This PR is the parent in a stack** (other PRs target this branch as their base):
+
+After your `git push --force-with-lease`, every child PR's branch needs to be rebased
+onto the new SHA:
+
+```bash
+# For each child PR's local branch:
+git checkout <child-branch>
+git rebase --onto <parent-branch> <OLD_PARENT_SHA> <child-branch>
+git push --force-with-lease
+```
+
+`<OLD_PARENT_SHA>` is the SHA the child was previously based on (find with
+`git log <child-branch>~N --oneline | grep <parent-subject>`). The plain
+`git rebase <parent-branch>` re-applies the parent's old commits and conflicts —
+use `--onto` to skip them.
+
+**This PR is a child** (its base is some other feature branch the user is also
+reviewing in another `/review-pr` session):
+
+If the parent has been rewritten upstream, your `git rebase --autosquash
+origin/<baseRefName>` from Step 2 will re-apply the parent's old commits and conflict.
+Detect this by `git fetch origin <baseRefName>` first; if `origin/<baseRefName>`
+moved, use `git rebase --onto origin/<baseRefName> <OLD_BASE_SHA>` instead of plain
+`--autosquash`.
+
+**About to merge the parent?** `gh pr merge --delete-branch` on the parent
+deletes its branch on origin, which auto-closes every child PR whose `baseRefName`
+points at that branch. The auto-closed PRs cannot be reopened (GitHub refuses
+because the base ref is gone) — you'd have to open fresh PRs from the same head
+branch with content rebased onto a still-existing base.
+
+Before merging a parent in a stack, **flip every child's base to the eventual
+destination (usually `main`)**:
+
+```bash
+gh pr edit <child-pr-number> --base main
+```
+
+This is a metadata-only change (no force-push). The child PR will then show its
+diff against `main` until the parent merges; once the parent merges, you can
+rebase the child's branch onto fresh `main` to drop the parent's now-redundant
+commits. Doing this *before* the parent merge means no PRs auto-close.
+
 ## Phase 6: Reply to each comment
 
-After pushing, reply to every unresolved comment using:
+After pushing, reply to every unresolved comment. Pipe through
+`jq -r '.html_url'` so the response is a tidy one-line confirmation, not the
+~3 KB JSON blob `gh api` dumps by default:
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/{number}/comments/{comment_id}/replies \
-  -X POST -f body='...'
+  -X POST -f body='...' | jq -r '.html_url'
 ```
 
 Reply format by classification:
 
-- **Code fix**: "Fixed — [describe what was changed]. [mention tests if added]"
-- **Already fixed**: "This was already addressed in [commit hash] — [brief explanation]"
-- **Acknowledged/deferred**: "Acknowledged — [reason for deferring]. Tracked in #NNN."
-  (must include a GitHub issue link)
+- **Code fix**: "Fixed in `<short-sha>` — [describe what was changed]. [mention
+  tests if added]"
+- **Already fixed**: "Already addressed in `<short-sha>` — [brief explanation]"
+- **Acknowledged/deferred**: "Acknowledged — [reason for deferring]. Tracked in
+  #NNN." (must include a GitHub issue link)
+- **Disagree**: "Disagree — [evidence]. [What you checked, e.g. `ls path/`,
+  `grep -n …`, `docs/api-facts.yaml: tags.X.endpoints[…]`, smoke-test result.]
+  Marking as not-applicable; happy to revisit if there's a repro." Don't be
+  hostile — be specific.
+
+  When the comment makes a factual claim about the generated API surface
+  (module name, response shape, helper presence), `docs/api-facts.yaml` is
+  the authoritative cite — it's CI-validated, so a single grep against that
+  file refutes most automated-reviewer hallucinations. Example: a reviewer
+  claiming `api/tags/list_tags.py` doesn't exist is refuted by
+  `summary.list_endpoints_with_field_results: tags.list_tags`.
 
 Reply to **EVERY** unresolved comment. None should be left without a response.
 
-## Phase 7: Update PR description
+Cite the **rewritten** SHA from Step 3, not the original commit, since
+`--autosquash` produced a new SHA.
 
-After fixing review comments (especially if the scope has changed), update the PR
-description to reflect the current state:
+## Phase 7: Update PR description (only if scope changed)
+
+**Skip this phase entirely** if the review fixes are minor (typos, doc tweaks,
+clarifications) and the existing description is still accurate. Overwriting a
+rich PR body with a stub template is destructive.
+
+Update only when scope materially changed (new files added, behavior changed,
+test plan no longer applies). Fetch the existing body first and amend it:
 
 ```bash
-gh pr edit {number} --body "$(cat <<'EOF'
-## Summary
-<updated bullet points reflecting current scope>
-
-## Test plan
-<updated checklist>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)"
+gh pr view {number} --json body --jq .body > /tmp/pr-body.md
+# Edit /tmp/pr-body.md in place to reflect current scope
+gh pr edit {number} --body-file /tmp/pr-body.md
 ```
 
-Review the commit log (`git log origin/<baseRefName>..HEAD --oneline`) to ensure the
-description covers all changes, not just the original PR scope.
+Review the commit log (`git log origin/<baseRefName>..HEAD --oneline`) before
+deciding whether scope changed.
 
 ## Phase 8: Summary
 
