@@ -8,7 +8,8 @@ inherits these for free.
 
 The Core API is large — 139 paths and 233 operations spanning conversations, messages,
 contacts, teammates, tags, inboxes, channels, rules, analytics, and more. This client
-exposes **all** of them via the generated `client.api.<tag>.<operation>` surface, plus
+exposes **all** of them via direct module imports (e.g.
+`from frontapp_public_api_client.api.conversations import list_conversations`), plus
 hand-written ergonomic helpers for the most-used resources.
 
 ## Installation

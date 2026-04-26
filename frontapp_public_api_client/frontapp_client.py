@@ -26,7 +26,6 @@ from httpx import AsyncHTTPTransport
 from httpx_retries import Retry, RetryTransport
 
 from ._logging import Logger
-from .api_wrapper import ApiNamespace
 from .client import AuthenticatedClient
 
 # Patterns used to identify sensitive query parameters and body fields in logs.
@@ -1025,7 +1024,6 @@ class FrontappClient(AuthenticatedClient):
 
         # Domain helper instances (lazy-loaded via properties)
         self._conversations: Conversations | None = None
-        self._api_namespace: ApiNamespace | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
         # Event hooks for observability - start with our defaults
@@ -1103,13 +1101,6 @@ class FrontappClient(AuthenticatedClient):
         if self._conversations is None:
             self._conversations = Conversations(self)
         return self._conversations
-
-    @property
-    def api(self) -> ApiNamespace:
-        """Thin CRUD wrappers for all API resources. Returns raw attrs models."""
-        if self._api_namespace is None:
-            self._api_namespace = ApiNamespace(self)
-        return self._api_namespace
 
     # Event hooks for observability
     async def _capture_pagination_metadata(self, response: httpx.Response) -> None:

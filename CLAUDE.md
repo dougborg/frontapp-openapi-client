@@ -137,12 +137,12 @@ Common mistakes to avoid:
   hardcoded tool documentation. When adding or modifying tool parameters, also update
   the help resource content to stay in sync.
 - **`typecheck` skips generated code deliberately** — `ty check` only runs over
-  hand-written paths (`helpers/`, `domain/`, `frontapp_client.py`, `utils.py`,
-  `api_wrapper/`). The generated `api/` and `models/` have ~9 false positives from
-  openapi-python-client's `from_dict` patterns that ty (pre-1.0) doesn't narrow
-  correctly. When adding new hand-written modules, extend the `typecheck` task path list
-  in `pyproject.toml` to include them. Revisit the exclusion when ty hits 1.0 — tracked
-  in [issue #8](https://github.com/dougborg/frontapp-openapi-client/issues/8).
+  hand-written paths (`helpers/`, `domain/`, `frontapp_client.py`, `utils.py`). The
+  generated `api/` and `models/` have ~9 false positives from openapi-python-client's
+  `from_dict` patterns that ty (pre-1.0) doesn't narrow correctly. When adding new
+  hand-written modules, extend the `typecheck` task path list in `pyproject.toml` to
+  include them. Revisit the exclusion when ty hits 1.0 — tracked in
+  [issue #8](https://github.com/dougborg/frontapp-openapi-client/issues/8).
 
 ## Using the LSP tool
 
@@ -195,7 +195,8 @@ etc. Bearer auth on every endpoint.
 - **Transport-layer resilience** — retries, rate-limit awareness live in the httpx
   transport stack, not on individual methods. Every endpoint inherits them automatically
   via `FrontappClient`.
-- **Two-layer API surface** — raw `client.api.<tag>.<operation>` access to every
+- **Two-layer API surface** — direct
+  `from frontapp_public_api_client.api.<tag> import <operation>` access to every
   generated endpoint, plus hand-written `client.<resource>.…` facades that return
   Pydantic domain models for the most-used resources.
 - **Two-step confirm on MCP mutations** — tools like `reply_to_conversation` take a
@@ -210,7 +211,7 @@ etc. Bearer auth on every endpoint.
 
 | Category                    | Files                                                                                                                                                                                                                                                                                                                                                                              | Action          |
 | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| **EDITABLE**                | `frontapp_public_api_client/{frontapp_client.py, helpers/**, domain/**, utils.py, api_wrapper/**}`, `frontapp_mcp_server/src/**`, `packages/frontapp-client/src/**`, `tests/**`, `frontapp_mcp_server/tests/**`, `scripts/**`, `docs/**` (except the YAMLs below), `.claude/**`, `.github/**`                                                                                      | Can modify      |
+| **EDITABLE**                | `frontapp_public_api_client/{frontapp_client.py, helpers/**, domain/**, utils.py}`, `frontapp_mcp_server/src/**`, `packages/frontapp-client/src/**`, `tests/**`, `frontapp_mcp_server/tests/**`, `scripts/**`, `docs/**` (except the YAMLs below), `.claude/**`, `.github/**`                                                                                                      | Can modify      |
 | **GENERATED — DO NOT EDIT** | `frontapp_public_api_client/api/**/*.py`, `frontapp_public_api_client/models/**/*.py`, `frontapp_public_api_client/client.py`, `frontapp_public_api_client/client_types.py`, `frontapp_public_api_client/errors.py`, `docs/frontapp-openapi.yaml` (vendored from upstream), `docs/api-facts.yaml` (generated from the api/ tree), `packages/frontapp-client/src/generated/**` (TS) | **DO NOT EDIT** |
 
 The `.claude/hooks/block-generated-edits.sh` PreToolUse hook enforces the generated-file

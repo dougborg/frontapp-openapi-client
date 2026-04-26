@@ -53,8 +53,10 @@ resources with ergonomic signatures and Pydantic domain models:
 - `client.messages.…` — ⏳ planned
 - `client.tags.…`, `client.inboxes.…`, `client.teammates.…` — ⏳ planned
 
-Anything without a helper yet is still accessible via `client.api.<tag>.<operation>(…)`
-or direct imports from `frontapp_public_api_client.api`.
+Anything without a helper yet is still accessible by importing operations directly from
+`frontapp_public_api_client.api.<tag>` (for example,
+`from frontapp_public_api_client.api.conversations import list_conversations`) — the
+full generated surface (233 operations).
 
 ## Documentation Structure
 
