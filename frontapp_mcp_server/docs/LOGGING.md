@@ -8,8 +8,8 @@ capabilities.
 
 - **Structured JSON or text output** - Choose between JSON (for log aggregation) or
   human-readable text format
-- **Contextual information** - Every log includes relevant context (tool names, SKUs,
-  IDs, etc.)
+- **Contextual information** - Every log includes relevant context (tool names,
+  conversation IDs, recipient handles, etc.)
 - **Performance metrics** - Automatic duration tracking for all tool executions
 - **Trace IDs** - Support for request correlation across operations
 - **Security** - Automatic redaction of sensitive data (API keys, passwords,
@@ -50,13 +50,15 @@ frontapp-mcp-server
 
 ### JSON Format Example
 
+The `@observe_tool` decorator emits a paired `tool_invoked` / `tool_completed` event for
+every tool call (or `tool_failed` on exception). A successful completion looks like:
+
 ```json
 {
-  "event": "tool_executed",
-  "tool_name": "search_items",
-  "query": "widget",
-  "result_count": 15,
+  "event": "tool_completed",
+  "tool_name": "list_conversations",
   "duration_ms": 245.67,
+  "success": true,
   "timestamp": "2025-01-05T17:08:40.123456Z",
   "level": "info"
 }
@@ -65,7 +67,7 @@ frontapp-mcp-server
 ### Text Format Example
 
 ```
-2025-01-05 17:08:40 [info     ] tool_executed         tool_name=search_items query=widget result_count=15 duration_ms=245.67
+2025-01-05 17:08:40 [info     ] tool_completed         tool_name=list_conversations duration_ms=245.67 success=True
 ```
 
 ## Logged Events
@@ -107,41 +109,41 @@ frontapp-mcp-server
 
 ### Tool Execution
 
-**Inventory Check (Success):**
+**Get Conversation (Success):**
 
 ```json
 {
-  "event": "order_status_updated",
-  "sku": "WIDGET-001",
-  "product_name": "Widget Pro",
-  "available_stock": 100,
-  "committed": 30,
+  "event": "tool_completed",
+  "tool_name": "get_conversation",
+  "conversation_id": "cnv_abc123",
+  "status": "open",
   "duration_ms": 123.45,
   "level": "info"
 }
 ```
 
-**Search Items (Success):**
+**List Conversations (Success):**
 
 ```json
 {
-  "event": "item_search_completed",
-  "query": "widget",
+  "event": "tool_completed",
+  "tool_name": "list_conversations",
+  "query": "status:open tag:urgent",
   "result_count": 15,
   "duration_ms": 245.67,
   "level": "info"
 }
 ```
 
-**Create Item (Success):**
+**Reply to Conversation (Success):**
 
 ```json
 {
-  "event": "item_create_completed",
-  "item_type": "product",
-  "item_id": 123,
-  "name": "Widget Pro",
-  "sku": "WGT-PRO-001",
+  "event": "tool_completed",
+  "tool_name": "reply_to_conversation",
+  "conversation_id": "cnv_abc123",
+  "author_id": "tea_xyz",
+  "status_code": 202,
   "duration_ms": 567.89,
   "level": "info"
 }
@@ -153,10 +155,11 @@ frontapp-mcp-server
 
 ```json
 {
-  "event": "item_search_failed",
-  "query": "invalid",
+  "event": "tool_failed",
+  "tool_name": "list_conversations",
+  "query": "invalid:syntax",
   "error": "Invalid search query",
-  "error_type": "ValueError",
+  "error_type": "ValidationError",
   "duration_ms": 12.34,
   "level": "error",
   "exception": "Traceback (most recent call last)..."
@@ -214,16 +217,17 @@ All tool executions include performance metrics:
 
 - **`duration_ms`** - Time taken to execute the tool (in milliseconds)
 - **`result_count`** - Number of items returned (for search/list operations)
-- **`threshold`** - Configured threshold (for low stock checks)
+- **`limit`** - Page size requested (for paginated list operations)
 
 Example with metrics:
 
 ```json
 {
-  "event": "low_stock_search_completed",
-  "threshold": 10,
-  "total_count": 25,
-  "returned_count": 25,
+  "event": "tool_completed",
+  "tool_name": "search_conversations",
+  "query": "status:open assignee:me",
+  "limit": 25,
+  "result_count": 25,
   "duration_ms": 678.9,
   "level": "info"
 }

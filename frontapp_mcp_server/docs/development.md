@@ -331,7 +331,7 @@ uv run poe check         # Full validation (lint + test + format)
 # Good: Helps debug issues
 logger.info(f"Updating status for conversation {conversation_id}")
 logger.debug(f"Client config: base_url={client.base_url}, timeout={client.timeout}")
-logger.warning(f"SKU not found: {request.sku}, returning empty stock")
+logger.warning(f"Conversation not found: {conversation_id}, returning empty result")
 
 # Bad: Not helpful
 logger.info("Doing a thing")

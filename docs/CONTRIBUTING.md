@@ -107,7 +107,7 @@ All formatting is automated via `uv run poe format`.
    git commit -m "feat(client): add new domain helper"
 
    # For MCP server changes
-   git commit -m "feat(mcp): add inventory tool"
+   git commit -m "feat(mcp): add tags reference resource"
    ```
 
 1. **Push to your fork** and create a pull request
@@ -131,10 +131,10 @@ for monorepo versioning:
 
 ```bash
 # Release client package
-git commit -m "feat(client): add Products domain helper"
+git commit -m "feat(client): add Contacts domain helper"
 
 # Release MCP server package
-git commit -m "feat(mcp): implement check_inventory tool"
+git commit -m "feat(mcp): implement reply_to_conversation tool"
 
 # No release (documentation only)
 git commit -m "docs: update README with new examples"

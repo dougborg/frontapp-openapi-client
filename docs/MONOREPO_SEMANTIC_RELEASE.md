@@ -21,7 +21,7 @@ released:
 Commits affecting the main client:
 
 ```bash
-feat(client): add new Products helper methods
+feat(client): add Contacts helper methods
 fix(client): resolve pagination edge case
 perf(client): optimize retry backoff algorithm
 ```
@@ -38,8 +38,8 @@ fix: handle 429 rate limits correctly
 Commits affecting the MCP server:
 
 ```bash
-feat(mcp): add inventory tools
-fix(mcp): correct stock level calculation
+feat(mcp): add tags reference resource
+fix(mcp): correct two-step confirm for reply tool
 docs(mcp): update usage examples
 ```
 
@@ -195,15 +195,15 @@ git push origin mcp-v0.1.1
 ### Example 1: Release MCP Server Only
 
 ```bash
-# On branch: feature/add-inventory-tools
-git add frontapp_mcp_server/src/frontapp_mcp/tools/inventory.py
-git commit -m "feat(mcp): implement check_inventory tool
+# On branch: feature/add-tags-tools
+git add frontapp_mcp_server/src/frontapp_mcp/tools/tags.py
+git commit -m "feat(mcp): implement tags management tools
 
-- Add CheckInventoryRequest and StockInfo models
-- Implement tool using Products domain helper
+- Add create_tag and update_tag with two-step confirm
+- Wire elicitation for destructive operations
 - Add comprehensive unit tests"
 
-git push origin feature/add-inventory-tools
+git push origin feature/add-tags-tools
 # Create PR, merge to main
 # → Triggers MCP release (e.g., 0.1.0a1 → 0.2.0a1)
 ```
@@ -211,15 +211,15 @@ git push origin feature/add-inventory-tools
 ### Example 2: Release Client Only
 
 ```bash
-# On branch: feature/domain-helpers
-git add frontapp_public_api_client/helpers/products.py
-git commit -m "feat(client): add Products domain helper class
+# On branch: feature/contacts-helper
+git add frontapp_public_api_client/helpers/contacts.py
+git commit -m "feat(client): add Contacts domain helper class
 
-- Implement CRUD operations
-- Add search and filtering methods
+- Implement list/get/create/update operations
+- Add handle-lookup methods
 - Full test coverage"
 
-git push origin feature/domain-helpers
+git push origin feature/contacts-helper
 # Create PR, merge to main
 # → Triggers client release (e.g., 0.23.0 → 0.24.0)
 ```
@@ -228,14 +228,14 @@ git push origin feature/domain-helpers
 
 ```bash
 # First commit for client
-git add frontapp_public_api_client/helpers/inventory.py
-git commit -m "feat(client): add Inventory domain helper"
+git add frontapp_public_api_client/helpers/contacts.py
+git commit -m "feat(client): add Contacts domain helper"
 
 # Second commit for MCP
-git add frontapp_mcp_server/src/frontapp_mcp/tools/inventory.py
-git commit -m "feat(mcp): add inventory tools using new helper"
+git add frontapp_mcp_server/src/frontapp_mcp/tools/contacts.py
+git commit -m "feat(mcp): add contacts tools using new helper"
 
-git push origin feature/inventory-support
+git push origin feature/contacts-support
 # Create PR, merge to main
 # → Triggers BOTH releases independently
 ```

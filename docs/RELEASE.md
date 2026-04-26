@@ -21,8 +21,8 @@ git commit -m "fix(client): resolve pagination edge case"
 ### For MCP Server Releases
 
 ```bash
-git commit -m "feat(mcp): add inventory tools"
-git commit -m "fix(mcp): correct stock level calculation"
+git commit -m "feat(mcp): add tags management tools"
+git commit -m "fix(mcp): correct two-step confirm for reply tool"
 ```
 
 ### No Release Needed
@@ -60,14 +60,14 @@ Both jobs run **in parallel** and are **completely independent**.
 
 ### Version Bumps
 
-| Commit Type                       | Example                         | Version Bump                   |
-| --------------------------------- | ------------------------------- | ------------------------------ |
-| `feat(scope):`                    | `feat(mcp): add search tool`    | MINOR (0.1.0 → 0.2.0)          |
-| `fix(scope):`                     | `fix(client): resolve auth bug` | PATCH (0.1.0 → 0.1.1)          |
-| `perf(scope):`                    | `perf(mcp): optimize queries`   | PATCH (0.1.0 → 0.1.1)          |
-| `feat(scope)!:` or Breaking       | `feat(client)!: redesign API`   | MAJOR (0.1.0 → 1.0.0)          |
-| Other (`docs:`, `chore:`, `test`) | `docs(mcp): update README`      | NO BUMP                        |
-| `feat:` (no scope)                | `feat: add pagination`          | Client MINOR (0.23.0 → 0.24.0) |
+| Commit Type                       | Example                                    | Version Bump                   |
+| --------------------------------- | ------------------------------------------ | ------------------------------ |
+| `feat(scope):`                    | `feat(mcp): add search_conversations tool` | MINOR (0.1.0 → 0.2.0)          |
+| `fix(scope):`                     | `fix(client): resolve auth bug`            | PATCH (0.1.0 → 0.1.1)          |
+| `perf(scope):`                    | `perf(mcp): optimize queries`              | PATCH (0.1.0 → 0.1.1)          |
+| `feat(scope)!:` or Breaking       | `feat(client)!: redesign API`              | MAJOR (0.1.0 → 1.0.0)          |
+| Other (`docs:`, `chore:`, `test`) | `docs(mcp): update README`                 | NO BUMP                        |
+| `feat:` (no scope)                | `feat: add pagination`                     | Client MINOR (0.23.0 → 0.24.0) |
 
 ## Commit Message Format
 
@@ -88,23 +88,23 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/) with scopes:
 **Client Package Release:**
 
 ```bash
-feat(client): add Products domain helper class
+feat(client): add Contacts domain helper class
 
-- Implement CRUD operations
-- Add search and filtering methods
+- Implement list/get/create/update operations
+- Add handle-lookup methods
 - Full test coverage
 ```
 
 **MCP Server Release:**
 
 ```bash
-feat(mcp): implement check_inventory tool
+feat(mcp): implement reply_to_conversation tool
 
-- Add CheckInventoryRequest and StockInfo models
-- Implement tool using Products domain helper
+- Add ReplyRequest model with two-step confirm
+- Wire to ctx.elicit for explicit user approval
 - Add comprehensive unit tests
 
-Closes #35
+Closes #14
 ```
 
 **Breaking Change (Major Version):**

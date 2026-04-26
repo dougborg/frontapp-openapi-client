@@ -197,8 +197,10 @@ We recommend the **Docker-built** option because:
 
 ```yaml
 name: frontapp-mcp-server
-title: Frontapp Manufacturing ERP
-description: MCP server for interacting with Frontapp Manufacturing ERP API
+title: Frontapp MCP Server
+description:
+  MCP server for the Front customer-communication API (conversations, messages, tags,
+  inboxes, teammates)
 repository: https://github.com/dougborg/frontapp-openapi-client
 dockerfile_path: frontapp_mcp_server/Dockerfile
 version: 0.1.0
@@ -206,12 +208,12 @@ license: MIT
 author: Doug Borg
 tags:
   - conversations
-  - erp
-  - statuses
-  - conversations
+  - messaging
+  - customer-support
+  - shared-inbox
 categories:
   - business
-  - conversations
+  - communications
 build_type: docker-built # Docker will build and maintain
 ```
 

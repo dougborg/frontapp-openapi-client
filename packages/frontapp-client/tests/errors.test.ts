@@ -77,8 +77,8 @@ describe('Error Classes', () => {
 
     it('should store validation details', () => {
       const details = [
-        { field: 'name', message: 'Name is required' },
-        { field: 'sku', message: 'SKU must be unique', code: 'unique' },
+        { field: 'subject', message: 'Subject is required' },
+        { field: 'tags', message: 'Tag ID must be unique', code: 'unique' },
       ];
       const error = new ValidationError('Validation failed', { details });
       expect(error.details).toEqual(details);

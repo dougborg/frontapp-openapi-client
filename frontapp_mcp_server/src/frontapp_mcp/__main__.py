@@ -23,7 +23,10 @@ from frontapp_mcp.server import main
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Frontapp MCP Server - Manufacturing ERP tools for AI assistants"
+        description=(
+            "Frontapp MCP Server — Front API tools for AI assistants "
+            "(conversations, messages, tags, inboxes, teammates)"
+        )
     )
     parser.add_argument(
         "--transport",
