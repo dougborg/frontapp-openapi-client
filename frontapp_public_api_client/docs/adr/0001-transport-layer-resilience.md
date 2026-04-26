@@ -42,7 +42,7 @@ Specifically:
   changes
 
 Implementation in
-[frontapp_client.py](../../frontapp_public_api_client/frontapp_client.py):
+[frontapp_client.py](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/frontapp_client.py):
 
 ```python
 class ResilientAsyncTransport:
@@ -174,7 +174,8 @@ class RetryMiddleware:
 
 - [httpx Transports Documentation](https://www.python-httpx.org/advanced/#custom-transports)
 - [httpx-retries Library](https://github.com/karpetrosyan/httpx-retries)
-- [`frontapp_client.py`](../../frontapp_client.py) — implementation
+- [`frontapp_client.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/frontapp_client.py)
+  — implementation
 - [ADR-003: Transparent Pagination](0003-transparent-pagination.md) — pagination built
   on this transport stack
 - [ADR-006: Response Unwrapping Utilities](0006-response-unwrapping-utilities.md) —

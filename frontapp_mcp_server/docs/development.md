@@ -360,9 +360,9 @@ This allows testing `_update_conversation_impl` directly with mocks.
 - **mcp-hmr GitHub**: https://github.com/mizchi/mcp-hmr
 - **MCP Specification**: https://modelcontextprotocol.io
 - **Project README**:
-  [../frontapp_mcp_server/README.md](../../frontapp_mcp_server/README.md)
+  [frontapp_mcp_server/README.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/README.md)
 - **Testing Guide**:
-  [Client Testing Guide](../../frontapp_public_api_client/docs/testing.md)
+  [Client Testing Guide](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/testing.md)
 
 ## Getting Help
 

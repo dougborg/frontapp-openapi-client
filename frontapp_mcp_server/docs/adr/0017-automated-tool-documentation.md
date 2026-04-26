@@ -283,9 +283,9 @@ tool responses are small JSON objects and a Pydantic projection model
 ## References
 
 - [ADR-0016: Tool Interface Pattern](0016-tool-interface-pattern.md)
-- [ADR-004: Defer Observability to httpx](../../../frontapp_public_api_client/docs/adr/0004-defer-observability-to-httpx.md)
-- [`scripts/generate_tools_json.py`](../../../scripts/generate_tools_json.py) — metadata
-  generator
-- [`frontapp_mcp/resources/help.py`](../../src/frontapp_mcp/resources/help.py) — help
-  Markdown
+- [ADR-004: Defer Observability to httpx](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/adr/0004-defer-observability-to-httpx.md)
+- [`scripts/generate_tools_json.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/scripts/generate_tools_json.py)
+  — metadata generator
+- [`frontapp_mcp/resources/help.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/src/frontapp_mcp/resources/help.py)
+  — help Markdown
 - [Google Style Docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)

@@ -19,8 +19,10 @@ package.
 
 ## Quick Links
 
-- **[Main Repository README](../../README.md)** - Project overview
-- **[Contributing Guide](../../docs/CONTRIBUTING.md)** - How to contribute
+- **[Main Repository README](https://github.com/dougborg/frontapp-openapi-client/blob/main/README.md)** -
+  Project overview
+- **[Contributing Guide](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/CONTRIBUTING.md)** -
+  How to contribute
 - **[API Documentation](https://dougborg.github.io/frontapp-openapi-client/)** - Live
   docs site
 
@@ -28,5 +30,5 @@ package.
 
 This monorepo also contains:
 
-- **[frontapp-mcp-server](../../frontapp_mcp_server/docs/README.md)** - MCP server for
-  Claude Code integration
+- **[frontapp-mcp-server](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/docs/README.md)** -
+  MCP server for Claude Code integration

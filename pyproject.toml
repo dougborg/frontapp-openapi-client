@@ -472,7 +472,7 @@ validate-openapi-redocly = "npx @redocly/cli lint docs/frontapp-openapi.yaml"
 # -----------------------------------------------------------------------------
 # Documentation Tasks
 # -----------------------------------------------------------------------------
-docs-build = "mkdocs build"
+docs-build = "mkdocs build --strict"
 docs-clean = "rm -rf site"
 docs-serve = "mkdocs serve"
 docs-autobuild = "mkdocs serve --watch docs --watch frontapp_public_api_client"

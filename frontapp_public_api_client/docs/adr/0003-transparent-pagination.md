@@ -246,5 +246,5 @@ Auto-pagination: reached max_items=500, stopping
 - [ADR-006: Response Unwrapping Utilities](0006-response-unwrapping-utilities.md) —
   `unwrap(response)` + `getattr(..., "field_results")`
 - [Front pagination docs](https://dev.frontapp.com/docs/pagination)
-- [`helpers/conversations.py`](../../helpers/conversations.py) — current manual cursor
-  support
+- [`helpers/conversations.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/helpers/conversations.py)
+  — current manual cursor support

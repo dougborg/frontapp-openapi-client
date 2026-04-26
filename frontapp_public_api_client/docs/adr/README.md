@@ -36,5 +36,5 @@ We use the format proposed by Michael Nygard in
 
 - [Testing Guide](../testing.md)
 - [Client Guide](../guide.md)
-- [Contributing Guide](../../../docs/CONTRIBUTING.md)
-- [Monorepo ADRs](../../../docs/adr/README.md)
+- [Contributing Guide](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/CONTRIBUTING.md)
+- [Monorepo ADRs](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/adr/README.md)

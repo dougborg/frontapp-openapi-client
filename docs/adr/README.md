@@ -5,9 +5,9 @@ This directory contains Architecture Decision Records (ADRs) for
 
 For package-specific ADRs, see:
 
-- **[Client ADRs](../../frontapp_public_api_client/docs/adr/README.md)** -
+- **[Client ADRs](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/adr/README.md)** -
   `frontapp-openapi-client` package decisions
-- **[MCP Server ADRs](../../frontapp_mcp_server/docs/adr/README.md)** -
+- **[MCP Server ADRs](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/docs/adr/README.md)** -
   `frontapp-mcp-server` package decisions
 
 ## What is an ADR?
@@ -69,9 +69,10 @@ ensure ordering.
 
 ## Related Documentation
 
-- [Client ADRs](../../frontapp_public_api_client/docs/adr/README.md) - Client package
-  ADRs
-- [MCP Server ADRs](../../frontapp_mcp_server/docs/adr/README.md) - MCP server package
-  ADRs
+- [Client ADRs](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/adr/README.md) -
+  Client package ADRs
+- [MCP Server ADRs](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/docs/adr/README.md) -
+  MCP server package ADRs
 - [Contributing Guide](../CONTRIBUTING.md) - Contribution guidelines
-- [README](../../README.md) - Project overview and quick start
+- [README](https://github.com/dougborg/frontapp-openapi-client/blob/main/README.md) -
+  Project overview and quick start

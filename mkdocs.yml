@@ -125,6 +125,15 @@ markdown_extensions:
       custom_checkbox: true
   - pymdownx.tilde
 
+# Exclude top-level meta-readmes (which describe the docs folder for repo
+# readers) from the site build. mkdocs would otherwise warn about them
+# conflicting with the corresponding ``index.md`` (which is the actual site
+# content). Globs are anchored so deeper README.md files (e.g.
+# ``client/adr/README.md``) stay included.
+exclude_docs: |
+  /README.md
+  /mcp-server/README.md
+
 nav:
   - Home: index.md
   - Python Client:

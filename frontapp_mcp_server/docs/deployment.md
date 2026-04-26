@@ -369,15 +369,15 @@ After PR is merged:
 
 ## Related Documentation
 
-- **Main Release Guide**: [docs/RELEASE.md](../docs/RELEASE.md) - Monorepo release
-  process
 - **Monorepo Semantic-Release**:
-  [docs/MONOREPO_SEMANTIC_RELEASE.md](../docs/MONOREPO_SEMANTIC_RELEASE.md) -
+  [docs/MONOREPO_SEMANTIC_RELEASE.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/MONOREPO_SEMANTIC_RELEASE.md) -
   Comprehensive guide
-- **Contributing**: [docs/CONTRIBUTING.md](../docs/CONTRIBUTING.md) - Commit message
-  format
-- **MCP Documentation Index**: [docs/mcp-server/README.md](../docs/mcp-server/README.md)
-  \- All MCP documentation
+- **Contributing**:
+  [docs/CONTRIBUTING.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/CONTRIBUTING.md) -
+  Commit message format
+- **MCP Documentation Index**:
+  [frontapp_mcp_server/docs/README.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/docs/README.md) -
+  All MCP documentation
 
 ## Related Links
 

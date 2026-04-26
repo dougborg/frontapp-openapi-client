@@ -255,16 +255,6 @@ class FrontappClient(AuthenticatedClient):
         )
 ```
 
-### Examples Provided
-
-Both patterns documented:
-
-- `examples/basic_usage.py` - Async examples
-- `examples/sync_usage.py` - Sync examples
-
 ## References
 
 - [httpx Async Support](https://www.python-httpx.org/async/)
-- [examples/basic_usage.py](../../examples/basic_usage.py)
-- [examples/sync_usage.py](../../examples/sync_usage.py)
--
