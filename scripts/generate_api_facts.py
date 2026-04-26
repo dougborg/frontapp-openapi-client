@@ -16,11 +16,20 @@ facts agents would otherwise rediscover by walking the generated tree:
       (``helpers/<resource>.py``) or domain projection
       (``domain/<resource>.py``)?
 
-The generator imports each module dynamically and inspects:
+The generator reads each module file with ``ast.parse`` (no import) and
+extracts:
 
-    - ``_get_kwargs()`` for ``method`` and ``url``
-    - ``_parse_response`` annotations for the parsed response type
-    - The response model class for a ``field_results`` attribute
+    - the ``"method"`` and ``"url"`` keys from ``_get_kwargs``'s ``_kwargs``
+      dict literal
+    - ``_parse_response``'s return annotation, walked as an AST union
+    - the ``field_results`` attribute on the response model class — looked up
+      by snake-casing the class name and AST-scanning ``models/<name>.py``
+
+Imports were ~75% of total runtime in the previous import-based design (~233
+endpoint modules, plus ``models/__init__.py``'s 480 re-exports building 420
+attrs classes); AST parsing is ~50x faster on the hot loop and runs every
+``agent-check`` / ``check`` / ``full-check`` invocation, so the saved time
+compounds during agent development.
 
 Run ``uv run poe facts`` to regenerate. Run ``uv run poe facts-check`` in CI
 to fail the build if the file has drifted from the generated tree.
@@ -34,22 +43,25 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import importlib
-import inspect
+import ast
 import re
 import subprocess
 import sys
 import typing as t
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from functools import cache
 from pathlib import Path
 
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-API_PACKAGE = "frontapp_public_api_client.api"
-HELPERS_DIR = REPO_ROOT / "frontapp_public_api_client" / "helpers"
-DOMAIN_DIR = REPO_ROOT / "frontapp_public_api_client" / "domain"
+CLIENT_DIR = REPO_ROOT / "frontapp_public_api_client"
+API_DIR = CLIENT_DIR / "api"
+MODELS_DIR = CLIENT_DIR / "models"
+HELPERS_DIR = CLIENT_DIR / "helpers"
+DOMAIN_DIR = CLIENT_DIR / "domain"
 OUTPUT_PATH = REPO_ROOT / "docs" / "api-facts.yaml"
 
 # Module-name quirks to flag for agent attention.
@@ -115,104 +127,251 @@ def _categorize(module_name: str, method: str) -> str:
     return "other"
 
 
-def _detect_list_shape(
-    module_name: str, response_cls: type | None, category: str
-) -> str:
-    if category in {"create", "update", "delete"}:
-        return "mutation"
-    if category == "get":
-        return "single"
-    if category == "list":
-        if response_cls is None:
-            return "single"
-        annotations = getattr(response_cls, "__annotations__", {})
-        if "field_results" in annotations:
-            return "field_results"
-        # Some list endpoints return the response as a top-level list[Foo].
-        # In that case openapi-python-client doesn't make a wrapper class —
-        # the parsed type is ``list[...]`` directly. Detect via response type
-        # name starting with "list[" or being a builtin list.
-        return "raw_array"
-    return "single"
-
-
 def _detect_quirks(module_name: str) -> list[str]:
     return [
         name for name, pattern in QUIRK_PATTERNS.items() if pattern.search(module_name)
     ]
 
 
-def _resolve_response_type(
-    parse_response_fn: t.Callable[..., t.Any],
-) -> tuple[str | None, type | None]:
-    """Return ``(type_name, type_object)`` for the parsed response.
+# ---------------------------------------------------------------------------
+# AST extraction (replaces the previous import + inspect-based design)
+# ---------------------------------------------------------------------------
 
-    Reads ``_parse_response``'s return annotation, which is something like
-    ``ConversationResponse | None`` or ``list[TeammateResponse] | None``.
-    Strips the ``| None`` / ``Optional`` and returns the meaningful side.
+
+def _find_function(tree: ast.Module, name: str) -> ast.FunctionDef | None:
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    return None
+
+
+def _extract_method_and_path(
+    get_kwargs: ast.FunctionDef,
+) -> tuple[str | None, str | None]:
+    """Pull method and url from the ``_kwargs`` dict literal in ``_get_kwargs``.
+
+    The function looks like:
+
+        def _get_kwargs(...) -> dict[str, Any]:
+            ...
+            _kwargs: dict[str, Any] = {
+                "method": "post",
+                "url": "/conversations",            # plain literal
+                # or "url": "/foo/{id}".format(id=...) for path-param URLs
+            }
+            ...
+            return _kwargs
+
+    We walk for ``Dict`` literals carrying both ``"method"`` and ``"url"`` and
+    ignore the empty ``params``/``headers`` dicts that some endpoints set up
+    earlier in the body.
     """
-    try:
-        sig = inspect.signature(parse_response_fn)
-    except (TypeError, ValueError):
-        return None, None
-    return_anno = sig.return_annotation
-    if return_anno is inspect.Signature.empty:
-        return None, None
-
-    # The annotation is a string (PEP 563) or a real type. Resolve via __module__'s globals.
-    module = inspect.getmodule(parse_response_fn)
-    if module is None:
-        return None, None
-    if isinstance(return_anno, str):
-        try:
-            return_anno = eval(return_anno, module.__dict__)
-        except Exception:
-            return None, None
-
-    args = t.get_args(return_anno)
-    candidate = None
-    for arg in args:
-        if arg is type(None):
+    for node in ast.walk(get_kwargs):
+        if not isinstance(node, ast.Dict):
             continue
-        candidate = arg
-        break
-    if candidate is None:
-        candidate = return_anno
+        method: str | None = None
+        url: str | None = None
+        for key, value in zip(node.keys, node.values, strict=False):
+            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                continue
+            if key.value == "method":
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    method = value.value
+            elif key.value == "url":
+                url = _extract_url_value(value)
+        if method is not None and url is not None:
+            return method, url
+    return None, None
 
-    # If the candidate is list[X], try to keep the wrapper info.
-    origin = t.get_origin(candidate)
-    if origin in (list, t.List):  # noqa: UP006 — keep both for older typings
-        inner = t.get_args(candidate)
-        inner_name = getattr(inner[0], "__name__", str(inner[0])) if inner else "Any"
-        return f"list[{inner_name}]", None
-    name = getattr(candidate, "__name__", str(candidate))
-    return name, candidate if isinstance(candidate, type) else None
+
+def _extract_url_value(value: ast.expr) -> str | None:
+    """Return the URL template string from a Dict ``"url"`` value node.
+
+    Two forms appear in generated code:
+
+    - ``"/conversations"`` — ast.Constant
+    - ``"/conversations/{id}".format(id=...)`` —
+      ast.Call(func=Attribute(value=Constant, attr='format'))
+
+    Returning the template literal preserves ``{id}`` placeholders; calling the
+    function would interpolate any spec-example default like ``cnv_123`` into
+    the URL.
+    """
+    if isinstance(value, ast.Constant) and isinstance(value.value, str):
+        return value.value
+    if isinstance(value, ast.Call):
+        func = value.func
+        if isinstance(func, ast.Attribute) and func.attr == "format":
+            base = func.value
+            if isinstance(base, ast.Constant) and isinstance(base.value, str):
+                return base.value
+    return None
 
 
-def _read_endpoint(tag: str, module_stem: str) -> Endpoint | None:
-    full_module = f"{API_PACKAGE}.{tag}.{module_stem}"
-    # Import failure means a real bug in the generated code — surface it
-    # rather than silently dropping the endpoint, which would leave gaps in
-    # the agent-facing index without any signal.
-    mod = importlib.import_module(full_module)
+def _resolve_response_type(
+    parse_response: ast.FunctionDef,
+) -> tuple[str | None, str | None]:
+    """Extract ``(display_type, model_class_name)`` from ``_parse_response``'s
+    return annotation.
 
-    get_kwargs = getattr(mod, "_get_kwargs", None)
-    parse_response = getattr(mod, "_parse_response", None)
+    The annotation is one of:
+
+    - ``ConversationResponse | None``                  → ``("ConversationResponse", "ConversationResponse")``
+    - ``Optional[ConversationResponse]``               → same
+    - ``Union[Any, ConversationResponse, None]``       → ``("Any", "Any")`` (model lookup will miss → raw_array)
+    - ``Any | ConversationResponse | None``            → ``("Any", "Any")``
+    - ``list[TeammateResponse] | None``                → ``("list[TeammateResponse]", None)``
+    - missing / unparseable                            → ``(None, None)``
+
+    The "first non-None arm wins" rule mirrors the previous import-based
+    behavior. When openapi-python-client emits ``Any | RealResponse | None``
+    for endpoints with non-200 fallback bodies, the ``Any`` short-circuits the
+    ``field_results`` lookup — the model_class_name comes back as ``"Any"``,
+    no ``models/any.py`` exists, so the endpoint correctly classifies as
+    ``raw_array``. Callers should not need to special-case ``Any``.
+    """
+    if parse_response.returns is None:
+        return None, None
+
+    arms = [
+        a
+        for a in _flatten_union_arms(parse_response.returns)
+        if not (isinstance(a, ast.Constant) and a.value is None)
+    ]
+    if not arms:
+        return None, None
+
+    first = arms[0]
+
+    # list[X] / List[X] — wrapper-less raw arrays.
+    if isinstance(first, ast.Subscript):
+        base = first.value
+        if isinstance(base, ast.Name) and base.id in {"list", "List"}:
+            inner = ast.unparse(first.slice)
+            return f"list[{inner}]", None
+        if isinstance(base, ast.Name):
+            return base.id, None
+        return ast.unparse(first), None
+
+    # Bare class name — most endpoints.
+    if isinstance(first, ast.Name):
+        return first.id, first.id
+
+    return ast.unparse(first), None
+
+
+def _flatten_union_arms(node: ast.expr) -> Iterator[ast.expr]:
+    """Yield arms of a union annotation in source order.
+
+    Handles ``X | Y | Z`` (BinOp), ``Optional[X]``, and ``Union[X, Y]`` —
+    everything openapi-python-client emits as a return annotation in this
+    project. Non-union annotations yield themselves once.
+    """
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        yield from _flatten_union_arms(node.left)
+        yield from _flatten_union_arms(node.right)
+        return
+    if isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name):
+        if node.value.id == "Optional":
+            yield from _flatten_union_arms(node.slice)
+            yield ast.Constant(value=None)
+            return
+        if node.value.id == "Union":
+            slice_ = node.slice
+            if isinstance(slice_, ast.Tuple):
+                for elt in slice_.elts:
+                    yield from _flatten_union_arms(elt)
+                return
+    yield node
+
+
+def _detect_list_shape(model_class_name: str | None, category: str) -> str:
+    if category in {"create", "update", "delete"}:
+        return "mutation"
+    if category == "get":
+        return "single"
+    if category == "list":
+        # ``model_class_name is None`` covers list[X] returns and unparseable
+        # annotations — the previous import-based code returned "single" in
+        # both cases. Preserve that to keep the YAML byte-identical.
+        if model_class_name is None:
+            return "single"
+        if _model_has_field_results(model_class_name):
+            return "field_results"
+        return "raw_array"
+    return "single"
+
+
+def _camel_to_snake(name: str) -> str:
+    """``ConversationResponse`` → ``conversation_response``.
+
+    Matches openapi-python-client's filename convention:
+    insert ``_`` before any uppercase that isn't at position 0, and before
+    any digit run that follows a letter.
+    """
+    out: list[str] = []
+    for i, ch in enumerate(name):
+        if i > 0:
+            prev = name[i - 1]
+            if ch.isupper() or (ch.isdigit() and prev.isalpha()):
+                out.append("_")
+        out.append(ch.lower())
+    return "".join(out)
+
+
+@cache
+def _model_has_field_results(model_name: str) -> bool:
+    """Check whether ``models/<snake_case_model>.py`` declares a
+    ``field_results`` class attribute.
+
+    openapi-python-client renames spec fields starting with ``_`` to
+    ``field_*`` (so ``_results`` becomes ``field_results``). The attribute
+    appears as a class-level ``AnnAssign`` on the attrs ``@_attrs_define``
+    response wrapper. Caching matters: 14 conversation endpoints all reference
+    ``ConversationResponse`` (and other resources have similar fan-out).
+    """
+    model_path = MODELS_DIR / f"{_camel_to_snake(model_name)}.py"
+    if not model_path.exists():
+        return False
+    try:
+        tree = ast.parse(model_path.read_text(), filename=str(model_path))
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "field_results"
+        ):
+            return True
+    return False
+
+
+def _read_endpoint(tag: str, module_stem: str) -> Endpoint:
+    """Parse ``api/<tag>/<module_stem>.py`` and extract endpoint facts.
+
+    The hot loop of this script — runs ~233 times per regen. Failures are
+    raised loudly: a generated module without ``_get_kwargs`` /
+    ``_parse_response`` would mean the codegen contract changed, and silently
+    dropping the endpoint would leave gaps in the agent-facing index.
+    """
+    module_path = API_DIR / tag / f"{module_stem}.py"
+    tree = ast.parse(module_path.read_text(), filename=str(module_path))
+
+    get_kwargs = _find_function(tree, "_get_kwargs")
+    parse_response = _find_function(tree, "_parse_response")
     if get_kwargs is None or parse_response is None:
-        # An openapi-python-client module without these is genuinely
-        # surprising — every generated endpoint module defines both. Fail
-        # loud so the next regeneration that breaks this contract is caught.
-        raise RuntimeError(f"{full_module} is missing _get_kwargs or _parse_response")
+        raise RuntimeError(f"{module_path} is missing _get_kwargs or _parse_response")
 
-    method, url = _extract_method_and_path(mod, get_kwargs)
+    method, url = _extract_method_and_path(get_kwargs)
     if method is None or url is None:
         raise RuntimeError(
-            f"could not extract method/url from {full_module}._get_kwargs"
+            f"could not extract method/url from {module_path}._get_kwargs"
         )
 
-    response_type, response_cls = _resolve_response_type(parse_response)
+    response_type, model_class_name = _resolve_response_type(parse_response)
     category = _categorize(module_stem, method)
-    list_shape = _detect_list_shape(module_stem, response_cls, category)
+    list_shape = _detect_list_shape(model_class_name, category)
     quirks = _detect_quirks(module_stem)
 
     return Endpoint(
@@ -224,37 +383,6 @@ def _read_endpoint(tag: str, module_stem: str) -> Endpoint | None:
         category=category,
         quirks=quirks,
     )
-
-
-def _extract_method_and_path(
-    mod: t.Any, get_kwargs: t.Callable[..., t.Any]
-) -> tuple[str | None, str | None]:
-    """Pull method and url from ``_get_kwargs``.
-
-    Source-extract the URL template (e.g. ``/conversations/{conversation_id}``)
-    so path-param placeholders survive — calling ``_get_kwargs`` would
-    interpolate any spec-example default like ``cnv_123`` into the URL,
-    producing useless data.
-    """
-    src = inspect.getsource(mod)
-    method_m = re.search(r'"method"\s*:\s*"([a-z]+)"', src)
-    method = method_m.group(1) if method_m else None
-
-    # The url is one of:
-    #   "url": "/conversations"
-    #   "url": "/conversations/{conversation_id}/followers".format(...)
-    # Capture the template literal in either form.
-    url_m = re.search(
-        r'"url"\s*:\s*"([^"]+)"',  # plain literal
-        src,
-    )
-    if not url_m:
-        url_m = re.search(
-            r'"url"\s*:\s*"([^"]+)"\.format',  # template before .format(...)
-            src,
-        )
-    url = url_m.group(1) if url_m else None
-    return method, url
 
 
 def _wiring_status(kind: str, tag: str) -> dict[str, t.Any]:
@@ -313,9 +441,6 @@ def _spec_tag_label(tag_dir: str) -> str:
 
 
 def collect_facts() -> dict[str, t.Any]:
-    api_root = importlib.import_module(API_PACKAGE)
-    api_path = Path(api_root.__file__).parent
-
     tags: dict[str, dict[str, t.Any]] = {}
     summary = {
         "list_endpoints_with_field_results": [],
@@ -326,7 +451,7 @@ def collect_facts() -> dict[str, t.Any]:
         "tags_with_domain": [],
     }
 
-    for tag_dir in sorted(p for p in api_path.iterdir() if p.is_dir()):
+    for tag_dir in sorted(p for p in API_DIR.iterdir() if p.is_dir()):
         if tag_dir.name.startswith("_"):
             continue
         tag = tag_dir.name
@@ -335,17 +460,16 @@ def collect_facts() -> dict[str, t.Any]:
             if module_path.suffix != ".py" or module_path.name == "__init__.py":
                 continue
             ep = _read_endpoint(tag, module_path.stem)
-            if ep is not None:
-                endpoints.append(ep)
-                ref = f"{tag}.{ep.module}"
-                if ep.list_shape == "field_results":
-                    summary["list_endpoints_with_field_results"].append(ref)
-                elif ep.list_shape == "raw_array":
-                    summary["list_endpoints_returning_raw_array"].append(ref)
-                if ep.list_shape == "mutation":
-                    summary["mutations"].append(ref)
-                if ep.quirks:
-                    summary["module_name_quirks"].append(ref)
+            endpoints.append(ep)
+            ref = f"{tag}.{ep.module}"
+            if ep.list_shape == "field_results":
+                summary["list_endpoints_with_field_results"].append(ref)
+            elif ep.list_shape == "raw_array":
+                summary["list_endpoints_returning_raw_array"].append(ref)
+            if ep.list_shape == "mutation":
+                summary["mutations"].append(ref)
+            if ep.quirks:
+                summary["module_name_quirks"].append(ref)
 
         helper = _wiring_status("helper", tag)
         domain = _wiring_status("domain", tag)
