@@ -218,17 +218,24 @@ def _resolve_response_type(
 
     - ``ConversationResponse | None``                  → ``("ConversationResponse", "ConversationResponse")``
     - ``Optional[ConversationResponse]``               → same
-    - ``Union[Any, ConversationResponse, None]``       → ``("Any", "Any")`` (model lookup will miss → raw_array)
-    - ``Any | ConversationResponse | None``            → ``("Any", "Any")``
+    - ``Union[Any, ConversationResponse, None]``       → ``("ConversationResponse", "ConversationResponse")``
+    - ``Any | ConversationResponse | None``            → ``("ConversationResponse", "ConversationResponse")``
+    - ``Any | None``                                   → ``("Any", "Any")``
     - ``list[TeammateResponse] | None``                → ``("list[TeammateResponse]", None)``
     - missing / unparseable                            → ``(None, None)``
 
-    The "first non-None arm wins" rule mirrors the previous import-based
-    behavior. When openapi-python-client emits ``Any | RealResponse | None``
-    for endpoints with non-200 fallback bodies, the ``Any`` short-circuits the
-    ``field_results`` lookup — the model_class_name comes back as ``"Any"``,
-    no ``models/any.py`` exists, so the endpoint correctly classifies as
-    ``raw_array``. Callers should not need to special-case ``Any``.
+    Concrete-class arms win over ``Any``: openapi-python-client emits
+    ``Any | RealResponse | None`` when the spec has a non-200 fallback (e.g.
+    a 301 redirect modeled as ``Any``) alongside the real success type. The
+    runtime parsed body on a 200 IS ``RealResponse``, so the classifier
+    should hand callers the wrapper class — not the ``Any`` arm whose only
+    purpose is to type the redirect path. ``Any | None`` (no concrete arm)
+    falls through to ``"Any"`` unchanged.
+
+    Pre-#49 behavior was "first non-None arm wins", which picked ``Any``
+    over ``RealResponse`` and produced a misleading ``raw_array``
+    classification for many list endpoints whose runtime parsed type
+    actually has ``field_results``.
     """
     if parse_response.returns is None:
         return None, None
@@ -241,7 +248,9 @@ def _resolve_response_type(
     if not arms:
         return None, None
 
-    first = arms[0]
+    # Prefer a concrete-class arm over `Any` — see docstring above.
+    non_any = [a for a in arms if not (isinstance(a, ast.Name) and a.id == "Any")]
+    first = non_any[0] if non_any else arms[0]
 
     # list[X] / List[X] — wrapper-less raw arrays.
     if isinstance(first, ast.Subscript):

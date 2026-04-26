@@ -13,11 +13,9 @@ Notes:
   full replacement, so callers must re-supply the body even when only changing
   metadata.
 - ``list_for_conversation`` returns raw attrs ``MessageResponse`` items pulled
-  out of the standard ``field_results`` wrapper. (``api-facts.yaml`` classifies
-  this endpoint as ``raw_array`` due to an "Any takes precedence" quirk in the
-  classifier, but the runtime parsed type is
-  ``ListConversationDraftsResponse200`` with ``field_results: list[MessageResponse]``
-  — same shape as every other Front list endpoint.)
+  out of the standard ``field_results`` wrapper of
+  ``ListConversationDraftsResponse200`` — same shape as every other Front
+  list endpoint.
 - ``attachments`` is accepted as a typed pass-through (``list[File] | None``)
   on all three mutation helpers; the actual upload mechanism is unresolved
   upstream and tracked in #12. Callers who already have ``File`` objects (e.g.
@@ -47,11 +45,7 @@ class Drafts(Base):
     ) -> builtins.list[MessageResponse]:
         """List drafts on a conversation. Returns raw attrs ``MessageResponse``s.
 
-        Despite api-facts.yaml's ``raw_array`` classification (a known
-        classifier quirk where ``Any`` takes precedence over the real wrapper
-        in the union), the runtime parsed type is
-        ``ListConversationDraftsResponse200`` with the standard ``field_results``
-        wrapper. Callers wanting a domain projection should
+        Callers wanting a domain projection should
         ``Draft.model_validate(item.to_dict())`` per item.
         """
         from frontapp_public_api_client.api.drafts import list_conversation_drafts

@@ -93,7 +93,7 @@ class TestDraftDomain:
 
 
 # ---------------------------------------------------------------------------
-# Helper: client.drafts.list_for_conversation (raw_array unwrap)
+# Helper: client.drafts.list_for_conversation
 # ---------------------------------------------------------------------------
 
 
@@ -125,12 +125,9 @@ class TestDraftsHelper:
     async def test_list_for_conversation_unwraps_field_results(
         self, mock_api_credentials
     ):
-        """list_conversation_drafts returns the standard field_results wrapper.
-
-        Despite api-facts.yaml's raw_array classification (a known classifier
-        quirk), the runtime parsed type is ListConversationDraftsResponse200
-        with the field_results wrapper.
-        """
+        """list_conversation_drafts returns the standard field_results wrapper
+        of ListConversationDraftsResponse200, like every other Front list
+        endpoint."""
         from frontapp_public_api_client import FrontappClient
 
         client = FrontappClient(**mock_api_credentials)

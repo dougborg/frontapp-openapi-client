@@ -121,11 +121,9 @@ Common mistakes to avoid:
   use `getattr(parsed, "field_results", None) or []` when unwrapping list responses.
   Which list endpoints use `field_results` vs return raw arrays is enumerated in
   `docs/api-facts.yaml` under `summary.list_endpoints_with_field_results` and
-  `summary.list_endpoints_returning_raw_array` — read that file rather than guessing by
-  tag name. Notably `/teammates` and `/tags` use `field_results` (despite older
-  intuition); the raw-array set is small and includes some conversation sub-resource
-  lists plus `statuses.list_company_ticket_statuses` — see the facts file for the
-  current authoritative list.
+  `summary.list_endpoints_returning_raw_array`. Front's spec is currently
+  all-`field_results` (the raw-array set is empty); the facts file is the authoritative
+  source if that ever changes.
 - **Front error responses have no single schema** — Front doesn't define a canonical
   `ErrorResponse` type; each endpoint models errors inline. `utils.unwrap()` dispatches
   on HTTP status code, not on parsed-type `isinstance` checks. Don't try to import an
