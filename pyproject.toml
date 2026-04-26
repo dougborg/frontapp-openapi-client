@@ -464,7 +464,8 @@ test-schema = "pytest -m schema_validation"  # Run schema validation tests only 
 # -----------------------------------------------------------------------------
 vendor-spec = "python scripts/vendor_spec.py"
 regenerate-client = "python scripts/regenerate_client.py"
-regenerate-all = ["vendor-spec", "regenerate-client"]
+# Always regenerate facts after the client so the index never drifts.
+regenerate-all = ["vendor-spec", "regenerate-client", "facts"]
 validate-openapi = "openapi-spec-validator docs/frontapp-openapi.yaml"
 validate-openapi-redocly = "npx @redocly/cli lint docs/frontapp-openapi.yaml"
 
@@ -485,14 +486,22 @@ pre-commit-run = "pre-commit run --all-files"
 pre-commit-update = "pre-commit autoupdate"
 
 # -----------------------------------------------------------------------------
+# API facts index — machine-readable knowledge source for AI agents.
+# `facts` regenerates `docs/api-facts.yaml` from the generated tree.
+# `facts-check` is the CI gate: it fails if the file has drifted.
+# -----------------------------------------------------------------------------
+facts = "python scripts/generate_api_facts.py"
+facts-check = "python scripts/generate_api_facts.py --check"
+
+# -----------------------------------------------------------------------------
 # Combined Workflow Tasks
 # -----------------------------------------------------------------------------
 
 # Validation Tiers (for agent workflows)
 quick-check = ["format-check", "lint-ruff"]                              # Tier 1: Fast feedback (~5-10s)
-agent-check = ["format-check", "lint-ruff", "typecheck"]                # Tier 2: Pre-commit (~10-15s)
-check = ["format-check", "lint", "test"]                                 # Tier 3: PR validation (~40s)
-full-check = ["format-check", "lint", "test", "docs-build"]             # Tier 4: Final validation (~50s)
+agent-check = ["format-check", "lint-ruff", "typecheck", "facts-check"] # Tier 2: Pre-commit (~10-15s)
+check = ["format-check", "lint", "test", "facts-check"]                  # Tier 3: PR validation (~40s)
+full-check = ["format-check", "lint", "test", "facts-check", "docs-build"]  # Tier 4: Final validation
 
 # Other combined workflows
 fix = ["format", "lint-ruff-fix"]
