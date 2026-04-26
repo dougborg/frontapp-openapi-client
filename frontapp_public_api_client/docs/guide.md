@@ -193,7 +193,6 @@ Hand-written Pydantic models live in `frontapp_public_api_client.domain`:
 
 - `Conversation`, `TeammateSummary`, `TagSummary`, `RecipientSummary`,
   `ConversationPageCursor`
-- `FrontappBaseModel` (frozen, ignores unknown fields)
 
 These are separate from the generated attrs models and are intended for business-logic
 code, validation, and ETL. Front timestamps are unix-seconds floats on the wire; domain

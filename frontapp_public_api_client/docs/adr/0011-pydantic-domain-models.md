@@ -40,7 +40,6 @@ frontapp_public_api_client/
 │                      # e.g. ConversationResponse, TagResponse,
 │                      # TeammateResponse, RecipientResponse (complete)
 └── domain/            # Pydantic models — business layer (hand-written)
-    ├── base.py          # FrontappBaseModel (frozen, ignores extras)
     ├── converters.py    # to_unset / unwrap_unset helpers
     ├── conversation.py  # Conversation + TeammateSummary + TagSummary
     │                    #              + RecipientSummary
