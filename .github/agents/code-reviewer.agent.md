@@ -240,11 +240,15 @@ Verify documentation:
 
 ```markdown
 ❌ Bad: "This is inefficient"
-✅ Good: "This creates an N+1 query. Consider fetching all products
+✅ Good: "This creates an N+1 query. Consider fetching all conversations
           in a single call and filtering in memory:
 
-          products = await list_conversations.asyncio_detailed(client=client)
-          filtered = [p for p in products.parsed.data if p.is_sellable]
+          response = await list_conversations.asyncio_detailed(
+              client=client, q='status:open'
+          )
+          parsed = unwrap(response)
+          conversations = getattr(parsed, 'field_results', None) or []
+          urgent = [c for c in conversations if any(t.name == 'urgent' for t in c.tags)]
           "
 ```
 
@@ -275,7 +279,7 @@ Use emoji for clarity:
 **❌ Wrong: Wrapping API methods for retries**
 
 ```python
-async def get_products_with_retry():
+async def get_conversations_with_retry():
     for i in range(3):
         try:
             return await list_conversations.asyncio(...)
@@ -286,8 +290,9 @@ async def get_products_with_retry():
 **✅ Right: Use FrontappClient (transport-layer resilience)**
 
 ```python
-async with FrontappClient() as client:
-    # Retries handled automatically
+async with FrontappClient(api_key="...") as client:
+    # Retries + rate-limit awareness handled automatically by the
+    # ResilientAsyncTransport in FrontappClient.
     response = await list_conversations.asyncio_detailed(client=client)
 ```
 
@@ -296,17 +301,17 @@ async with FrontappClient() as client:
 **❌ Wrong: Missing type hints**
 
 ```python
-def process_product(product):
-    return product.name
+def process_conversation(conv):
+    return conv.subject
 ```
 
 **✅ Right: Full type annotations**
 
 ```python
-from frontapp_public_api_client.domain.product import Product
+from frontapp_public_api_client.domain import Conversation
 
-def process_product(product: Product) -> str:
-    return product.name
+def process_conversation(conv: Conversation) -> str | None:
+    return conv.subject
 ```
 
 ### Error Handling Issues
@@ -335,17 +340,20 @@ except SpecificError as e:
 **❌ Wrong: N+1 queries**
 
 ```python
-for product_id in product_ids:
-    product = await get_product(product_id)  # Multiple API calls
-    process(product)
+for conversation_id in conversation_ids:
+    conv = await client.conversations.get(conversation_id)  # Multiple API calls
+    process(conv)
 ```
 
-**✅ Right: Batch fetch**
+**✅ Right: Batch via the list endpoint with a query**
 
 ```python
-products = await list_conversations(ids=product_ids)  # Single call
-for product in products:
-    process(product)
+# Fetch the relevant set in one call via Front search syntax.
+conversations = await client.conversations.list(
+    q="status:open inbox:support", limit=100
+)
+for conv in conversations:
+    process(conv)
 ```
 
 ## Review Checklist
@@ -489,20 +497,20 @@ When a review reveals a recurring mistake or a pattern worth codifying:
 1. **Be specific** - Provide actionable feedback
 1. **Be constructive** - Suggest solutions, not just problems
 1. **Verify tests** - Always run test suite
-1. **Check coverage** - Must maintain 87%+ on core logic
+1. **Check coverage** - Watch for regression in test coverage; the project's
+   coverage baseline will firm up as the test infrastructure issue lands.
 1. **Reference ADRs** - Ensure architectural compliance
 1. **Security first** - Flag any security concerns
 1. **Performance matters** - Look for inefficient patterns
 1. **Documentation required** - Public APIs need docs
 1. **Improve the system** - Codify recurring findings into project docs
-1. **Coordinate with agents** - Request fixes from specialists
 
-## Agent Coordination
+## Coordinating with other agents
 
-Work with specialized agents:
+For Claude Code sessions, point requesters at the appropriate sub-agent or skill:
 
-- `@agent-dev` - Request code fixes for issues found
-- `@agent-test` - Request test coverage improvements
-- `@agent-docs` - Request documentation updates
-- `@agent-plan` - Verify implementation matches plan
-- `@agent-coordinator` - Report on PR readiness for merge
+- Code change needed → `code-modernizer` agent (refactor) or `/new-vertical` skill (new resource)
+- Test coverage gaps → `tdd-specialist.agent.md` (Copilot) or `/write-tests` skill
+- Documentation gaps → `documentation-writer.agent.md` (Copilot) or `/generate-docs` skill
+- Branch readiness check → `pr-preparer` agent or `/pre-commit` skill
+- PR review-comment loop → `/review-pr` skill

@@ -30,17 +30,25 @@ Review all commits on this branch (vs main) for:
 
 ### 3. Generated File Integrity
 
-- If generated files (`api/**/*.py`, `models/**/*.py`, `client.py`) appear in the diff,
-  verify they came from regeneration (spec change + `uv run poe regenerate-client`), not
-  manual edits
-- If `docs/frontapp-openapi.yaml` was modified, verify that client was regenerated AND
-  pydantic models were regenerated (`uv run poe generate-pydantic`)
+- If generated files (`api/**/*.py`, `models/**/*.py`, `client.py`, `client_types.py`,
+  `errors.py`) appear in the diff, verify they came from regeneration (spec change +
+  `uv run poe regenerate-client`), not manual edits. The PreToolUse hook normally blocks
+  these; if they're present, someone went around it.
+- If `docs/frontapp-openapi.yaml` was modified, verify the client was regenerated and
+  `docs/api-facts.yaml` is up to date (`uv run poe facts`). The full pipeline is
+  `uv run poe regenerate-all`.
 
 ### 4. Coverage Check
 
-- Run `uv run poe test-coverage` and verify core logic maintains 87%+ coverage
-- New code has test coverage for both success and error paths
-- No test files with only happy-path assertions
+- Run `uv run poe test-coverage` and verify there's no regression vs. the current
+  baseline on `main`. The project's test infrastructure is still ramping up — until a
+  fixed coverage floor is set in
+  [issue #7](https://github.com/dougborg/frontapp-openapi-client/issues/7), the gate is
+  "no regression," not a hardcoded percentage.
+- New code has test coverage for both success and error paths (including the
+  `unwrap`-helper exception classes: `AuthenticationError`, `ValidationError`,
+  `RateLimitError`, `ServerError`, `APIError`).
+- No test files with only happy-path assertions.
 
 ### 5. Documentation
 

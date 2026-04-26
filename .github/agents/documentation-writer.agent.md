@@ -517,12 +517,12 @@ Documentation should improve every time it's touched:
 1. **Fix what you find** - Improve existing docs alongside new ones
 1. **Coordinate with agents** - Get reviews from specialists
 
-## Agent Coordination
+## Coordinating with other agents
 
-Work with specialized agents:
+For Claude Code sessions:
 
-- `@agent-dev` - Request docs for new features
-- `@agent-plan` - Document architectural decisions from planning
-- `@agent-test` - Document testing patterns and coverage
-- `@agent-review` - Get doc reviews for accuracy
-- `@agent-coordinator` - Coordinate documentation releases
+- Code change for new feature → `vertical-planner` then `/new-vertical` skill
+- Test patterns to document → `tdd-specialist.agent.md` (Copilot)
+- ADR-driven planning → `task-planner.agent.md` (Copilot)
+- Doc review → `/review` skill or `code-reviewer.agent.md` (Copilot)
+- Cookbook entries / MkDocs builds → `/generate-docs` skill
