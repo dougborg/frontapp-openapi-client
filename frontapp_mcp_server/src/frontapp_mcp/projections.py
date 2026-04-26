@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from frontapp_public_api_client.domain import Conversation
+from frontapp_public_api_client.domain import Conversation, Draft
 
 
 class ConversationSummary(BaseModel):
@@ -53,4 +53,51 @@ def to_summary(conv: Conversation) -> ConversationSummary:
     )
 
 
-__all__ = ["ConversationSummary", "to_summary"]
+class DraftSummary(BaseModel):
+    """Compact projection of a draft for LLM responses.
+
+    Strips the heavy ``MessageResponse`` shape down to what an LLM cares about
+    when reviewing a draft it just created or edited: id, subject, body,
+    recipient handles, version (for clobber-free re-edits), and timestamps.
+    """
+
+    id: str
+    subject: str | None = None
+    body: str | None = None
+    blurb: str | None = None
+    draft_mode: str | None = None
+    error_type: str | None = None
+    version: str | None = None
+    author_name: str | None = None
+    recipients: list[str] = Field(default_factory=list)
+    attachment_filenames: list[str] = Field(default_factory=list)
+    created_at: str | None = None
+
+
+def to_draft_summary(draft: Draft) -> DraftSummary:
+    """Project a ``Draft`` domain model to a ``DraftSummary``."""
+    author_name: str | None = None
+    if draft.author:
+        parts = [draft.author.first_name, draft.author.last_name]
+        author_name = " ".join(p for p in parts if p) or draft.author.username
+    return DraftSummary(
+        id=draft.id,
+        subject=draft.subject,
+        body=draft.body,
+        blurb=draft.blurb,
+        draft_mode=draft.draft_mode,
+        error_type=draft.error_type,
+        version=draft.version,
+        author_name=author_name,
+        recipients=[r.handle for r in draft.recipients if r.handle],
+        attachment_filenames=[a.filename for a in draft.attachments if a.filename],
+        created_at=draft.created_at.isoformat() if draft.created_at else None,
+    )
+
+
+__all__ = [
+    "ConversationSummary",
+    "DraftSummary",
+    "to_draft_summary",
+    "to_summary",
+]

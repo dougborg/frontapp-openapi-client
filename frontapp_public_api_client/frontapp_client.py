@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 if TYPE_CHECKING:
     from .helpers.conversations import Conversations
+    from .helpers.drafts import Drafts
 
 import httpx
 from dotenv import load_dotenv
@@ -1024,6 +1025,7 @@ class FrontappClient(AuthenticatedClient):
 
         # Domain helper instances (lazy-loaded via properties)
         self._conversations: Conversations | None = None
+        self._drafts: Drafts | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
         # Event hooks for observability - start with our defaults
@@ -1101,6 +1103,20 @@ class FrontappClient(AuthenticatedClient):
         if self._conversations is None:
             self._conversations = Conversations(self)
         return self._conversations
+
+    @property
+    def drafts(self) -> "Drafts":
+        """Ergonomic operations over Frontapp's draft endpoints.
+
+        Drafts are the safe-by-default outbound path: an agent creates the
+        draft, the human reviews in Front, and the human clicks send. There
+        is no programmatic ``send_draft`` — sending is human-in-the-loop.
+        """
+        from .helpers.drafts import Drafts
+
+        if self._drafts is None:
+            self._drafts = Drafts(self)
+        return self._drafts
 
     # Event hooks for observability
     async def _capture_pagination_metadata(self, response: httpx.Response) -> None:

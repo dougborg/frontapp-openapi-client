@@ -12,8 +12,9 @@ Produce a concrete, repo-grounded implementation plan for a new resource vertica
 vertical has highly stereotyped structure, but the resource-specific details (generated
 module names, list-response shape, presence of sub-resources) must be discovered
 up-front from the spec and the generated `api/` tree. Without this, mid-implementation
-surprises like the `reply_to_conversation` → `create_message_reply` module-name mismatch
-or `AddComment` → `CreateComment` model rename cost a full debug cycle.
+surprises like the `edit_draft` path being `/drafts/{message_id}/` (note: `message_id`
+not `draft_id`, and a trailing slash) or `AddComment` → `CreateComment` model rename
+cost a full debug cycle.
 
 You do **not** write code. Your output is a plan the human reviews before invoking
 `/new-vertical` or any code-writing agent.

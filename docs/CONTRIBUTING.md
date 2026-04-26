@@ -134,7 +134,7 @@ for monorepo versioning:
 git commit -m "feat(client): add Contacts domain helper"
 
 # Release MCP server package
-git commit -m "feat(mcp): implement reply_to_conversation tool"
+git commit -m "feat(mcp): implement create_draft_reply tool"
 
 # No release (documentation only)
 git commit -m "docs: update README with new examples"

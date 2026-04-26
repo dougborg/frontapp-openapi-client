@@ -34,26 +34,29 @@ option for future tools with wide or deeply-nested request bodies.
 
 ```python
 @mcp.tool(
-    name="reply_to_conversation",
+    name="create_draft_reply",
     description=(
-        "Send an outbound reply on an existing conversation. Uses the "
-        "channel the conversation was opened on. Two-step confirm."
+        "Create a draft reply on an existing conversation. The human reviews "
+        "the draft in Front and clicks send. Two-step confirm."
     ),
 )
-async def reply_to_conversation(
+async def create_draft_reply(
     context: Context,
     conversation_id: str,
     body: Annotated[str, Field(description="Reply body (HTML or plain text)")],
+    channel_id: Annotated[
+        str, Field(description="Channel to send through, e.g. 'cha_xyz'")
+    ],
     author_id: Annotated[
         str | None,
-        Field(description="Teammate id to send as; defaults to token owner"),
+        Field(description="Teammate id to author as; defaults to token owner"),
     ] = None,
     subject: Annotated[str | None, Field(description="Override subject")] = None,
     to: Annotated[list[str] | None, Field(description="Override To recipients")] = None,
     cc: Annotated[list[str] | None, Field(description="CC recipients")] = None,
     bcc: Annotated[list[str] | None, Field(description="BCC recipients")] = None,
     confirm: Annotated[
-        bool, Field(description="Must be true to send the reply")
+        bool, Field(description="Must be true to create the draft")
     ] = False,
 ) -> dict[str, Any]:
     ...
@@ -97,7 +100,7 @@ with a consistent shape:
 # confirm=False (preview)
 {
     "preview": {
-        "action": "reply_to_conversation",
+        "action": "create_draft_reply",
         "conversation_id": "cnv_abc",
         "body_preview": "Hi there…",
         ...
@@ -153,7 +156,28 @@ The pattern has two independent safety gates:
 2. **Host elicitation**: `ctx.elicit` prompts the user even once the LLM has set
    `confirm=True`, so a misaligned LLM can't unilaterally apply changes.
 
-#### 5. Shared schemas
+#### 5. Drafts-first outbound
+
+For customer-facing replies there is a **third** gate beyond preview + elicitation: the
+agent never sends, it only drafts. The Frontapp drafts vertical (`create_draft_reply`,
+`create_draft_on_channel`, `edit_draft`, `delete_draft`) exposes the full reply surface,
+but Front's API has no programmatic `send_draft` — the human reviews the draft in
+Front's UI and clicks send themselves.
+
+The earlier `reply_to_conversation` tool (which sent immediately on `confirm=True`) was
+removed in the drafts vertical PR. Even a misaligned LLM that gets past elicitation
+cannot send to a customer; the strongest action it can take is creating a draft that a
+human still has to approve and dispatch.
+
+This also matches Front's product model — every outbound message in Front flows through
+a draft state, even when teammates type-and-send by hand. The agent surface just keeps
+that behavior explicit.
+
+Mutation tools that don't reach the customer (`update_conversation`,
+`add_conversation_comment`) keep the standard two-gate pattern only. The drafts-first
+rule is specifically for outbound messaging.
+
+#### 6. Shared schemas
 
 Common schemas live in `frontapp_mcp/tools/schemas.py`:
 
@@ -224,7 +248,7 @@ elicitation flow stays consistent.
 ### Flat untyped parameters
 
 ```python
-async def reply_to_conversation(
+async def create_draft_reply(
     conversation_id: str,
     body: str,
     author_id: str | None,    # ❌ no Field description
@@ -240,7 +264,7 @@ to keep tools consistent.
 ### Dictionary-based
 
 ```python
-async def reply_to_conversation(
+async def create_draft_reply(
     params: dict,    # ❌ no type safety
     context: Context,
 ) -> dict:
@@ -252,7 +276,7 @@ async def reply_to_conversation(
 ### Response-field confirmation (no elicitation)
 
 ```python
-async def reply_to_conversation(...) -> dict:
+async def create_draft_reply(...) -> dict:
     if not confirmed:
         return {"status": "pending", "confirmation_required": True}
     # else apply
@@ -271,11 +295,13 @@ the intended action before committing, without requiring a speculative API call.
 
 ## Implementation examples
 
-Live today in the conversations vertical (`tools/conversations.py`):
+Live today across the conversations and drafts verticals:
 
 **Mutations** (two-step confirm + elicitation):
 
-- `reply_to_conversation` — customer-facing outbound message
+- `create_draft_reply` / `create_draft_on_channel` / `edit_draft` / `delete_draft` — the
+  drafts vertical (`tools/drafts.py`); customer-facing outbound always goes through
+  drafts
 - `update_conversation` — archive/reopen, reassign, retag, move inbox
 - `add_conversation_comment` — internal teammate note
 

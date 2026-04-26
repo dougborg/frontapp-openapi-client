@@ -48,7 +48,9 @@ stack rather than as per-method decorators. This means:
 On top of the generated API, hand-written **domain helpers** wrap the most-used
 resources with ergonomic signatures and Pydantic domain models:
 
-- `client.conversations.{list, get, search, update, reply, …}` — ✅ available today
+- `client.conversations.{list, get, search, update, …}` — ✅ available today
+- `client.drafts.{create_on_channel, create_reply, edit, delete, list_for_conversation}`
+  — ✅ available today (drafts-first outbound)
 - `client.contacts.…` — ⏳ planned (see issues)
 - `client.messages.…` — ⏳ planned
 - `client.tags.…`, `client.inboxes.…`, `client.teammates.…` — ⏳ planned

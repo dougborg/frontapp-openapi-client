@@ -60,14 +60,20 @@ async with FrontappClient() as client:
 
 ## Available helpers today
 
-| Helper                 | Status     | Covers                                                               |
-| ---------------------- | ---------- | -------------------------------------------------------------------- |
-| `client.conversations` | ✅ shipped | list/get/search/update/reply/list_messages/list_comments/add_comment |
-| `client.contacts`      | ⏳ planned | See issue tracker                                                    |
-| `client.messages`      | ⏳ planned | See issue tracker                                                    |
-| `client.tags`          | ⏳ planned | See issue tracker                                                    |
-| `client.inboxes`       | ⏳ planned | See issue tracker                                                    |
-| `client.teammates`     | ⏳ planned | See issue tracker                                                    |
+| Helper                 | Status     | Covers                                                           |
+| ---------------------- | ---------- | ---------------------------------------------------------------- |
+| `client.conversations` | ✅ shipped | list/get/search/update/list_messages/list_comments/add_comment   |
+| `client.drafts`        | ✅ shipped | list_for_conversation/create_on_channel/create_reply/edit/delete |
+| `client.contacts`      | ⏳ planned | See issue tracker                                                |
+| `client.messages`      | ⏳ planned | See issue tracker                                                |
+| `client.tags`          | ⏳ planned | See issue tracker                                                |
+| `client.inboxes`       | ⏳ planned | See issue tracker                                                |
+| `client.teammates`     | ⏳ planned | See issue tracker                                                |
+
+Outbound replies go through `client.drafts.create_reply(...)` rather than
+`client.conversations.reply(...)` — the latter still exists at the helper level for
+direct API access, but the recommended path is drafts-first: agents draft, humans review
+and send in Front's UI. Front has no programmatic `send_draft`.
 
 Anything without a helper is still fully usable via the generated API layer.
 

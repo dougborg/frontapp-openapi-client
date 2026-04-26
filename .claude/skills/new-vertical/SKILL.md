@@ -118,11 +118,12 @@ future `client.<resource>` surface.
      tool, decorated with `@mcp.tool(name=..., description=...)`.
    - Reads return a `list[<Resource>Summary]`. Mutations take
      `confirm: bool = False` and return a plain dict with `preview` and
-     `confirmed` keys (matching `tools/conversations.py:reply_to_conversation`).
-     Note: `ConfirmationResult` is a `StrEnum` (`CONFIRMED`/`CANCELLED`/
-     `DECLINED`) — it's the **return value of `require_confirmation`**, not
-     the tool's return type. Drafts (#14) invert this — `create_draft` has no
-     `confirm` parameter; the draft IS the review step.
+     `confirmed` keys (matching `tools/conversations.py:update_conversation`
+     or `tools/drafts.py:create_draft_reply`). Note: `ConfirmationResult` is
+     a `StrEnum` (`CONFIRMED`/`CANCELLED`/`DECLINED`) — it's the **return
+     value of `require_confirmation`**, not the tool's return type.
+     Customer-facing outbound mutations always go through the drafts
+     vertical; there is no direct-send pattern.
    - Tools call `get_services(context).client.<resource>.<method>(...)`. Never
      reach into the generated `api/` modules from a tool.
 

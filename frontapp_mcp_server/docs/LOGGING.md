@@ -135,12 +135,12 @@ every tool call (or `tool_failed` on exception). A successful completion looks l
 }
 ```
 
-**Reply to Conversation (Success):**
+**Create Draft Reply (Success):**
 
 ```json
 {
   "event": "tool_completed",
-  "tool_name": "reply_to_conversation",
+  "tool_name": "create_draft_reply",
   "conversation_id": "cnv_abc123",
   "author_id": "tea_xyz",
   "status_code": 202,
