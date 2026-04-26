@@ -173,8 +173,9 @@ If multiple agents are working on the project simultaneously:
    (generated-file edits, stale fact index).
 3. For overlapping changes, the second-to-merge rebases via `/review-pr`'s stacked-PR
    section.
-4. `/babysit-prs` (TODO — see open issues) would automate the "watch CI on N open PRs"
-   coordination loop. Until then, manual `gh pr list --state open`.
+4. `/babysit-prs` watches CI on every open PR in parallel, surfaces real (non-flaky)
+   failures with their job-log tails, and chains into `/review-pr` when comments arrive
+   — see `.claude/skills/babysit-prs/SKILL.md`.
 
 ---
 
