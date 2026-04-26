@@ -2,7 +2,7 @@
 # PostToolUse hook: silently format files after Edit/Write/MultiEdit succeeds.
 #
 # - *.py  → ruff check --fix && ruff format (one `uv run` to amortize startup)
-# - *.md  → pnpm exec prettier --write
+# - *.md  → ./node_modules/.bin/prettier --write (direct binary, skips pnpm shim)
 #
 # Zero-token on success. Never blocks (exit 0 even when the formatter exits
 # non-zero) — formatting failures must not undo a successful edit. PostToolUse
@@ -70,8 +70,10 @@ case "$file_path" in
     fi
     ;;
   *.md)
-    if command -v pnpm >/dev/null 2>&1; then
-      pnpm exec prettier --write --log-level=silent "$file_path" \
+    # Direct binary skips pnpm + node-shim startup (~250-400ms saved per edit).
+    # See issue #26.
+    if [[ -x ./node_modules/.bin/prettier ]]; then
+      ./node_modules/.bin/prettier --write --log-level=silent "$file_path" \
         >/dev/null 2>&1 || true
     fi
     ;;
