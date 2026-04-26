@@ -12,51 +12,11 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
-from pydantic import BaseModel, Field
+from pydantic import Field
 
+from frontapp_mcp.projections import ConversationSummary, to_summary
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
-from frontapp_public_api_client.domain import Conversation
-
-
-class ConversationSummary(BaseModel):
-    """Human-readable projection of a conversation, for LLM responses.
-
-    The full ``Conversation`` domain model carries more structure than is
-    useful to an LLM on every list hit. This projection keeps the context
-    window small — callers can still call ``get_conversation`` for full
-    detail on a specific id.
-    """
-
-    id: str
-    subject: str | None = None
-    status: str | None = None
-    assignee_name: str | None = None
-    recipient: str | None = None
-    tags: list[str] = Field(default_factory=list)
-    is_private: bool | None = None
-    created_at: str | None = None
-    updated_at: str | None = None
-    waiting_since: str | None = None
-
-
-def _to_summary(conv: Conversation) -> ConversationSummary:
-    assignee_name = None
-    if conv.assignee:
-        parts = [conv.assignee.first_name, conv.assignee.last_name]
-        assignee_name = " ".join(p for p in parts if p) or conv.assignee.username
-    return ConversationSummary(
-        id=conv.id,
-        subject=conv.subject,
-        status=conv.status,
-        assignee_name=assignee_name,
-        recipient=conv.recipient.handle if conv.recipient else None,
-        tags=[t.name for t in conv.tags if t.name],
-        is_private=conv.is_private,
-        created_at=conv.created_at.isoformat() if conv.created_at else None,
-        updated_at=conv.updated_at.isoformat() if conv.updated_at else None,
-        waiting_since=(conv.waiting_since.isoformat() if conv.waiting_since else None),
-    )
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -94,7 +54,7 @@ def register_tools(mcp: FastMCP) -> None:
         conversations = await services.client.conversations.list(
             q=q, limit=limit, page_token=page_token
         )
-        return [_to_summary(c) for c in conversations]
+        return [to_summary(c) for c in conversations]
 
     @mcp.tool(
         name="get_conversation",
@@ -108,7 +68,7 @@ def register_tools(mcp: FastMCP) -> None:
     ) -> ConversationSummary:
         services = get_services(context)
         conv = await services.client.conversations.get(conversation_id)
-        return _to_summary(conv)
+        return to_summary(conv)
 
     @mcp.tool(
         name="search_conversations",
@@ -131,7 +91,7 @@ def register_tools(mcp: FastMCP) -> None:
         conversations = await services.client.conversations.search(
             query, limit=limit, page_token=page_token
         )
-        return [_to_summary(c) for c in conversations]
+        return [to_summary(c) for c in conversations]
 
     @mcp.tool(
         name="list_conversation_messages",
