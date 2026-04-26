@@ -11,6 +11,10 @@
 
 set -uo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=_lib/generated-paths.sh
+source "${script_dir}/_lib/generated-paths.sh"
+
 input=$(cat)
 
 file_path=$(python3 -c '
@@ -35,14 +39,13 @@ fi
 
 # Don't try to format generated/vendored output (edits there are blocked
 # by block-generated-edits.sh anyway; defense in depth).
+if is_generated_path "$file_path"; then
+  exit 0
+fi
+
+# Build/cache directories — never format these (large, and not source).
 case "$file_path" in
-  */frontapp_public_api_client/api/* | \
-    */frontapp_public_api_client/models/* | \
-    */frontapp_public_api_client/client.py | \
-    */frontapp_public_api_client/client_types.py | \
-    */frontapp_public_api_client/errors.py | \
-    */docs/frontapp-openapi.yaml | \
-    */node_modules/* | \
+  */node_modules/* | \
     */.venv/* | \
     */dist/* | \
     */build/*)

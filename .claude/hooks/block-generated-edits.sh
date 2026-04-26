@@ -2,10 +2,14 @@
 # PreToolUse hook: block Edit/Write/MultiEdit on openapi-python-client generated files.
 #
 # Reads Claude Code's hook payload from stdin (JSON with tool_input.file_path),
-# matches against the generated-file globs from CLAUDE.md "File Rules", and exits
-# with status 2 to block the call. The stderr message is shown to the agent.
+# matches against the shared generated-path globs (.claude/hooks/_lib/generated-paths.sh),
+# and exits with status 2 to block the call. The stderr message is shown to the agent.
 
 set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=_lib/generated-paths.sh
+source "${script_dir}/_lib/generated-paths.sh"
 
 input=$(cat)
 
@@ -22,16 +26,8 @@ if [[ -z "$file_path" ]]; then
   exit 0
 fi
 
-case "$file_path" in
-  */frontapp_public_api_client/api/*.py | \
-  */frontapp_public_api_client/api/*/*.py | \
-  */frontapp_public_api_client/models/*.py | \
-  */frontapp_public_api_client/client.py | \
-  */frontapp_public_api_client/client_types.py | \
-  */frontapp_public_api_client/errors.py | \
-  */docs/frontapp-openapi.yaml | \
-  */docs/api-facts.yaml)
-    cat >&2 <<EOF
+if is_generated_path "$file_path"; then
+  cat >&2 <<EOF
 STOP — "$file_path" is a generated or vendored file.
 
 Do not edit it directly. To change it, edit the source and regenerate:
@@ -45,6 +41,9 @@ Do not edit it directly. To change it, edit the source and regenerate:
                              (patch sanitization rules in scripts/vendor_spec.py)
   • docs/api-facts.yaml    ↳ machine-derived agent knowledge index
                              uv run poe facts
+  • packages/frontapp-client/src/generated/
+                           ↳ hey-api TypeScript client output
+                             pnpm --filter frontapp-client generate
 
 For ergonomic wrappers around generated endpoints, edit hand-written modules:
   frontapp_public_api_client/helpers/<resource>.py
@@ -53,8 +52,7 @@ For ergonomic wrappers around generated endpoints, edit hand-written modules:
 
 See CLAUDE.md → "Known Pitfalls" → "Editing generated files".
 EOF
-    exit 2
-    ;;
-esac
+  exit 2
+fi
 
 exit 0
