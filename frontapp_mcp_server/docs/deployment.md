@@ -376,7 +376,7 @@ After PR is merged:
   [docs/CONTRIBUTING.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/CONTRIBUTING.md) -
   Commit message format
 - **MCP Documentation Index**:
-  [frontapp_mcp_server/docs/README.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/docs/README.md) -
+  [frontapp_mcp_server/docs/index.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/docs/index.md) -
   All MCP documentation
 
 ## Related Links
