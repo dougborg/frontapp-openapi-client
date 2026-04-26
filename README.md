@@ -143,9 +143,9 @@ highest-value subset. Current status:
 | Analytics                | ⏳ planned                   | ⏳ planned (create→poll recipe)                                                    |
 
 See the [issue tracker](https://github.com/dougborg/frontapp-openapi-client/issues) for
-the roadmap. The full generated surface is usable today via
-`client.api.<tag>.<operation>` or direct imports from `frontapp_public_api_client.api` —
-helpers and MCP tools just add ergonomic polish on top.
+the roadmap. The full generated surface is usable today via direct imports from
+`frontapp_public_api_client.api.<tag>` — helpers and MCP tools just add ergonomic polish
+on top.
 
 ### Front Search Syntax
 
@@ -212,7 +212,6 @@ frontapp-openapi-client/               # Monorepo root
 │   ├── frontapp_client.py              # Resilient client + transport layer
 │   ├── domain/                         # Pydantic domain models (Conversation, …)
 │   ├── helpers/                        # Ergonomic facades (client.conversations)
-│   ├── api_wrapper/                    # Registry + generic Resource wrapper
 │   ├── utils.py                        # unwrap/is_success + error types
 │   ├── api/, models/                   # Generated from the OpenAPI spec
 │   └── docs/                           # Package documentation

@@ -88,16 +88,15 @@ frontapp_public_api_client/
 ├── frontapp_client.py  # Enhanced client (hand-written)
 ├── helpers/          # client.conversations, future helpers (hand-written)
 ├── domain/           # Pydantic domain models (hand-written)
-├── utils.py          # unwrap/is_success/exceptions (hand-written)
-└── api_wrapper/      # Resource + registry scaffolding (hand-written)
+└── utils.py          # unwrap/is_success/exceptions (hand-written)
 ```
 
 Clear separation:
 
 - **Generated code** (`api/`, `models/`, `client.py`, `client_types.py`, `errors.py`):
   never edit manually; regenerated from the spec
-- **Hand-written code** (`frontapp_client.py`, `helpers/`, `domain/`, `utils.py`,
-  `api_wrapper/`): hand-maintained enhancements
+- **Hand-written code** (`frontapp_client.py`, `helpers/`, `domain/`, `utils.py`):
+  hand-maintained enhancements
 
 ## Consequences
 
@@ -216,7 +215,6 @@ Custom enhancements live in clearly-separated files that the regeneration never 
 - `helpers/*.py` — ergonomic facades (`client.conversations`, etc.)
 - `domain/*.py` — Pydantic domain models
 - `utils.py` — `unwrap` / `is_success` / error types
-- `api_wrapper/*.py` — generic `Resource` + `RESOURCE_REGISTRY`
 
 ## References
 

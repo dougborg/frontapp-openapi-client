@@ -430,7 +430,7 @@ format-check = ["format-python-check", "format-markdown-check"]
 # (b) switch this task to pyright (handles the pattern), or (c) post-process the
 # generated from_dict methods in scripts/regenerate_client.py.
 # See https://github.com/dougborg/frontapp-openapi-client/issues/8
-typecheck = "ty check frontapp_public_api_client/frontapp_client.py frontapp_public_api_client/helpers frontapp_public_api_client/domain frontapp_public_api_client/utils.py frontapp_public_api_client/api_wrapper"
+typecheck = "ty check frontapp_public_api_client/frontapp_client.py frontapp_public_api_client/helpers frontapp_public_api_client/domain frontapp_public_api_client/utils.py"
 lint-ruff = "ruff check ."
 lint-ruff-fix = "ruff check --fix ."
 lint-yaml = "yamllint ."
