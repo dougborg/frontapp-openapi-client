@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T18:04:31+00:00'
-generated_from_commit: f5909c27791b3f1f484bf88389d4453ada52affb
+generated_at: '2026-04-26T19:14:12+00:00'
+generated_from_commit: 37c22eeeece886d5650f2a7c449cc066542a4b68
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -27,6 +27,7 @@ summary:
     - channels.list_team_channels
     - channels.list_teammate_channels
     - comments.list_comment_mentions
+    - comments.list_conversation_comments
     - contact_groups.list_contacts_in_group
     - contact_groups.list_groups
     - contact_groups.list_team_groups
@@ -40,6 +41,10 @@ summary:
     - contacts.list_contacts
     - contacts.list_team_contacts
     - contacts.list_teammate_contacts
+    - conversations.list_conversation_events
+    - conversations.list_conversation_followers
+    - conversations.list_conversation_inboxes
+    - conversations.list_conversation_messages
     - conversations.list_conversations
     - custom_fields.list_account_custom_fields
     - custom_fields.list_contact_custom_fields
@@ -48,6 +53,7 @@ summary:
     - custom_fields.list_inbox_custom_fields
     - custom_fields.list_link_custom_fields
     - custom_fields.list_teammate_custom_fields
+    - drafts.list_conversation_drafts
     - events.list_events
     - inboxes.list_inbox_access
     - inboxes.list_inbox_channels
@@ -77,6 +83,7 @@ summary:
     - shifts.list_teammate_shifts
     - signatures.list_team_signatures
     - signatures.list_teammate_signatures
+    - statuses.list_company_ticket_statuses
     - tags.list_company_tags
     - tags.list_tag_children
     - tags.list_tagged_conversations
@@ -93,14 +100,7 @@ summary:
     - teams.list_teams
     - views.list_team_views
     - views.list_views
-  list_endpoints_returning_raw_array:
-    - comments.list_conversation_comments
-    - conversations.list_conversation_events
-    - conversations.list_conversation_followers
-    - conversations.list_conversation_inboxes
-    - conversations.list_conversation_messages
-    - drafts.list_conversation_drafts
-    - statuses.list_company_ticket_statuses
+  list_endpoints_returning_raw_array: []
   mutations:
     - accounts.add_contact_to_account
     - accounts.create_account
@@ -434,7 +434,7 @@ tags:
       - module: add_comment
         method: POST
         path: /conversations/{conversation_id}/comments
-        response_type: Any
+        response_type: CommentResponse
         list_shape: mutation
         category: create
       - module: add_comment_reply
@@ -458,8 +458,8 @@ tags:
       - module: list_conversation_comments
         method: GET
         path: /conversations/{conversation_id}/comments
-        response_type: Any
-        list_shape: raw_array
+        response_type: ListConversationCommentsResponse200
+        list_shape: field_results
         category: list
       - module: update_comment
         method: PATCH
@@ -792,32 +792,32 @@ tags:
       - module: get_conversation_by_id
         method: GET
         path: /conversations/{conversation_id}
-        response_type: Any
+        response_type: ConversationResponse
         list_shape: single
         category: get
       - module: list_conversation_events
         method: GET
         path: /conversations/{conversation_id}/events
-        response_type: Any
-        list_shape: raw_array
+        response_type: ListConversationEventsResponse200
+        list_shape: field_results
         category: list
       - module: list_conversation_followers
         method: GET
         path: /conversations/{conversation_id}/followers
-        response_type: Any
-        list_shape: raw_array
+        response_type: ListConversationFollowersResponse200
+        list_shape: field_results
         category: list
       - module: list_conversation_inboxes
         method: GET
         path: /conversations/{conversation_id}/inboxes
-        response_type: Any
-        list_shape: raw_array
+        response_type: ListConversationInboxesResponse200
+        list_shape: field_results
         category: list
       - module: list_conversation_messages
         method: GET
         path: /conversations/{conversation_id}/messages
-        response_type: Any
-        list_shape: raw_array
+        response_type: ListConversationMessagesResponse200
+        list_shape: field_results
         category: list
       - module: list_conversations
         method: GET
@@ -936,7 +936,7 @@ tags:
       - module: create_draft_reply
         method: POST
         path: /conversations/{conversation_id}/drafts
-        response_type: Any
+        response_type: MessageResponse
         list_shape: mutation
         category: create
       - module: delete_draft
@@ -954,8 +954,8 @@ tags:
       - module: list_conversation_drafts
         method: GET
         path: /conversations/{conversation_id}/drafts
-        response_type: Any
-        list_shape: raw_array
+        response_type: ListConversationDraftsResponse200
+        list_shape: field_results
         category: list
   events:
     spec_tag: Events
@@ -1504,7 +1504,7 @@ tags:
       - module: create_message_reply
         method: POST
         path: /conversations/{conversation_id}/messages
-        response_type: Any
+        response_type: CreateMessageReplyResponse202
         list_shape: mutation
         category: create
       - module: get_message
@@ -1726,8 +1726,8 @@ tags:
       - module: list_company_ticket_statuses
         method: GET
         path: /company/statuses
-        response_type: Any
-        list_shape: raw_array
+        response_type: ListCompanyTicketStatusesResponse200
+        list_shape: field_results
         category: list
   tags:
     spec_tag: Tags
