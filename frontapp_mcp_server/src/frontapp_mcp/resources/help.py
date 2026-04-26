@@ -52,6 +52,43 @@ programmatic ``send_draft``.
 | `edit_draft` | `PATCH /drafts/{id}/` | Full-replacement edit of an existing draft (`body` + `channel_id` required). Two-step confirm. |
 | `delete_draft` | `DELETE /drafts/{id}` | Discard a draft. Two-step confirm. |
 
+## Contacts
+
+A contact is a person identified by one or more handles (email/phone/etc.).
+Spans three sibling Front tags: `contacts`, `contact_handles`, `contact_notes`.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `list_contacts` | `GET /contacts` | Cursor-paginated list. Pass `q=` for partial-match search across handles/names. |
+| `get_contact` | `GET /contacts/{id}` | Full detail for one contact. |
+| `lookup_contact_by_email` | (wraps `list_contacts(q=email)`) | Best-effort email lookup. Returns 0..n matches. |
+| `list_team_contacts` | `GET /teams/{team_id}/contacts` | Contacts owned by a team. |
+| `list_teammate_contacts` | `GET /teammates/{teammate_id}/contacts` | Contacts owned by a teammate. |
+| `list_contact_conversations` | `GET /contacts/{id}/conversations` | Full conversation history with this customer. Returns `ConversationSummary`s. |
+| `list_contact_notes` | `GET /contacts/{id}/notes` | Internal teammate notes (HTTP 202). |
+| `create_contact` | `POST /contacts` | Create workspace-scoped contact. `handles` required. Two-step confirm. |
+| `create_team_contact` | `POST /teams/{team_id}/contacts` | Create team-scoped contact. Two-step confirm. |
+| `create_teammate_contact` | `POST /teammates/{teammate_id}/contacts` | Create teammate-scoped contact. Two-step confirm. |
+| `update_contact` | `PATCH /contacts/{id}` | Update name/description/links/groups. Cannot change handles. Two-step confirm. |
+| `add_contact_note` | `POST /contacts/{id}/notes` | Add internal teammate note. `author_id` required. Two-step confirm. |
+| `add_contact_handle` | `POST /contacts/{id}/handles` | Add handle to existing contact. Two-step confirm. |
+| `delete_contact_handle` | `DELETE /contacts/{id}/handles` | Remove handle. `force=true` allows last-handle removal. Two-step confirm. |
+| `merge_contacts` | `POST /contacts/merge` | **DESTRUCTIVE / irreversible.** Merge contacts; conversations move to target. Two-step confirm. |
+| `delete_contact` | `DELETE /contacts/{id}` | **DESTRUCTIVE / permanent.** Delete contact + all handles. Two-step confirm. |
+
+### Workflow recipe — "what else do we have on this customer?"
+
+```
+lookup_contact_by_email(email="customer@example.com")
+  -> [ContactSummary(id="crd_abc", name="Alice", primary_email="customer@example.com")]
+
+list_contact_conversations(contact_id="crd_abc")
+  -> [{id: cnv_1, subject: "Order #1234"}, ...]
+
+list_contact_notes(contact_id="crd_abc")
+  -> [{body: "VIP customer", author: ...}, ...]
+```
+
 ## Front search syntax (`q=` parameter)
 
 | Query                 | Description                 |

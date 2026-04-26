@@ -10,9 +10,11 @@ from fastmcp import FastMCP
 
 def register_all_tools(mcp: FastMCP) -> None:
     """Register every tool module with the FastMCP instance."""
+    from .contacts import register_tools as register_contacts_tools
     from .conversations import register_tools as register_conversations_tools
     from .drafts import register_tools as register_drafts_tools
 
+    register_contacts_tools(mcp)
     register_conversations_tools(mcp)
     register_drafts_tools(mcp)
 

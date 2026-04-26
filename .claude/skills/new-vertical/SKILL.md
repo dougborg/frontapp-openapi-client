@@ -181,7 +181,12 @@ future `client.<resource>` surface.
 
 ## After
 
-- Open a PR with `/open-pr` (the existing skill).
+- Open a PR with `/open-pr` (the existing skill). Once CI is green, the
+  `/open-pr` flow runs `/simplify` (self-review pass) and `/review-pr`
+  (handle external feedback) before declaring the PR ready — both are
+  routine steps for verticals, not optional polish. Vertical PRs in
+  particular tend to surface real type-annotation bugs and DRY misses
+  that `/simplify` catches in one round.
 - Resolve the related issue (or note follow-up gaps in a comment).
 - If new spec quirks were patched in `scripts/vendor_spec.py`, mention it in
   the PR description so reviewers know.

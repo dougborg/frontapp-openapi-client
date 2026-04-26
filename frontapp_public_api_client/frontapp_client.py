@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 if TYPE_CHECKING:
+    from .helpers.contacts import Contacts
     from .helpers.conversations import Conversations
     from .helpers.drafts import Drafts
 
@@ -1025,6 +1026,7 @@ class FrontappClient(AuthenticatedClient):
 
         # Domain helper instances (lazy-loaded via properties)
         self._conversations: Conversations | None = None
+        self._contacts: Contacts | None = None
         self._drafts: Drafts | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
@@ -1117,6 +1119,20 @@ class FrontappClient(AuthenticatedClient):
         if self._drafts is None:
             self._drafts = Drafts(self)
         return self._drafts
+
+    @property
+    def contacts(self) -> "Contacts":
+        """Ergonomic operations over Frontapp's contacts surface.
+
+        Spans three sibling generated tags (``contacts/``,
+        ``contact_handles/``, ``contact_notes/``). Includes ``merge`` and
+        the team-/teammate-scoped create/list paths.
+        """
+        from .helpers.contacts import Contacts
+
+        if self._contacts is None:
+            self._contacts = Contacts(self)
+        return self._contacts
 
     # Event hooks for observability
     async def _capture_pagination_metadata(self, response: httpx.Response) -> None:

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from frontapp_public_api_client.domain import Conversation, Draft
+from frontapp_public_api_client.domain import Contact, Conversation, Draft
 
 
 class ConversationSummary(BaseModel):
@@ -95,9 +95,51 @@ def to_draft_summary(draft: Draft) -> DraftSummary:
     )
 
 
+class ContactSummary(BaseModel):
+    """Compact projection of a contact for LLM responses.
+
+    Surfaces the fields an agent actually uses when triaging or
+    referencing a contact: id, display name, primary handles by source,
+    and counts to avoid stuffing the full handles list into the LLM
+    context.
+    """
+
+    id: str
+    name: str | None = None
+    description: str | None = None
+    primary_email: str | None = None
+    primary_phone: str | None = None
+    handle_count: int = 0
+    is_private: bool | None = None
+    group_names: list[str] = Field(default_factory=list)
+
+
+def _first_handle(contact: Contact, source: str) -> str | None:
+    for h in contact.handles:
+        if h.source == source:
+            return h.handle
+    return None
+
+
+def to_contact_summary(contact: Contact) -> ContactSummary:
+    """Project a ``Contact`` domain model to a ``ContactSummary``."""
+    return ContactSummary(
+        id=contact.id,
+        name=contact.name,
+        description=contact.description,
+        primary_email=_first_handle(contact, "email"),
+        primary_phone=_first_handle(contact, "phone"),
+        handle_count=len(contact.handles),
+        is_private=contact.is_private,
+        group_names=[g.name for g in contact.groups if g.name],
+    )
+
+
 __all__ = [
+    "ContactSummary",
     "ConversationSummary",
     "DraftSummary",
+    "to_contact_summary",
     "to_draft_summary",
     "to_summary",
 ]
