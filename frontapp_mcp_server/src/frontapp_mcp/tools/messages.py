@@ -25,61 +25,42 @@ from frontapp_public_api_client.models.message_response import MessageResponse
 from frontapp_public_api_client.models.seen_receipt_response import SeenReceiptResponse
 
 
+def _enum_value(field: Any) -> str | None:
+    """Return ``.value`` of an attrs StrEnum field, or ``None`` if UNSET."""
+    resolved = unwrap_unset(field, None)
+    return resolved.value if resolved is not None else None
+
+
+def _author_name(author: Any) -> str | None:
+    """Render a teammate as ``"First Last"``, falling back to username."""
+    if author is None:
+        return None
+    first = unwrap_unset(author.first_name, "")
+    last = unwrap_unset(author.last_name, "")
+    full = f"{first} {last}".strip()
+    return full or unwrap_unset(author.username, None)
+
+
 def _message_summary(message: MessageResponse) -> dict[str, Any]:
-    """Compact dict projection of a generated ``MessageResponse``.
-
-    Picks the fields an agent typically wants when reading one message
-    (id, type, direction, subject, plaintext body, recipient handles,
-    timestamps) — the full attrs payload is heavier than necessary on
-    every tool hit.
-    """
-    recipients_field = unwrap_unset(message.recipients, [])
-    attachments_field = unwrap_unset(message.attachments, [])
-    author = unwrap_unset(message.author, None)
-    author_name: str | None = None
-    if author is not None:
-        first = unwrap_unset(author.first_name, "")
-        last = unwrap_unset(author.last_name, "")
-        author_name = (first + " " + last).strip() or unwrap_unset(
-            author.username, None
-        )
-
+    """Compact dict projection of a generated ``MessageResponse``."""
+    recipients = unwrap_unset(message.recipients, [])
+    attachments = unwrap_unset(message.attachments, [])
     return {
         "id": unwrap_unset(message.id, None),
         "message_uid": unwrap_unset(message.message_uid, None),
-        "type": (
-            unwrap_unset(message.type_, None).value
-            if unwrap_unset(message.type_, None) is not None
-            else None
-        ),
+        "type": _enum_value(message.type_),
         "is_inbound": unwrap_unset(message.is_inbound, None),
-        "draft_mode": (
-            unwrap_unset(message.draft_mode, None).value
-            if unwrap_unset(message.draft_mode, None) is not None
-            else None
-        ),
+        "draft_mode": _enum_value(message.draft_mode),
         "error_type": unwrap_unset(message.error_type, None),
         "version": unwrap_unset(message.version, None),
         "created_at": unwrap_unset(message.created_at, None),
         "subject": unwrap_unset(message.subject, None),
         "blurb": unwrap_unset(message.blurb, None),
-        "author_name": author_name,
-        "recipients": [
-            {
-                "handle": unwrap_unset(r.handle, None),
-                "role": (
-                    unwrap_unset(r.role, None).value
-                    if unwrap_unset(r.role, None) is not None
-                    else None
-                ),
-            }
-            for r in recipients_field
-        ],
+        "author_name": _author_name(unwrap_unset(message.author, None)),
+        "recipients": [{"handle": r.handle, "role": r.role.value} for r in recipients],
         "text": unwrap_unset(message.text, None),
         "body": unwrap_unset(message.body, None),
-        "attachment_filenames": [
-            unwrap_unset(a.filename, None) for a in attachments_field
-        ],
+        "attachment_filenames": [unwrap_unset(a.filename, None) for a in attachments],
     }
 
 
@@ -87,18 +68,13 @@ def _seen_receipt_summary(receipt: SeenReceiptResponse) -> dict[str, Any]:
     """Project a ``SeenReceiptResponse`` to a flat dict.
 
     ``first_seen_at`` is an ISO string (Front returns a formatted timestamp
-    here, not a unix epoch like on most other resources). ``seen_by`` is a
-    ``ContactHandle`` carrying the recipient's handle + source.
+    here, not a unix epoch like on most other resources).
     """
     return {
         "first_seen_at": receipt.first_seen_at,
         "seen_by": {
-            "handle": unwrap_unset(receipt.seen_by.handle, None),
-            "source": (
-                unwrap_unset(receipt.seen_by.source, None).value
-                if unwrap_unset(receipt.seen_by.source, None) is not None
-                else None
-            ),
+            "handle": receipt.seen_by.handle,
+            "source": receipt.seen_by.source.value,
         },
     }
 
