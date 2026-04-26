@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 import pytest
-from frontapp_mcp.projections import TagSummary, to_tag_summary
+from frontapp_mcp.projections import TagCatalogSummary, to_tag_catalog_summary
 from frontapp_mcp.tools.tags import register_tools
 
 from frontapp_public_api_client.domain import Tag
@@ -58,7 +58,7 @@ class TestReadTools:
 
         result = await tags_tools["get_tag"](context, tag_id="tag_abc")
 
-        assert isinstance(result, TagSummary)
+        assert isinstance(result, TagCatalogSummary)
         assert result.id == "tag_abc"
         assert result.highlight == "red"
 
@@ -74,7 +74,7 @@ class TestReadTools:
         result = await tags_tools["list_tags"](context)
 
         assert len(result) == 2
-        assert all(isinstance(t, TagSummary) for t in result)
+        assert all(isinstance(t, TagCatalogSummary) for t in result)
 
 
 # ---------------------------------------------------------------------------
@@ -225,12 +225,12 @@ class TestDeclinePath:
 
 
 # ---------------------------------------------------------------------------
-# TagSummary projection
+# TagCatalogSummary projection
 # ---------------------------------------------------------------------------
 
 
-class TestTagSummaryProjection:
-    def test_to_tag_summary_includes_timestamps_as_iso(self):
+class TestTagCatalogSummaryProjection:
+    def test_to_tag_catalog_summary_includes_timestamps_as_iso(self):
         from datetime import UTC, datetime
 
         tag = Tag.model_validate(
@@ -240,7 +240,7 @@ class TestTagSummaryProjection:
                 "created_at": 1701292639,
             }
         )
-        summary = to_tag_summary(tag)
+        summary = to_tag_catalog_summary(tag)
         assert summary.id == "tag_a"
         assert (
             summary.created_at == datetime.fromtimestamp(1701292639, tz=UTC).isoformat()

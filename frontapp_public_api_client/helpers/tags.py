@@ -26,8 +26,8 @@ Quirks worth knowing:
   in ``api-facts.yaml`` ``summary.module_name_quirks``). The body model
   is plain ``UpdateTag``, not ``UpdateATag``.
 - ``CreateTagHighlight`` and ``UpdateTagHighlight`` are separate
-  generated enums with identical values; ``_HIGHLIGHTS`` is the shared
-  Literal alias the helper exposes.
+  generated enums with identical values; ``HighlightLiteral`` is the
+  shared Literal alias the helper exposes.
 - ``TagResponse.created_at`` / ``updated_at`` are unix-seconds floats
   (not ISO strings) — the ``Tag`` Pydantic projection converts them.
 """

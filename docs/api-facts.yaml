@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T22:41:46+00:00'
-generated_from_commit: 8666688fd4d7a067db0916c41c75491c178c6817
+generated_at: '2026-04-26T22:42:31+00:00'
+generated_from_commit: fd5ac1040479d1e4df9467e6643d0067e2154de5
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -237,6 +237,7 @@ summary:
     - contacts
     - conversations
     - drafts
+    - inboxes
     - tags
 tags:
   accounts:
@@ -979,9 +980,9 @@ tags:
       path: frontapp_public_api_client/helpers/inboxes.py
       class: Inboxes
     domain:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/domain/inbox.py
+      class: Inbox
     endpoints:
       - module: add_inbox_access
         method: POST

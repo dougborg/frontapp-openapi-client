@@ -24,31 +24,20 @@ tag.
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 
 from fastmcp import Context, FastMCP
 from pydantic import Field
 
 from frontapp_mcp.projections import (
     ConversationSummary,
-    TagSummary,
+    TagCatalogSummary,
     to_summary,
-    to_tag_summary,
+    to_tag_catalog_summary,
 )
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
-
-HighlightLiteral = Literal[
-    "blue",
-    "green",
-    "grey",
-    "light-blue",
-    "orange",
-    "pink",
-    "purple",
-    "red",
-    "yellow",
-]
+from frontapp_public_api_client.helpers.tags import HighlightLiteral
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -72,10 +61,10 @@ def register_tools(mcp: FastMCP) -> None:
         page_token: Annotated[
             str | None, Field(description="Cursor from a prior pagination.next")
         ] = None,
-    ) -> list[TagSummary]:
+    ) -> list[TagCatalogSummary]:
         services = get_services(context)
         tags = await services.client.tags.list(limit=limit, page_token=page_token)
-        return [to_tag_summary(t) for t in tags]
+        return [to_tag_catalog_summary(t) for t in tags]
 
     @mcp.tool(
         name="list_company_tags",
@@ -85,12 +74,12 @@ def register_tools(mcp: FastMCP) -> None:
         context: Context,
         limit: Annotated[int | None, Field(description="Page size")] = None,
         page_token: Annotated[str | None, Field(description="Cursor")] = None,
-    ) -> list[TagSummary]:
+    ) -> list[TagCatalogSummary]:
         services = get_services(context)
         tags = await services.client.tags.list_company(
             limit=limit, page_token=page_token
         )
-        return [to_tag_summary(t) for t in tags]
+        return [to_tag_catalog_summary(t) for t in tags]
 
     @mcp.tool(
         name="list_team_tags",
@@ -101,12 +90,12 @@ def register_tools(mcp: FastMCP) -> None:
         team_id: Annotated[str, Field(description="Team id, e.g. 'tim_abc'")],
         limit: Annotated[int | None, Field(description="Page size")] = None,
         page_token: Annotated[str | None, Field(description="Cursor")] = None,
-    ) -> list[TagSummary]:
+    ) -> list[TagCatalogSummary]:
         services = get_services(context)
         tags = await services.client.tags.list_for_team(
             team_id, limit=limit, page_token=page_token
         )
-        return [to_tag_summary(t) for t in tags]
+        return [to_tag_catalog_summary(t) for t in tags]
 
     @mcp.tool(
         name="list_teammate_tags",
@@ -117,12 +106,12 @@ def register_tools(mcp: FastMCP) -> None:
         teammate_id: Annotated[str, Field(description="Teammate id, e.g. 'tea_abc'")],
         limit: Annotated[int | None, Field(description="Page size")] = None,
         page_token: Annotated[str | None, Field(description="Cursor")] = None,
-    ) -> list[TagSummary]:
+    ) -> list[TagCatalogSummary]:
         services = get_services(context)
         tags = await services.client.tags.list_for_teammate(
             teammate_id, limit=limit, page_token=page_token
         )
-        return [to_tag_summary(t) for t in tags]
+        return [to_tag_catalog_summary(t) for t in tags]
 
     @mcp.tool(
         name="get_tag",
@@ -131,10 +120,10 @@ def register_tools(mcp: FastMCP) -> None:
     async def get_tag(
         context: Context,
         tag_id: Annotated[str, Field(description="Tag id, e.g. 'tag_abc'")],
-    ) -> TagSummary:
+    ) -> TagCatalogSummary:
         services = get_services(context)
         tag = await services.client.tags.get(tag_id)
-        return to_tag_summary(tag)
+        return to_tag_catalog_summary(tag)
 
     @mcp.tool(
         name="list_tag_children",
@@ -146,10 +135,10 @@ def register_tools(mcp: FastMCP) -> None:
     async def list_tag_children(
         context: Context,
         tag_id: Annotated[str, Field(description="Parent tag id")],
-    ) -> list[TagSummary]:
+    ) -> list[TagCatalogSummary]:
         services = get_services(context)
         children = await services.client.tags.list_children(tag_id)
-        return [to_tag_summary(c) for c in children]
+        return [to_tag_catalog_summary(c) for c in children]
 
     @mcp.tool(
         name="list_tagged_conversations",
@@ -293,7 +282,7 @@ def register_tools(mcp: FastMCP) -> None:
             highlight=highlight,
             is_visible_in_conversation_lists=is_visible_in_conversation_lists,
         )
-        return {"confirmed": True, "tag": to_tag_summary(tag).model_dump()}
+        return {"confirmed": True, "tag": to_tag_catalog_summary(tag).model_dump()}
 
     @mcp.tool(
         name="create_child_tag",
@@ -335,7 +324,7 @@ def register_tools(mcp: FastMCP) -> None:
             highlight=highlight,
             is_visible_in_conversation_lists=is_visible_in_conversation_lists,
         )
-        return {"confirmed": True, "tag": to_tag_summary(tag).model_dump()}
+        return {"confirmed": True, "tag": to_tag_catalog_summary(tag).model_dump()}
 
     @mcp.tool(
         name="update_tag",

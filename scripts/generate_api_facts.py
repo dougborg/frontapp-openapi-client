@@ -425,6 +425,11 @@ def _camel(snake: str) -> str:
 def _singular(word: str) -> str:
     if word.endswith("ies"):
         return word[:-3] + "y"
+    # "inboxes" → "inbox", "boxes" → "box" (strip the -es when it follows -x/-s/-z/-ch/-sh)
+    if word.endswith("xes") or word.endswith("ses") or word.endswith("zes"):
+        return word[:-2]
+    if word.endswith("ches") or word.endswith("shes"):
+        return word[:-2]
     if word.endswith("s") and not word.endswith("ss"):
         return word[:-1]
     return word
