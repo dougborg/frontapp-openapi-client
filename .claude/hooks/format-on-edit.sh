@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 # PostToolUse hook: silently format files after Edit/Write/MultiEdit succeeds.
 #
-# - *.py  → ruff check --fix && ruff format (one `uv run` to amortize startup)
+# - *.py  → ruff format (style only — NO ruff check --fix; see #50)
 # - *.md  → ./node_modules/.bin/prettier --write (direct binary, skips pnpm shim)
+#
+# This hook is intentionally **format-only**, not lint-and-fix. Earlier
+# versions ran `ruff check --fix` here too, but it caused a race where
+# TYPE_CHECKING imports got pruned between an agent's two Edits (one adding
+# the import, the next adding the usage) — every vertical PR hit it 3-5
+# times. Linting still happens at `uv run poe check` and in CI; doing it on
+# every edit was over-eager.
 #
 # Zero-token on success. Never blocks (exit 0 even when the formatter exits
 # non-zero) — formatting failures must not undo a successful edit. PostToolUse
@@ -63,10 +70,8 @@ cd "$CLAUDE_PROJECT_DIR" || exit 0
 case "$file_path" in
   *.py)
     if command -v uv >/dev/null 2>&1; then
-      # One `uv run` invocation for both — amortizes uv's setup cost
-      # (~150-300ms) so a typical .py edit takes ~half as long.
-      uv run sh -c 'ruff check --fix "$1" && ruff format "$1"' _ "$file_path" \
-        >/dev/null 2>&1 || true
+      # Format-only — NO `ruff check --fix`. See header comment + #50.
+      uv run ruff format "$file_path" >/dev/null 2>&1 || true
     fi
     ;;
   *.md)
