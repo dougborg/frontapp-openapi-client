@@ -49,9 +49,10 @@ future `client.<resource>` surface.
   `domain/conversation.py`, and `tools/conversations.py`. Do not invent a new
   shape unless the resource genuinely differs.
 - **Two-step confirm on mutations.** Every mutation tool takes
-  `confirm: bool = False` and returns `ConfirmationResult`. **Exception:**
-  drafts (#14) invert this — the draft IS the review step, so `create_draft`
-  has no `confirm` param. Confirm against the issue before deviating.
+  `confirm: bool = False` and runs the gate via `confirm_or_preview`
+  (see step 6 below for the canonical shape). **Exception:** drafts (#14)
+  use the same gate but the draft itself IS the review step (no
+  programmatic send). Confirm against the issue before deviating.
 - **Never edit files under `frontapp_public_api_client/api/`,
   `frontapp_public_api_client/models/`, or `client.py`** — those are generated.
   The `block-generated-edits.sh` PreToolUse hook will reject the attempt.
@@ -119,11 +120,30 @@ future `client.<resource>` surface.
    - Reads return a `list[<Resource>Summary]`. Mutations take
      `confirm: bool = False` and return a plain dict with `preview` and
      `confirmed` keys (matching `tools/conversations.py:update_conversation`
-     or `tools/drafts.py:create_draft_reply`). Note: `ConfirmationResult` is
-     a `StrEnum` (`CONFIRMED`/`CANCELLED`/`DECLINED`) — it's the **return
-     value of `require_confirmation`**, not the tool's return type.
-     Customer-facing outbound mutations always go through the drafts
-     vertical; there is no direct-send pattern.
+     or `tools/drafts.py:create_draft_reply`). Customer-facing outbound
+     mutations always go through the drafts vertical; there is no direct-
+     send pattern.
+   - **Use `confirm_or_preview` for the gate.** Every mutation tool runs
+     the same preview-then-elicit cascade — import `confirm_or_preview`
+     from `frontapp_mcp.tools.schemas` and call it once instead of
+     hand-rolling the 6-line `if not confirm: ... require_confirmation
+     ... ConfirmationResult.CONFIRMED` block. Canonical shape:
+
+         preview = {"action": "...", ...}
+         gate = await confirm_or_preview(
+             context,
+             preview=preview,
+             confirm=confirm,
+             elicit_message=f"Concrete prompt the user sees?",
+         )
+         if gate is not None:
+             return gate
+         # ... proceed with the mutation
+
+     `ConfirmationResult` (a `StrEnum` of `CONFIRMED`/`CANCELLED`/
+     `DECLINED`) is now an internal detail of `confirm_or_preview`. Only
+     import it directly if your tool needs to branch differently between
+     declined vs cancelled (rare).
    - Tools call `get_services(context).client.<resource>.<method>(...)`. Never
      reach into the generated `api/` modules from a tool.
 
@@ -178,6 +198,25 @@ future `client.<resource>` surface.
 - **Raw-array list endpoints.** `/statuses` and `/teammates` return arrays
   directly, not wrapped in `field_results`. Unwrap as `unwrap(response)` and
   iterate the result directly.
+- **Deprecated sister vertical.** When the resource is the older,
+  deprecated half of a pair (e.g. `contact_groups` superseded by
+  `contact_lists`), Front marks every endpoint with `deprecated: true`
+  in the spec and may share request body models with the modern sibling.
+  Ship the vertical anyway for workspaces still using the deprecated
+  surface, but: (a) keep a `_DEPRECATION_NOTE` constant in the MCP tool
+  module and prefix every tool description with it; (b) reuse the modern
+  sibling's domain projection if the wire shape is identical (avoids a
+  duplicate `<Resource>` class); (c) extend the `instructions=` block in
+  `server.py` to steer agents toward the modern sibling for new work.
+  Canonical example: `tools/contact_groups.py` (deprecated) mirrors
+  `tools/contact_lists.py` (current) with the deprecation prefix.
+- **Server-side maxItems caps.** When a Front request body declares
+  `maxItems: N` on a list-bearing field (e.g. `RemoveContactsFromList`'s
+  `maxItems: 50`), the helper should fail-fast with `check_list_size_cap`
+  from `helpers/constants.py`, and the MCP tool should preview-error
+  with `cap_error_message` (same module). Add the cap as a named
+  constant in `helpers/constants.py` so a future Front-side change is
+  one edit.
 
 ## After
 

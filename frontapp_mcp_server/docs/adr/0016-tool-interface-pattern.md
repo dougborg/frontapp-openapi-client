@@ -130,24 +130,31 @@ deliberately separate from the public domain package.
 
 #### 4. Two-step confirm pattern (safety-critical operations)
 
-Every mutation tool takes `confirm: bool = False` and follows this shape:
+Every mutation tool takes `confirm: bool = False` and runs the gate via the
+`confirm_or_preview` helper from `frontapp_mcp/tools/schemas.py`:
 
 ```python
 preview = {"action": "...", "conversation_id": conversation_id, ...}
-if not confirm:
-    return {"preview": preview, "confirmed": False}
 
-result = await require_confirmation(
+gate = await confirm_or_preview(
     context,
-    f"Send reply to conversation {conversation_id}?",
+    preview=preview,
+    confirm=confirm,
+    elicit_message=f"Send reply to conversation {conversation_id}?",
 )
-if result is not ConfirmationResult.CONFIRMED:
-    return {"preview": preview, "confirmed": False, "result": result.value}
+if gate is not None:
+    return gate
 
 # Proceed with the actual API call
 response = await services.client.conversations.reply(...)
 return {"confirmed": True, "status_code": response.status_code}
 ```
+
+`confirm_or_preview` returns the dict the tool should bail with on the preview path
+(`confirm=False`) or declined elicitation, or `None` when the caller should proceed. The
+6-line `if not confirm: ... require_confirmation ... ConfirmationResult.CONFIRMED`
+cascade was duplicated across ~40 mutating tools before being extracted into this
+helper.
 
 The pattern has two independent safety gates:
 
@@ -201,10 +208,30 @@ async def require_confirmation(context: Context, message: str) -> ConfirmationRe
     if not elicit_result.data.confirm:
         return ConfirmationResult.DECLINED
     return ConfirmationResult.CONFIRMED
+
+
+async def confirm_or_preview(
+    context: Context,
+    *,
+    preview: dict[str, Any],
+    confirm: bool,
+    elicit_message: str,
+) -> dict[str, Any] | None:
+    """Standard preview-then-elicit gate. Returns the response dict the
+    caller should return verbatim, or None when the caller should proceed.
+    """
+    if not confirm:
+        return {"preview": preview, "confirmed": False}
+    result = await require_confirmation(context, elicit_message)
+    if result is not ConfirmationResult.CONFIRMED:
+        return {"preview": preview, "confirmed": False, "result": result.value}
+    return None
 ```
 
-Every mutation tool imports `ConfirmationResult` and `require_confirmation` so the
-elicitation flow stays consistent.
+Every mutation tool imports `confirm_or_preview` and calls it once instead of
+hand-rolling the cascade. `ConfirmationResult` and `require_confirmation` are now
+internal details; tools only import them directly when they need to branch on `DECLINED`
+vs `CANCELLED` (rare).
 
 ### Benefits
 

@@ -36,7 +36,9 @@ from frontapp_mcp.projections import (
     to_tag_catalog_summary,
 )
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import (
+    confirm_or_preview,
+)
 from frontapp_public_api_client.helpers.tags import HighlightLiteral
 
 
@@ -187,14 +189,14 @@ def register_tools(mcp: FastMCP) -> None:
             "tag_id": tag_id,
             "semantics": "delta — does not replace existing tags",
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Add tag {tag_id} to conversation {conversation_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Add tag {tag_id} to conversation {conversation_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.tags.apply_to_conversation(
             conversation_id, tag_ids=[tag_id]
@@ -221,14 +223,14 @@ def register_tools(mcp: FastMCP) -> None:
             "tag_id": tag_id,
             "semantics": "delta — only removes this tag",
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Remove tag {tag_id} from conversation {conversation_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Remove tag {tag_id} from conversation {conversation_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.tags.remove_from_conversation(
             conversation_id, tag_ids=[tag_id]
@@ -269,12 +271,14 @@ def register_tools(mcp: FastMCP) -> None:
             "is_visible_in_conversation_lists": is_visible_in_conversation_lists,
             "scope": "workspace-wide",
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(context, f"Create workspace tag '{name}'?")
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create workspace tag '{name}'?",
+        )
+        if gate is not None:
+            return gate
 
         tag = await services.client.tags.create(
             name=name,
@@ -308,14 +312,14 @@ def register_tools(mcp: FastMCP) -> None:
             "name": name,
             "highlight": highlight,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Create child tag '{name}' under {parent_tag_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create child tag '{name}' under {parent_tag_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         tag = await services.client.tags.create_child(
             parent_tag_id,
@@ -373,13 +377,15 @@ def register_tools(mcp: FastMCP) -> None:
                 "confirmed": False,
                 "result": "no_changes_requested",
             }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
         summary = ", ".join(f"{k}={v}" for k, v in changes.items())
-        result = await require_confirmation(context, f"Update tag {tag_id}: {summary}?")
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Update tag {tag_id}: {summary}?",
+        )
+        if gate is not None:
+            return gate
 
         success = await services.client.tags.update(
             tag_id,
@@ -412,15 +418,16 @@ def register_tools(mcp: FastMCP) -> None:
                 "currently has it. Cannot be undone."
             ),
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"PERMANENTLY DELETE tag {tag_id}? Removes from every conversation that had it.",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"PERMANENTLY DELETE tag {tag_id}? Removes from every conversation that had it."
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.tags.delete(tag_id)
         return {"confirmed": True, "deleted": success}

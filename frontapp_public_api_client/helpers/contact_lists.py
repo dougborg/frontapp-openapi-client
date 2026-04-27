@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING, Any
 from frontapp_public_api_client.helpers.base import Base
 from frontapp_public_api_client.helpers.constants import (
     CONTACT_BUCKET_REMOVE_CAP,
-    CONTACT_BUCKET_REMOVE_OVER_CAP_MSG,
+    check_list_size_cap,
 )
 
 if TYPE_CHECKING:
@@ -274,10 +274,9 @@ class ContactLists(Base):
         )
         from frontapp_public_api_client.utils import is_success
 
-        if len(contact_ids) > CONTACT_BUCKET_REMOVE_CAP:
-            raise ValueError(
-                CONTACT_BUCKET_REMOVE_OVER_CAP_MSG.format(count=len(contact_ids))
-            )
+        check_list_size_cap(
+            contact_ids, cap=CONTACT_BUCKET_REMOVE_CAP, operation="remove_contacts"
+        )
 
         response = await remove_contacts_from_contact_list.asyncio_detailed(
             contact_list_id=contact_list_id,

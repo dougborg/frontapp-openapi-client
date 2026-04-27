@@ -148,9 +148,27 @@ once should remember:
   `unwrap_unset(field, default)` from `frontapp_public_api_client/domain/converters.py`,
   not `isinstance` or `hasattr` checks. Use `to_unset(value)` when building request
   bodies.
-- **MCP mutation pattern** — tools take `confirm: bool = False` and return a plain dict
-  with `preview` and `confirmed` keys. `ConfirmationResult` is the `StrEnum` returned by
-  `require_confirmation`, **not** the tool's return type.
+- **MCP mutation pattern** — every mutating tool takes `confirm: bool = False`, builds a
+  `preview` dict, then runs the gate via `confirm_or_preview` from
+  `frontapp_mcp/tools/schemas.py`:
+
+  ```python
+  preview = {"action": "...", ...}
+  gate = await confirm_or_preview(
+      context, preview=preview, confirm=confirm,
+      elicit_message=f"Concrete prompt the user sees?",
+  )
+  if gate is not None:
+      return gate
+  # ... proceed with mutation
+  ```
+
+  `confirm_or_preview` returns the response dict to bail with on the preview / declined
+  paths, or `None` when the caller should proceed. Don't hand-roll the 6-line
+  `if not confirm: ... require_confirmation ... ConfirmationResult.CONFIRMED` cascade.
+  The underlying `ConfirmationResult` StrEnum is now an implementation detail; only
+  import it directly if a tool needs to branch on `DECLINED` vs `CANCELLED` (rare).
+
 - **`/review-pr` on stacked PRs** — when merging a parent with `--delete-branch`, flip
   every child's base to `main` first, otherwise GitHub auto-closes them (and they can't
   be reopened). The `/review-pr` skill has a full section on this.
@@ -159,15 +177,44 @@ once should remember:
 
 ## Working with the LSP tool
 
-For type/call-graph questions inside hand-written code, prefer LSP operations over
-`Read`+`Grep`. The full table is in CLAUDE.md "Using the LSP tool". Quick mapping:
+For type/call-graph questions inside hand-written code, **prefer LSP operations over
+`Read`+`Grep`** — they're faster, more accurate, and cross-reference the real type
+system (including third-party libraries in `.venv`). Both Python (pyright) and
+TypeScript (typescript-language-server) LSPs are configured and active.
 
-- "What's this symbol's type?" → `LSP hover`
-- "Where is X defined?" → `LSP goToDefinition`
-- "Who calls X?" → `LSP findReferences` or `LSP incomingCalls`
+| When you need to…                                                 | Use                  |
+| ----------------------------------------------------------------- | -------------------- |
+| Understand a symbol's type/signature/docstring                    | `LSP hover`          |
+| Jump to where a function/class is defined                         | `LSP goToDefinition` |
+| **Find every caller of a function before changing its signature** | `LSP findReferences` |
+| List all symbols in a file (skim without reading the whole thing) | `LSP documentSymbol` |
+| Trace callers of a function (who calls X?)                        | `LSP incomingCalls`  |
+| Trace callees of a function (what does X call?)                   | `LSP outgoingCalls`  |
 
-For project-wide symbol search, fall back to `Grep` — pyright only indexes open files in
-this configuration.
+**Concrete situations where reaching for LSP wins over `Read`/`Grep`:**
+
+- **Before extracting a helper or renaming a symbol** — `LSP findReferences` on the
+  symbol gives you the exact set of files that need updating. Saves a "missed one
+  caller" bug.
+- **Before changing a function signature** — `LSP findReferences` then `LSP hover` on
+  each caller to see the call site shape. Avoids surprise type errors at validation
+  time.
+- **When designing a new helper class that mirrors an existing one** —
+  `LSP documentSymbol` on the canonical (e.g. `helpers/contacts.py`) gives you the full
+  method list in seconds, no `Read` needed.
+- **When chasing why a test fails on an attribute access** — `LSP hover` on the
+  attribute tells you whether the type is `Unset` / `None` / domain model, including
+  fields from third-party libs.
+- **When refactoring touches 30+ files** — never grep + edit blindly.
+  `LSP findReferences` gives you the precise call graph, then a small Python script can
+  rewrite the matches mechanically. (Lesson from the PR that introduced
+  `confirm_or_preview` — grep-driven refactor missed several formatting variants the
+  regex didn't catch.)
+
+For project-wide symbol search, fall back to `Grep` — pyright only indexes _open_ files
+in this configuration, so `LSP workspaceSymbol` returns nothing. Other known limitations
+(`goToImplementation` not implemented, external-import `goToDefinition` returns nothing
+— use `hover` instead) are listed in CLAUDE.md "LSP known limitations".
 
 ---
 

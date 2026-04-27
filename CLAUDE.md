@@ -162,6 +162,28 @@ questions** — they are faster, more accurate, and cross-reference the real typ
 `pyrightconfig.json` (relative `venvPath: "."`). CLI pyright uses it automatically
 (`npx pyright` or `uv run pyright`); the langserver reads it on startup.
 
+### Reach for LSP first in these situations
+
+It's easy to fall back on `Grep` reflexively — these are the situations where doing so
+is genuinely worse than the LSP:
+
+- **Before extracting a helper, renaming a symbol, or changing a function signature** —
+  `LSP findReferences` returns the precise call graph. Grepping the symbol name misses
+  re-exports, dynamic dispatch, and string-only matches in unrelated docs; LSP doesn't.
+- **Before designing a class that mirrors an existing one** — `LSP documentSymbol` on
+  the canonical file (e.g. `helpers/contacts.py`) gives you the full method list in one
+  hop; `Read` walks the whole file.
+- **When debugging a `'X' object has no attribute 'y'` style error** — `LSP hover` on
+  the access tells you whether the type is `Unset`, `None`, a domain model, or a
+  third-party class. Grepping for the field misses the type relationship.
+- **Refactors that touch >10 files** — get the call graph from `LSP findReferences`,
+  then mechanically rewrite. Lesson from PR #71 (`confirm_or_preview` rollout): a
+  grep-driven refactor missed several formatting variants the regex didn't catch and
+  needed a hand-edit pass to clean up.
+
+If the question is "where is the string `foo` in this repo?" — `Grep`. If the question
+is "what calls / extends / overrides / shadows `foo`?" — LSP.
+
 ### LSP known limitations
 
 - `workspaceSymbol` returns nothing in this tooling — pyright only indexes _open_ files,
