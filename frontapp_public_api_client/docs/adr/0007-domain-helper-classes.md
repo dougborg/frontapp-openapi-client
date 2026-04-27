@@ -122,7 +122,7 @@ than free functions taking a `FrontappClient` argument:
    `conversations.list(client, ...)`, and the bound shape mirrors how the underlying
    resource is structured ("operations on conversations" → a Conversations object).
 2. **Shared pagination machinery** — `Base._paginate` is genuinely shared state-aware
-   logic (max_pages defaults from the client, debug logging via `self._client.logger`).
+   logic (debug logging via `self._client.logger`, cursor extraction, safety caps).
    Inheriting it is cheaper than passing it around.
 3. **Lazy property registration** — the `FrontappClient.<resource>` property pattern
    needs an instance to attach to. A class is the natural target.

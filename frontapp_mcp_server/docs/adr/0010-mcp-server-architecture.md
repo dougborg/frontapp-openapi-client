@@ -41,7 +41,7 @@ context manager loads `FRONTAPP_API_KEY`, opens a `FrontappClient`, and exposes 
 ```python
 @asynccontextmanager
 async def lifespan(server: FastMCP) -> AsyncIterator[Services]:
-    async with FrontappClient(api_key=..., max_retries=5, max_pages=100) as client:
+    async with FrontappClient(api_key=..., max_retries=5) as client:
         yield Services(client=client)
 ```
 

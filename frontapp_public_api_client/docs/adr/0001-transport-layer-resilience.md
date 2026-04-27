@@ -37,9 +37,15 @@ Specifically:
 - Create custom `RateLimitAwareRetry` class that distinguishes between 429 (rate limit)
   and 5xx errors
 - Compose transport layers: `ResilientAsyncTransport` = `ErrorLoggingTransport` +
-  `AutoPaginationTransport` + `RetryTransport`
+  `RetryTransport`
 - All API calls through `FrontappClient` automatically get resilience without any code
   changes
+
+> **Update (2026-04-27)**: An earlier `AutoPaginationTransport` layer that watched for
+> the `X-Pagination` HTTP response header was removed in PR #62 — Front uses
+> cursor-token pagination (`_pagination.next` JSON envelope) rather than `X-Pagination`
+> headers, so the transport-level auto-paginator never fired at runtime. Pagination is
+> now handled at the helper layer (see ADR-0003 update).
 
 Implementation in
 [frontapp_client.py](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/frontapp_client.py):
@@ -54,15 +60,12 @@ class ResilientAsyncTransport:
         # Layer 2: Error logging
         error_transport = ErrorLoggingTransport(base_transport, logger)
 
-        # Layer 3: Auto-pagination
-        pagination_transport = AutoPaginationTransport(error_transport, ...)
-
-        # Layer 4: Retry logic
+        # Layer 3: Retry logic
         retry = RateLimitAwareRetry(
             status_forcelist=[429, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST", "PATCH"]
         )
-        resilient_transport = RetryTransport(pagination_transport, retry=retry)
+        resilient_transport = RetryTransport(error_transport, retry=retry)
 
         return resilient_transport
 ```

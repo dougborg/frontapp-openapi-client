@@ -2,8 +2,9 @@
 FrontappClient - The pythonic Frontapp API client with automatic resilience.
 
 This client uses httpx's native transport layer to provide automatic retries,
-rate limiting, error handling, and pagination for all API calls without any
-decorators or wrapper methods needed.
+rate-limit handling, and detailed error logging for all API calls without
+any decorators or wrapper methods needed. Pagination is handled at the
+helper layer (see ``Base._paginate`` and ``client.<resource>.iter_all``).
 """
 
 import contextlib
@@ -273,502 +274,25 @@ class ErrorLoggingTransport(AsyncHTTPTransport):
             self.logger.error(f"{prefix}\n  Raw error: {_sanitize_body(error_data)}")
 
 
-class PaginationTransport(AsyncHTTPTransport):
-    """
-    Transport layer that adds automatic pagination for GET requests.
-
-    Auto-pagination behavior (for Frontapp's ``page``/``per_page`` scheme):
-    - ON by default for GET requests with NO page parameter in URL
-    - Uses 100 items per page (Frontapp's max) when no ``per_page`` is specified
-    - If caller specifies ``per_page``, that value is respected
-    - ANY explicit ``page`` parameter disables auto-pagination
-    - Disabled when request has ``extensions={"auto_pagination": False}``
-    - Only applies to GET requests
-    - Only applies to wrapped list responses (``{"data": [...], "meta": {...}}``);
-      raw-array responses like ``/statuses`` are passed through unchanged.
-
-    Controlling pagination limits:
-    - ``max_pages`` (constructor): Maximum number of pages to fetch
-    - ``max_items`` (extension): Maximum total items to collect, e.g.,
-      ``extensions={"max_items": 200}``
-    """
-
-    def __init__(
-        self,
-        wrapped_transport: AsyncHTTPTransport | None = None,
-        max_pages: int = 100,
-        logger: Logger | None = None,
-        **kwargs: Any,
-    ):
-        """
-        Initialize the pagination transport.
-
-        Args:
-            wrapped_transport: The transport to wrap. If None, creates a new AsyncHTTPTransport.
-            max_pages: Maximum number of pages to collect during auto-pagination. Defaults to 100.
-            logger: Logger instance for capturing pagination operations. If None, creates a default logger.
-            **kwargs: Additional arguments passed to AsyncHTTPTransport if wrapped_transport is None.
-        """
-        # If no wrapped transport provided, create a base one
-        if wrapped_transport is None:
-            wrapped_transport = AsyncHTTPTransport(**kwargs)
-            super().__init__()
-        else:
-            super().__init__()
-
-        self._wrapped_transport = wrapped_transport
-        self.max_pages = max_pages
-        self.logger: Logger = logger or logging.getLogger(__name__)
-
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
-        """Handle request with automatic pagination for GET requests.
-
-        Auto-pagination is ON by default for GET requests. It is disabled when:
-        - `extensions={"auto_pagination": False}` is set, OR
-        - ANY explicit `page` parameter is in the URL (e.g., `?page=1` or `?page=2`)
-
-        To get auto-pagination, simply don't pass a page parameter. The transport
-        will automatically use 100 items per page (Frontapp's max) unless you specify
-        a limit, in which case your limit will be respected.
-        """
-        # Check if auto-pagination is explicitly disabled via request extensions
-        auto_pagination = request.extensions.get("auto_pagination", True)
-
-        # ANY page param in URL disables auto-pagination - caller wants specific page
-        has_explicit_page = "page" in request.url.params
-
-        # Only paginate GET requests when auto_pagination is enabled and no explicit page
-        should_paginate = (
-            request.method == "GET" and auto_pagination and not has_explicit_page
-        )
-
-        if should_paginate:
-            return await self._handle_paginated_request(request)
-        else:
-            # For non-paginated requests, just pass through to wrapped transport
-            return await self._wrapped_transport.handle_async_request(request)
-
-    async def _handle_paginated_request(self, request: httpx.Request) -> httpx.Response:
-        """
-        Handle paginated requests by automatically collecting all pages.
-
-        This method detects paginated responses and automatically collects all available
-        pages up to the configured maximum. It preserves the original request structure
-        while combining data from multiple pages.
-
-        Args:
-            request: The HTTP request to handle (must be a GET request).
-
-        Returns:
-            A combined HTTP response containing data from all collected pages with
-            pagination metadata in the response body.
-
-        Note:
-            - Auto-pagination is ON by default for all GET requests
-            - If response has no pagination info, returns the single response as-is
-            - The response contains an 'auto_paginated' flag in the pagination metadata
-            - Data from all pages is combined into a single 'data' array
-            - Use `extensions={"max_items": N}` to limit total items collected
-        """
-        all_data: list[Any] = []
-        current_page = 1
-        total_pages: int | None = None
-        page_num = 1
-        response: httpx.Response | None = None
-        original_is_raw_list = False
-
-        # Get max_items limit from extensions (None = unlimited)
-        max_items: int | None = request.extensions.get("max_items")
-
-        # Parse initial parameters, preserving multi-value query params
-        # (e.g., tags[]=a&tags[]=b). Using multi_items() instead of dict()
-        # to avoid losing duplicate keys.
-        base_params = [
-            (k, v)
-            for k, v in request.url.params.multi_items()
-            if k not in ("page", "per_page")
-        ]
-
-        # Get caller's per_page or default to 100 (Frontapp's max)
-        original_per_page = request.url.params.get("per_page")
-        try:
-            page_size = int(original_per_page) if original_per_page else 100
-            if page_size <= 0:
-                self.logger.warning(
-                    "Invalid per_page parameter %r (must be positive), using 100",
-                    original_per_page,
-                )
-                page_size = 100
-            elif page_size > 100:
-                self.logger.warning(
-                    "per_page %d exceeds Frontapp's max of 100, clamping",
-                    page_size,
-                )
-                page_size = 100
-        except (ValueError, TypeError):
-            self.logger.warning(
-                "Invalid per_page parameter %r, using 100", original_per_page
-            )
-            page_size = 100
-
-        self.logger.info("Auto-paginating request: %s", _sanitize_url(str(request.url)))
-
-        for page_num in range(1, self.max_pages + 1):
-            # Determine per_page for this request
-            if max_items is not None:
-                remaining = max_items - len(all_data)
-                if remaining <= 0:
-                    break
-                current_per_page = str(min(page_size, remaining))
-            else:
-                current_per_page = str(page_size)
-
-            # Build params with updated page/per_page, preserving multi-value params
-            url_params = [
-                *base_params,
-                ("page", str(page_num)),
-                ("per_page", current_per_page),
-            ]
-
-            # Create a new request with updated parameters
-            paginated_request = httpx.Request(
-                method=request.method,
-                url=request.url.copy_with(params=url_params),
-                headers=request.headers,
-                content=request.content,
-                extensions=request.extensions,
-            )
-
-            # Make the request using the wrapped transport
-            response = await self._wrapped_transport.handle_async_request(
-                paginated_request
-            )
-
-            if response.status_code != 200:
-                # If we get an error, return the original response
-                return response
-
-            # Parse the response
-            try:
-                # Read the response content if it's streaming
-                if hasattr(response, "aread"):
-                    with contextlib.suppress(TypeError, AttributeError):
-                        # Skip aread if it's not async (e.g., in tests with mocks)
-                        await response.aread()
-
-                data = response.json()
-
-                # Track original response format on first page
-                if page_num == 1:
-                    original_is_raw_list = isinstance(data, list)
-
-                # Extract pagination info from headers or response body
-                pagination_info = self._extract_pagination_info(response, data)
-
-                if pagination_info:
-                    current_page = pagination_info.get("page", page_num)
-                    total_pages = pagination_info.get("total_pages")
-
-                    # Extract the actual data items
-                    if isinstance(data, list):
-                        items = data
-                    else:
-                        items = data.get("data", [])
-                    all_data.extend(items)
-
-                    # Check max_items limit
-                    if max_items is not None and len(all_data) >= max_items:
-                        all_data = all_data[:max_items]  # Truncate to exact limit
-                        self.logger.info(
-                            "Reached max_items limit (%d), stopping pagination",
-                            max_items,
-                        )
-                        break
-
-                    # Check if we're done
-                    # Break if we've reached the last known page or got an empty page
-                    if (total_pages and current_page >= total_pages) or len(items) == 0:
-                        break
-
-                    self.logger.debug(
-                        "Collected page %s/%s, items: %d, total so far: %d",
-                        current_page,
-                        total_pages or "?",
-                        len(items),
-                        len(all_data),
-                    )
-                else:
-                    # No pagination info - return response preserving its shape
-                    self.logger.info(
-                        "No pagination info found, returning single-page response"
-                    )
-                    # Apply max_items truncation if set
-                    if max_items is not None:
-                        if isinstance(data, list) and len(data) > max_items:
-                            truncated = json.dumps(data[:max_items]).encode()
-                            headers = dict(response.headers)
-                            headers.pop("content-encoding", None)
-                            headers.pop("content-length", None)
-                            return httpx.Response(
-                                status_code=200,
-                                headers=headers,
-                                content=truncated,
-                                request=request,
-                            )
-                        if isinstance(data, dict) and "data" in data:
-                            items = data["data"]
-                            if isinstance(items, list) and len(items) > max_items:
-                                data["data"] = items[:max_items]
-                                truncated = json.dumps(data).encode()
-                                headers = dict(response.headers)
-                                headers.pop("content-encoding", None)
-                                headers.pop("content-length", None)
-                                return httpx.Response(
-                                    status_code=200,
-                                    headers=headers,
-                                    content=truncated,
-                                    request=request,
-                                )
-                    return response
-
-            except (json.JSONDecodeError, KeyError) as e:
-                self.logger.warning("Failed to parse paginated response: %s", e)
-                return response
-
-        # Ensure we have a response at this point
-        if response is None:
-            msg = "No response available after pagination"
-            raise RuntimeError(msg)
-
-        # Create a combined response, preserving the original response shape
-        if original_is_raw_list:
-            # Original endpoint returned a raw JSON list - preserve that format
-            combined_content = json.dumps(all_data).encode()
-        else:
-            combined_data: dict[str, Any] = {"data": all_data}
-            # Add pagination metadata
-            if total_pages:
-                combined_data["pagination"] = {
-                    "total_pages": total_pages,
-                    "collected_pages": page_num,
-                    "total_items": len(all_data),
-                    "auto_paginated": True,
-                }
-            combined_content = json.dumps(combined_data).encode()
-
-        # Remove content-encoding headers to avoid compression issues
-        headers = dict(response.headers)
-        headers.pop("content-encoding", None)
-        headers.pop("content-length", None)  # Will be recalculated
-
-        combined_response = httpx.Response(
-            status_code=200,
-            headers=headers,
-            content=combined_content,
-            request=request,
-        )
-
-        self.logger.info(
-            "Auto-pagination complete: collected %d items from %d pages",
-            len(all_data),
-            page_num,
-        )
-
-        return combined_response
-
-    def _normalize_pagination_values(
-        self, pagination_info: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Convert pagination values from strings to appropriate Python types.
-
-        JSON parsing may return numeric values as strings (e.g., "41" instead of 41).
-        String comparison produces incorrect results: "5" >= "41" is True because
-        "5" > "4" lexicographically. This method ensures all numeric pagination
-        fields are proper integers for correct comparisons.
-
-        Additionally, boolean fields like first_page and last_page may come as
-        string values ("true"/"false") and are converted to Python booleans.
-
-        Args:
-            pagination_info: Dictionary containing pagination metadata.
-
-        Returns:
-            Dictionary with numeric fields converted to integers and boolean
-            fields converted to booleans.
-        """
-        # Fields that should be integers for pagination comparisons
-        numeric_fields = [
-            "page",
-            "total_pages",
-            "total_items",
-            "limit",
-            "offset",
-            "count",
-            "per_page",
-            "current_page",
-            "total_records",
-        ]
-
-        # Fields that should be booleans (API returns "true"/"false" strings)
-        boolean_fields = [
-            "first_page",
-            "last_page",
-        ]
-
-        result = pagination_info.copy()
-
-        # Convert numeric fields
-        for field in numeric_fields:
-            if field in result:
-                value = result[field]
-                # Convert string numbers to integers
-                if isinstance(value, str):
-                    try:
-                        result[field] = int(value)
-                    except ValueError:
-                        self.logger.warning(
-                            "Invalid pagination value for %s: %r, removing field",
-                            field,
-                            value,
-                        )
-                        # Remove invalid field so fallback values are used
-                        del result[field]
-                # Already an int or float - ensure it's int
-                elif isinstance(value, float):
-                    # Warn if float has a fractional part (unexpected for pagination)
-                    if value != int(value):
-                        self.logger.warning(
-                            "Pagination value %s has fractional part: %r, truncating to %d",
-                            field,
-                            value,
-                            int(value),
-                        )
-                    result[field] = int(value)
-                # If it's already an int, leave it as is
-
-        # Convert boolean fields ("true"/"false" strings to Python booleans)
-        for field in boolean_fields:
-            if field in result:
-                value = result[field]
-                if isinstance(value, str):
-                    lower_value = value.lower()
-                    if lower_value == "true":
-                        result[field] = True
-                    elif lower_value == "false":
-                        result[field] = False
-                    else:
-                        self.logger.warning(
-                            "Invalid boolean pagination value for %s: %r, removing field",
-                            field,
-                            value,
-                        )
-                        del result[field]
-                elif not isinstance(value, bool):
-                    # Unexpected type - convert truthy/falsy to bool
-                    result[field] = bool(value)
-
-        return result
-
-    def _extract_pagination_info(
-        self, response: httpx.Response, data: dict[str, Any]
-    ) -> dict[str, Any] | None:
-        """Extract pagination information from response headers or body.
-
-        Note:
-            All numeric pagination values (page, total_pages, total_items, etc.)
-            are converted to integers to ensure correct comparisons. This is important
-            because JSON parsing may return string values, and string comparison
-            (e.g., "5" >= "41") produces incorrect results.
-        """
-        pagination_info: dict[str, Any] = {}
-
-        # Check for X-Pagination header (JSON format)
-        if "X-Pagination" in response.headers:
-            try:
-                header_data = json.loads(response.headers["X-Pagination"])
-                # Validate that parsed JSON is a dictionary
-                if not isinstance(header_data, dict):
-                    self.logger.warning(
-                        "X-Pagination header is not a JSON object: %r", header_data
-                    )
-                else:
-                    # Convert numeric string values to integers to avoid string comparison bugs
-                    # (e.g., "5" >= "41" is True in string comparison but should be False)
-                    pagination_info = self._normalize_pagination_values(header_data)
-                    # Only return early if we got valid pagination data
-                    if pagination_info:
-                        return pagination_info
-            except json.JSONDecodeError:
-                pass
-
-        # Check for individual headers (with validation for malformed values)
-        if "X-Total-Pages" in response.headers:
-            try:
-                pagination_info["total_pages"] = int(response.headers["X-Total-Pages"])
-            except ValueError:
-                self.logger.warning(
-                    "Invalid X-Total-Pages header value: %s",
-                    response.headers["X-Total-Pages"],
-                )
-        if "X-Current-Page" in response.headers:
-            try:
-                pagination_info["page"] = int(response.headers["X-Current-Page"])
-            except ValueError:
-                self.logger.warning(
-                    "Invalid X-Current-Page header value: %s",
-                    response.headers["X-Current-Page"],
-                )
-
-        # Check for pagination in response body
-        if isinstance(data, dict):
-            if "pagination" in data and isinstance(data["pagination"], dict):
-                pagination_info.update(
-                    {str(k): v for k, v in data["pagination"].items()}
-                )
-            elif "meta" in data and isinstance(data["meta"], dict):
-                meta = data["meta"]
-                # Frontapp shape: meta has current_page, last_page, per_page, total
-                if "current_page" in meta or "last_page" in meta:
-                    pagination_info.update({str(k): v for k, v in meta.items()})
-                    # Map Frontapp field names to the internal canonical names so
-                    # the downstream stop-condition check in _handle_paginated_request
-                    # continues to use `page` / `total_pages`.
-                    if "current_page" in meta:
-                        pagination_info["page"] = meta["current_page"]
-                    if "last_page" in meta:
-                        pagination_info["total_pages"] = meta["last_page"]
-                # Alternate nested pagination shape: meta.pagination
-                elif "pagination" in meta and isinstance(meta["pagination"], dict):
-                    pagination_info.update(
-                        {str(k): v for k, v in meta["pagination"].items()}
-                    )
-
-        # Normalize all numeric values to ensure correct comparisons
-        if pagination_info:
-            pagination_info = self._normalize_pagination_values(pagination_info)
-
-        return pagination_info if pagination_info else None
-
-
 def ResilientAsyncTransport(
     max_retries: int = 5,
-    max_pages: int = 100,
     logger: Logger | None = None,
     **kwargs: Any,
 ) -> RetryTransport:
     """
-    Factory function that creates a chained transport with error logging,
-    pagination, and retry capabilities.
+    Factory function that creates a chained transport with error logging
+    and retry capabilities.
 
-    This function chains multiple transport layers:
+    This function chains three transport layers:
     1. AsyncHTTPTransport (base HTTP transport)
     2. ErrorLoggingTransport (logs detailed 4xx errors)
-    3. PaginationTransport (auto-collects paginated responses)
-    4. RetryTransport (handles retries with Retry-After header support)
+    3. RetryTransport (handles retries with Retry-After header support)
+
+    Pagination is handled at the helper layer (``Base._paginate`` /
+    ``client.<resource>.iter_all()``), not at the transport layer.
 
     Args:
         max_retries: Maximum number of retry attempts for failed requests. Defaults to 5.
-        max_pages: Maximum number of pages to collect during auto-pagination. Defaults to 100.
         logger: Logger instance for capturing operations. If None, creates a default logger.
         **kwargs: Additional arguments passed to the base AsyncHTTPTransport.
             Common parameters include:
@@ -788,7 +312,7 @@ def ResilientAsyncTransport(
 
     Example:
         ```python
-        transport = ResilientAsyncTransport(max_retries=3, max_pages=50)
+        transport = ResilientAsyncTransport(max_retries=3)
         async with httpx.AsyncClient(transport=transport) as client:
             response = await client.get("https://api.example.com/items")
         ```
@@ -804,13 +328,6 @@ def ResilientAsyncTransport(
     # 2. Wrap with error logging
     error_logging_transport = ErrorLoggingTransport(
         wrapped_transport=base_transport,
-        logger=resolved_logger,
-    )
-
-    # 3. Wrap with pagination
-    pagination_transport = PaginationTransport(
-        wrapped_transport=error_logging_transport,
-        max_pages=max_pages,
         logger=resolved_logger,
     )
 
@@ -840,7 +357,7 @@ def ResilientAsyncTransport(
         ],
     )
     retry_transport = RetryTransport(
-        transport=pagination_transport,
+        transport=error_logging_transport,
         retry=retry,
     )
 
@@ -848,7 +365,7 @@ def ResilientAsyncTransport(
 
 
 class FrontappClient(AuthenticatedClient):
-    """The pythonic Frontapp API client with automatic resilience and pagination.
+    """The pythonic Frontapp API client with automatic resilience.
 
     Inherits from ``AuthenticatedClient`` and can be passed directly to
     generated API methods without a ``.client`` property.
@@ -857,18 +374,12 @@ class FrontappClient(AuthenticatedClient):
     - Automatic retries on network errors and server errors (5xx)
     - Automatic rate-limit handling (parses ``Retry-After``, falls back to
       exponential backoff on 429 since Frontapp doesn't emit the header)
-    - Auto-pagination for wrapped list endpoints (``{"data": [...], "meta": {...}}``)
-    - Uses 100 items per page (Frontapp's max) by default
-    - Raw-array endpoints (``/statuses``, ``/orders/{id}/viable-statuses``) are passed through
     - Rich logging and observability
 
-    Auto-pagination behavior:
-    - ON by default for GET requests with no ``page`` parameter
-    - ``per_page`` defaults to 100; caller values are respected (capped at 100)
-    - ANY explicit ``page`` param disables auto-pagination
-    - Disabled per-request via ``extensions={"auto_pagination": False}``
-    - ``max_pages`` constructor argument caps total pages collected
-    - ``extensions={"max_items": N}`` caps total items collected
+    Pagination is handled at the helper layer — see ``client.<resource>.list``
+    (manual cursor) and ``client.<resource>.iter_all`` (automatic walker)
+    for the supported resources, or ``Base._paginate`` for the underlying
+    cursor-token loop.
 
     Usage:
         async with FrontappClient() as client:
@@ -955,7 +466,6 @@ class FrontappClient(AuthenticatedClient):
         base_url: str | None = None,
         timeout: float = 30.0,
         max_retries: int = 5,
-        max_pages: int = 100,
         logger: Logger | None = None,
         **httpx_kwargs: Any,
     ):
@@ -968,7 +478,6 @@ class FrontappClient(AuthenticatedClient):
             base_url: Base URL for the Frontapp API. Defaults to https://api2.frontapp.com
             timeout: Request timeout in seconds. Defaults to 30.0.
             max_retries: Maximum number of retry attempts for failed requests. Defaults to 5.
-            max_pages: Maximum number of pages to collect during auto-pagination. Defaults to 100.
             logger: Any object whose debug/info/warning/error methods accept
                 (msg, *args, **kwargs) — the standard logging.Logger call convention
                 (e.g. logging.Logger, structlog.BoundLogger). If None, creates a
@@ -1021,7 +530,6 @@ class FrontappClient(AuthenticatedClient):
             )
 
         self.logger: Logger = logger or logging.getLogger(__name__)
-        self.max_pages = max_pages
 
         # Warn if SSL verification is disabled — risk of MITM attacks
         if httpx_kwargs.get("verify") is False:
@@ -1087,7 +595,6 @@ class FrontappClient(AuthenticatedClient):
             # These will be passed to the base AsyncHTTPTransport (http2, limits, verify, etc.)
             transport = ResilientAsyncTransport(
                 max_retries=max_retries,
-                max_pages=max_pages,
                 logger=self.logger,
                 **httpx_kwargs,  # Pass through http2, limits, verify, cert, trust_env, etc.
             )

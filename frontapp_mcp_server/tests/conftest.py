@@ -32,7 +32,6 @@ async def frontapp_context():
         base_url=base_url,
         timeout=30.0,
         max_retries=3,
-        max_pages=10,
     )
 
     mock_lifespan_context.client = client

@@ -306,6 +306,8 @@ async with FrontappClient() as client:
 | `base_url`       | `https://api2.frontapp.com` | Or `FRONTAPP_BASE_URL` env var                           |
 | `timeout`        | `30.0`                      | Per-request seconds                                      |
 | `max_retries`    | `5`                         | Retry attempts before giving up                          |
-| `max_pages`      | `100`                       | Cap on paginated walks (where supported)                 |
 | `logger`         | module logger               | Any logger with `debug/info/warning/error`               |
 | `**httpx_kwargs` | —                           | Forwarded to the transport (http2, limits, verify, cert) |
+
+Pagination caps (`max_items`, `max_pages`) are per-call helper arguments — see
+`client.<resource>.iter_all(max_items=…, max_pages=…)`.
