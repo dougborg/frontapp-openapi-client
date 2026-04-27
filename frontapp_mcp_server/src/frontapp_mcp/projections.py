@@ -10,7 +10,15 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from frontapp_public_api_client.domain import Contact, Conversation, Draft, Inbox, Tag
+from frontapp_public_api_client.domain import (
+    Contact,
+    ContactGroupRef,
+    ContactList,
+    Conversation,
+    Draft,
+    Inbox,
+    Tag,
+)
 
 
 class ConversationSummary(BaseModel):
@@ -192,12 +200,32 @@ def to_inbox_summary(inbox: Inbox) -> InboxSummary:
     )
 
 
+class ContactListSummary(BaseModel):
+    """Compact projection of a contact list (or deprecated contact group).
+
+    Both Front primitives share the same wire shape (id + name + is_private),
+    so the projection is reused for ``client.contact_lists`` and the
+    deprecated ``client.contact_groups`` surfaces.
+    """
+
+    id: str | None = None
+    name: str | None = None
+    is_private: bool | None = None
+
+
+def to_contact_list_summary(item: ContactList | ContactGroupRef) -> ContactListSummary:
+    """Project a ``ContactList`` (or ``ContactGroupRef``) to a ``ContactListSummary``."""
+    return ContactListSummary(id=item.id, name=item.name, is_private=item.is_private)
+
+
 __all__ = [
+    "ContactListSummary",
     "ContactSummary",
     "ConversationSummary",
     "DraftSummary",
     "InboxSummary",
     "TagCatalogSummary",
+    "to_contact_list_summary",
     "to_contact_summary",
     "to_draft_summary",
     "to_inbox_summary",

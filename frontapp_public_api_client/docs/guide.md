@@ -60,16 +60,18 @@ async with FrontappClient() as client:
 
 ## Available helpers today
 
-| Helper                 | Status     | Covers                                                                                                                                                               |
-| ---------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `client.conversations` | ✅ shipped | list/get/search/update/reply/list_messages/list_comments/add_comment                                                                                                 |
-| `client.drafts`        | ✅ shipped | list_for_conversation/create_on_channel/create_reply/edit/delete                                                                                                     |
-| `client.contacts`      | ✅ shipped | list/get/search_by_email/list_for_team/list_for_teammate/list_conversations/list_notes/create (+team/teammate)/update/merge/delete/add_note/add_handle/delete_handle |
-| `client.messages`      | ✅ shipped | get/seen_status/mark_seen                                                                                                                                            |
-| `client.tags`          | ✅ shipped | list (+ company/team/teammate scopes)/get/list_children/list_tagged_conversations/apply_to_conversation/remove_from_conversation/create/create_child/update/delete   |
-| `client.inboxes`       | ✅ shipped | list (+ team/teammate scopes)/get/list_conversations/list_channels/list_access/create (+ team)/grant_access/revoke_access                                            |
-| `client.teammates`     | ✅ shipped | list/get/list_inboxes/list_assigned_conversations/update                                                                                                             |
-| `client.attachments`   | ✅ shipped | download/stream + `attachments=[FileSpec(...)]` parameter on every draft / reply / comment helper                                                                    |
+| Helper                  | Status     | Covers                                                                                                                                                               |
+| ----------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client.conversations`  | ✅ shipped | list/get/search/update/reply/list_messages/list_comments/add_comment                                                                                                 |
+| `client.drafts`         | ✅ shipped | list_for_conversation/create_on_channel/create_reply/edit/delete                                                                                                     |
+| `client.contacts`       | ✅ shipped | list/get/search_by_email/list_for_team/list_for_teammate/list_conversations/list_notes/create (+team/teammate)/update/merge/delete/add_note/add_handle/delete_handle |
+| `client.contact_lists`  | ✅ shipped | list/list_for_team/list_for_teammate/list_members/create (+team/teammate)/delete/add_contacts/remove_contacts                                                        |
+| `client.contact_groups` | ✅ shipped | Same shape as contact_lists. **Front has deprecated this surface** — prefer contact_lists for new code                                                               |
+| `client.messages`       | ✅ shipped | get/seen_status/mark_seen                                                                                                                                            |
+| `client.tags`           | ✅ shipped | list (+ company/team/teammate scopes)/get/list_children/list_tagged_conversations/apply_to_conversation/remove_from_conversation/create/create_child/update/delete   |
+| `client.inboxes`        | ✅ shipped | list (+ team/teammate scopes)/get/list_conversations/list_channels/list_access/create (+ team)/grant_access/revoke_access                                            |
+| `client.teammates`      | ✅ shipped | list/get/list_inboxes/list_assigned_conversations/update                                                                                                             |
+| `client.attachments`    | ✅ shipped | download/stream + `attachments=[FileSpec(...)]` parameter on every draft / reply / comment helper                                                                    |
 
 Outbound replies go through `client.drafts.create_reply(...)` rather than
 `client.conversations.reply(...)` — the latter still exists at the helper level for

@@ -19,6 +19,8 @@ from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 if TYPE_CHECKING:
     from .helpers.attachments import Attachments
+    from .helpers.contact_groups import ContactGroups
+    from .helpers.contact_lists import ContactLists
     from .helpers.contacts import Contacts
     from .helpers.conversations import Conversations
     from .helpers.drafts import Drafts
@@ -1033,6 +1035,8 @@ class FrontappClient(AuthenticatedClient):
         self._attachments: Attachments | None = None
         self._conversations: Conversations | None = None
         self._contacts: Contacts | None = None
+        self._contact_lists: ContactLists | None = None
+        self._contact_groups: ContactGroups | None = None
         self._drafts: Drafts | None = None
         self._messages: Messages | None = None
         self._tags: Tags | None = None
@@ -1160,6 +1164,36 @@ class FrontappClient(AuthenticatedClient):
         if self._contacts is None:
             self._contacts = Contacts(self)
         return self._contacts
+
+    @property
+    def contact_lists(self) -> "ContactLists":
+        """Ergonomic operations over Frontapp's contact-list surface.
+
+        Contact lists are named buckets of contacts used for bulk
+        operations (broadcasts, segmentation). Front exposes no
+        ``GET /contact_lists/{id}`` or PATCH endpoint — lists can't be
+        renamed once created. See helper docstring for the full list of
+        quirks (workspace-scoped create defaults, 50-contact remove cap).
+        """
+        from .helpers.contact_lists import ContactLists
+
+        if self._contact_lists is None:
+            self._contact_lists = ContactLists(self)
+        return self._contact_lists
+
+    @property
+    def contact_groups(self) -> "ContactGroups":
+        """Ergonomic operations over Frontapp's deprecated contact-group surface.
+
+        Front has deprecated all contact-group endpoints in favor of
+        contact lists; the vertical exists for workspaces still using
+        groups. Prefer ``client.contact_lists`` for new code.
+        """
+        from .helpers.contact_groups import ContactGroups
+
+        if self._contact_groups is None:
+            self._contact_groups = ContactGroups(self)
+        return self._contact_groups
 
     @property
     def messages(self) -> "Messages":

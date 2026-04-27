@@ -22,6 +22,7 @@ from .contact import (
     ContactHandleSource,
     ContactNote,
 )
+from .contact_list import ContactList
 from .conversation import (
     Conversation,
     ConversationPageCursor,
@@ -41,6 +42,7 @@ __all__ = [
     "ContactGroupRef",
     "ContactHandle",
     "ContactHandleSource",
+    "ContactList",
     "ContactNote",
     "Conversation",
     "ConversationPageCursor",
