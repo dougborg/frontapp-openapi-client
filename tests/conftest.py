@@ -48,6 +48,70 @@ def mock_transport(mock_transport_handler):
 
 
 @pytest.fixture
+def make_mock_transport():
+    """Factory: build an ``httpx.MockTransport`` that returns a fixed payload.
+
+    ``payload=None`` sends an empty body (use for 204 No Content). Used by
+    every helper test that wants to assert the helper's unwrap/decode path
+    without recording the request.
+    """
+
+    def factory(payload, status: int = 200) -> httpx.MockTransport:
+        def handler(_request: httpx.Request) -> httpx.Response:
+            if payload is None:
+                return httpx.Response(status, content=b"")
+            return httpx.Response(status, json=payload)
+
+        return httpx.MockTransport(handler)
+
+    return factory
+
+
+@pytest.fixture
+def make_recording_transport():
+    """Factory: build an ``httpx.MockTransport`` that records every request.
+
+    Returns ``(transport, recorded_list)``. Use when a test needs to inspect
+    the URL, method, or body the helper sent.
+    """
+
+    def factory(
+        payload, status: int = 200
+    ) -> tuple[httpx.MockTransport, list[httpx.Request]]:
+        recorded: list[httpx.Request] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            recorded.append(request)
+            if payload is None:
+                return httpx.Response(status, content=b"")
+            return httpx.Response(status, json=payload)
+
+        return httpx.MockTransport(handler), recorded
+
+    return factory
+
+
+@pytest.fixture
+def attach_transport(mock_api_credentials):
+    """Helper: install a mock transport on a freshly-built FrontappClient.
+
+    Returns a callable ``(transport) -> FrontappClient`` so each test can
+    construct its own client with the chosen mock plumbing.
+    """
+
+    def attach(transport: httpx.MockTransport):
+        client = FrontappClient(**mock_api_credentials)
+        client.set_async_httpx_client(
+            httpx.AsyncClient(
+                transport=transport, base_url=mock_api_credentials["base_url"]
+            )
+        )
+        return client
+
+    return attach
+
+
+@pytest.fixture
 def frontapp_client_with_mock_transport(mock_api_credentials, mock_transport):
     """Create a FrontappClient with MockTransport for testing."""
     # Create a FrontappClient

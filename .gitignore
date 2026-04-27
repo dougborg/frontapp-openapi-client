@@ -182,3 +182,4 @@ node_modules/
 # Some users have `tags` (ctags) globally ignored, which silently drops the
 # generated `api/tags/` package — this negation keeps it tracked.
 !frontapp_public_api_client/api/tags/
+.claude/scheduled_tasks.lock
