@@ -73,7 +73,7 @@ dev = [
   "pytest-xdist>=3.6.1",
   "tox>=4.25.0",
   # Code quality and linting
-  "ruff>=0.14.0",
+  "ruff>=0.15.12",
   "pre-commit>=4.5.0",
   # Build tools
   "build>=1.2.0",
