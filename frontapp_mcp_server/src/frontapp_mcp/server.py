@@ -319,6 +319,43 @@ start to translate names/emails into `tea_*` ids.
   only — email and admin status are read-only via this API; manage
   those in Front's admin UI)
 
+## Contact Lists
+
+Contact lists are named buckets of contacts used for bulk operations
+(broadcasts, segmentation). Three creation scopes: workspace, team,
+teammate. Front exposes no GET-by-id and no PATCH — lists can't be
+renamed once created. To find a list's id, list and match by name.
+
+**Listing & detail:**
+  list_contact_lists / list_team_contact_lists / list_teammate_contact_lists |
+  list_contacts_in_contact_list
+
+**Mutations (all two-step confirm):**
+  create_contact_list — workspace-scoped (silently targets oldest workspace —
+    prefer create_team_contact_list when team is known)
+  create_team_contact_list / create_teammate_contact_list
+  add_contacts_to_contact_list — bulk add; accepts crd_* ids OR
+    'alt:email:foo@x.com' resource aliases
+  remove_contacts_from_contact_list — bulk remove; CAPPED at 50 per call
+  delete_contact_list — dissolves list; contacts NOT deleted
+
+Workflow tip: "tag this customer as VIP" →
+  lookup_contact_by_email(email) → list_contact_lists() [find VIP list id] →
+  add_contacts_to_contact_list(list_id, [contact_id])
+
+## Contact Groups (DEPRECATED)
+
+Front has deprecated all `contact_groups` endpoints in favor of `contact_lists`.
+The tools exist for workspaces still using groups; for new work use
+`contact_lists` instead. Same shape and the same 50-contact cap on bulk
+removal apply.
+
+  list_contact_groups / list_team_contact_groups / list_teammate_contact_groups |
+  list_contacts_in_group |
+  create_contact_group / create_team_contact_group / create_teammate_contact_group |
+  add_contacts_to_group / remove_contacts_from_group |
+  delete_contact_group
+
 ## Attachments
 
 Front carries attachments as `multipart/form-data` on the create / edit
@@ -411,6 +448,14 @@ _READ_ONLY_TOOLS = [
     "get_teammate",
     "list_teammate_inboxes",
     "list_assigned_conversations",
+    "list_contact_lists",
+    "list_team_contact_lists",
+    "list_teammate_contact_lists",
+    "list_contacts_in_contact_list",
+    "list_contact_groups",
+    "list_team_contact_groups",
+    "list_teammate_contact_groups",
+    "list_contacts_in_group",
 ]
 
 mcp.add_middleware(

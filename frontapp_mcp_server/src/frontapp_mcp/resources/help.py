@@ -100,6 +100,48 @@ Spans three sibling Front tags: `contacts`, `contact_handles`, `contact_notes`.
 | `merge_contacts` | `POST /contacts/merge` | **DESTRUCTIVE / irreversible.** Merge contacts; conversations move to target. Two-step confirm. |
 | `delete_contact` | `DELETE /contacts/{id}` | **DESTRUCTIVE / permanent.** Delete contact + all handles. Two-step confirm. |
 
+## Contact Lists
+
+Named buckets of contacts used for bulk operations (broadcasts, segmentation,
+exports). Three creation scopes: workspace, team, teammate. Front exposes no
+GET-by-id and no PATCH — lists can't be renamed once created.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `list_contact_lists` | `GET /contact_lists` | All contact lists visible to the token. |
+| `list_team_contact_lists` | `GET /teams/{team_id}/contact_lists` | Team-scoped lists. |
+| `list_teammate_contact_lists` | `GET /teammates/{teammate_id}/contact_lists` | Private (teammate-scoped) lists. |
+| `list_contacts_in_contact_list` | `GET /contact_lists/{id}/contacts` | Members of a list. Returns `ContactSummary`s. |
+| `create_contact_list` | `POST /contact_lists` | Workspace-scoped create. **Targets oldest active workspace** — prefer `create_team_contact_list` when team is known. Two-step confirm. |
+| `create_team_contact_list` | `POST /teams/{team_id}/contact_lists` | Team-scoped create. Two-step confirm. |
+| `create_teammate_contact_list` | `POST /teammates/{teammate_id}/contact_lists` | Private (teammate-scoped) create. Two-step confirm. |
+| `add_contacts_to_contact_list` | `POST /contact_lists/{id}/contacts` | Bulk add. Accepts `crd_*` ids OR Front resource aliases (`alt:email:foo@x.com`). Two-step confirm. |
+| `remove_contacts_from_contact_list` | `DELETE /contact_lists/{id}/contacts` | Bulk remove. **Capped at 50 ids per call** by Front. Two-step confirm. |
+| `delete_contact_list` | `DELETE /contact_lists/{id}` | Dissolve list; **contacts NOT deleted**. Two-step confirm. |
+
+Workflow tip: "tag this customer as VIP" → `lookup_contact_by_email(email)` →
+`list_contact_lists()` to find the VIP list id → `add_contacts_to_contact_list(list_id, [contact_id])`.
+
+## Contact Groups (DEPRECATED)
+
+Front has deprecated all contact-group endpoints in favor of contact lists.
+Tools exist for workspaces still using groups; for new work use `contact_lists`
+above. Same shape, same 50-contact cap on bulk removal, same workspace-default
+caveat on `create_contact_group`.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `list_contact_groups` | `GET /contact_groups` | All contact groups (deprecated). |
+| `list_team_contact_groups` | `GET /teams/{team_id}/contact_groups` | Team-scoped groups. |
+| `list_teammate_contact_groups` | `GET /teammates/{teammate_id}/contact_groups` | Private groups. |
+| `list_contacts_in_group` | `GET /contact_groups/{id}/contacts` | Members of a group. |
+| `create_contact_group` | `POST /contact_groups` | Workspace-scoped create. Two-step confirm. |
+| `create_team_contact_group` | `POST /teams/{team_id}/contact_groups` | Team-scoped create. Two-step confirm. |
+| `create_teammate_contact_group` | `POST /teammates/{teammate_id}/contact_groups` | Private create. Two-step confirm. |
+| `add_contacts_to_group` | `POST /contact_groups/{id}/contacts` | Bulk add. Two-step confirm. |
+| `remove_contacts_from_group` | `DELETE /contact_groups/{id}/contacts` | Bulk remove. **Capped at 50 per call.** Two-step confirm. |
+| `delete_contact_group` | `DELETE /contact_groups/{id}` | Dissolve group; contacts NOT deleted. Two-step confirm. |
+
 ## Messages
 
 Operations on individual messages by `msg_*` id. Use these when the id

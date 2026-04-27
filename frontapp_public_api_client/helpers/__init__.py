@@ -11,6 +11,8 @@ from frontapp_public_api_client.helpers.attachments import (
     FileSpec,
 )
 from frontapp_public_api_client.helpers.base import Base
+from frontapp_public_api_client.helpers.contact_groups import ContactGroups
+from frontapp_public_api_client.helpers.contact_lists import ContactLists
 from frontapp_public_api_client.helpers.contacts import Contacts
 from frontapp_public_api_client.helpers.conversations import Conversations
 from frontapp_public_api_client.helpers.drafts import Drafts
@@ -23,6 +25,8 @@ __all__ = [
     "MAX_ATTACHMENT_BYTES",
     "Attachments",
     "Base",
+    "ContactGroups",
+    "ContactLists",
     "Contacts",
     "Conversations",
     "Drafts",
