@@ -134,6 +134,30 @@ class Tags(Base):
         results = getattr(parsed, "field_results", None) or []
         return [Tag.model_validate(t.to_dict()) for t in results]
 
+    async def iter_company(
+        self,
+        *,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Tag]:
+        """Auto-paginated iterator over company-scoped tags."""
+        from frontapp_public_api_client.api.tags import list_company_tags
+        from frontapp_public_api_client.domain import Tag
+
+        kwargs: dict[str, Any] = {}
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            list_company_tags.asyncio_detailed,
+            projector=lambda t: Tag.model_validate(t.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
+
     async def list_for_team(
         self,
         team_id: str,
@@ -157,6 +181,31 @@ class Tags(Base):
         results = getattr(parsed, "field_results", None) or []
         return [Tag.model_validate(t.to_dict()) for t in results]
 
+    async def iter_for_team(
+        self,
+        team_id: str,
+        *,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Tag]:
+        """Auto-paginated iterator over tags scoped to a team."""
+        from frontapp_public_api_client.api.tags import list_team_tags
+        from frontapp_public_api_client.domain import Tag
+
+        kwargs: dict[str, Any] = {"team_id": team_id}
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            list_team_tags.asyncio_detailed,
+            projector=lambda t: Tag.model_validate(t.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
+
     async def list_for_teammate(
         self,
         teammate_id: str,
@@ -179,6 +228,31 @@ class Tags(Base):
         parsed = unwrap(response)
         results = getattr(parsed, "field_results", None) or []
         return [Tag.model_validate(t.to_dict()) for t in results]
+
+    async def iter_for_teammate(
+        self,
+        teammate_id: str,
+        *,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Tag]:
+        """Auto-paginated iterator over tags scoped to a teammate."""
+        from frontapp_public_api_client.api.tags import list_teammate_tags
+        from frontapp_public_api_client.domain import Tag
+
+        kwargs: dict[str, Any] = {"teammate_id": teammate_id}
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            list_teammate_tags.asyncio_detailed,
+            projector=lambda t: Tag.model_validate(t.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
 
     async def get(self, tag_id: str) -> Tag:
         """Fetch one tag by id (e.g. ``"tag_abc"``)."""
@@ -236,6 +310,35 @@ class Tags(Base):
         response = await list_tagged_conversations.asyncio_detailed(**kwargs)
         parsed = unwrap(response)
         return list(getattr(parsed, "field_results", None) or [])
+
+    async def iter_conversations(
+        self,
+        tag_id: str,
+        *,
+        q: str | None = None,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Any]:
+        """Auto-paginated iterator over conversations bearing this tag.
+
+        Yields raw attrs ``ConversationResponse`` items.
+        """
+        from frontapp_public_api_client.api.tags import list_tagged_conversations
+
+        kwargs: dict[str, Any] = {"tag_id": tag_id}
+        if q is not None:
+            kwargs["q"] = q
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            list_tagged_conversations.asyncio_detailed,
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
 
     # -- catalog mutations --------------------------------------------------
 

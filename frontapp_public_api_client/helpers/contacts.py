@@ -190,6 +190,43 @@ class Contacts(Base):
         results = getattr(parsed, "field_results", None) or []
         return [Contact.model_validate(c.to_dict()) for c in results]
 
+    async def iter_for_team(
+        self,
+        team_id: str,
+        *,
+        q: str | None = None,
+        limit: int | None = None,
+        sort_by: str | None = None,
+        sort_order: Literal["asc", "desc"] | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Contact]:
+        """Auto-paginated iterator over contacts owned by a team."""
+        from frontapp_public_api_client.api.contacts import list_team_contacts
+        from frontapp_public_api_client.domain import Contact
+        from frontapp_public_api_client.models.list_team_contacts_sort_order import (
+            ListTeamContactsSortOrder,
+        )
+
+        kwargs: dict[str, Any] = {"team_id": team_id}
+        if q is not None:
+            kwargs["q"] = q
+        if limit is not None:
+            kwargs["limit"] = limit
+        if sort_by is not None:
+            kwargs["sort_by"] = sort_by
+        if sort_order is not None:
+            kwargs["sort_order"] = ListTeamContactsSortOrder(sort_order)
+
+        async for item in self._paginate(
+            list_team_contacts.asyncio_detailed,
+            projector=lambda c: Contact.model_validate(c.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
+
     async def list_for_teammate(
         self,
         teammate_id: str,
@@ -225,6 +262,43 @@ class Contacts(Base):
         results = getattr(parsed, "field_results", None) or []
         return [Contact.model_validate(c.to_dict()) for c in results]
 
+    async def iter_for_teammate(
+        self,
+        teammate_id: str,
+        *,
+        q: str | None = None,
+        limit: int | None = None,
+        sort_by: str | None = None,
+        sort_order: Literal["asc", "desc"] | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Contact]:
+        """Auto-paginated iterator over contacts owned by a teammate."""
+        from frontapp_public_api_client.api.contacts import list_teammate_contacts
+        from frontapp_public_api_client.domain import Contact
+        from frontapp_public_api_client.models.list_teammate_contacts_sort_order import (
+            ListTeammateContactsSortOrder,
+        )
+
+        kwargs: dict[str, Any] = {"teammate_id": teammate_id}
+        if q is not None:
+            kwargs["q"] = q
+        if limit is not None:
+            kwargs["limit"] = limit
+        if sort_by is not None:
+            kwargs["sort_by"] = sort_by
+        if sort_order is not None:
+            kwargs["sort_order"] = ListTeammateContactsSortOrder(sort_order)
+
+        async for item in self._paginate(
+            list_teammate_contacts.asyncio_detailed,
+            projector=lambda c: Contact.model_validate(c.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
+
     async def list_conversations(
         self,
         contact_id: str,
@@ -248,6 +322,35 @@ class Contacts(Base):
         response = await list_contact_conversations.asyncio_detailed(**kwargs)
         parsed = unwrap(response)
         return list(getattr(parsed, "field_results", None) or [])
+
+    async def iter_conversations(
+        self,
+        contact_id: str,
+        *,
+        q: str | None = None,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Any]:
+        """Auto-paginated iterator over conversations involving this contact.
+
+        Yields raw attrs ``ConversationResponse`` items.
+        """
+        from frontapp_public_api_client.api.contacts import list_contact_conversations
+
+        kwargs: dict[str, Any] = {"contact_id": contact_id}
+        if q is not None:
+            kwargs["q"] = q
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            list_contact_conversations.asyncio_detailed,
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
 
     async def list_notes(self, contact_id: str) -> builtins.list[Any]:
         """List internal teammate notes on a contact.

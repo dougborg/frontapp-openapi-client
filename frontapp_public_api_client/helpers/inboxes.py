@@ -29,6 +29,7 @@ Quirks worth knowing:
 from __future__ import annotations
 
 import builtins
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from frontapp_public_api_client.helpers.base import Base
@@ -117,6 +118,35 @@ class Inboxes(Base):
         response = await list_inbox_conversations.asyncio_detailed(**kwargs)
         parsed = unwrap(response)
         return list(getattr(parsed, "field_results", None) or [])
+
+    async def iter_conversations(
+        self,
+        inbox_id: str,
+        *,
+        q: str | None = None,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Any]:
+        """Auto-paginated iterator over conversations in this inbox.
+
+        Yields raw attrs ``ConversationResponse`` items.
+        """
+        from frontapp_public_api_client.api.inboxes import list_inbox_conversations
+
+        kwargs: dict[str, Any] = {"inbox_id": inbox_id}
+        if q is not None:
+            kwargs["q"] = q
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            list_inbox_conversations.asyncio_detailed,
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
 
     async def list_channels(self, inbox_id: str) -> builtins.list[Any]:
         """List channels routing into this inbox. Returns raw attrs models."""
