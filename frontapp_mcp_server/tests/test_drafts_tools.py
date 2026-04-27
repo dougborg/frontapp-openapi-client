@@ -214,7 +214,7 @@ class TestDraftSummary:
             }
         )
         # Re-construct with author and recipients for projection.
-        author = TeammateSummary(first_name="Ada", last_name="Lovelace")
+        author = TeammateSummary(id="tea_1", first_name="Ada", last_name="Lovelace")
         recipient = RecipientSummary(handle="customer@example.com", role="to")
         draft = draft.model_copy(update={"author": author, "recipients": [recipient]})
 
@@ -230,7 +230,9 @@ class TestDraftSummary:
         from frontapp_public_api_client.domain import TeammateSummary
 
         draft = Draft.model_validate({"id": "msg_abc"})
-        author = TeammateSummary(username="ada", first_name=None, last_name=None)
+        author = TeammateSummary(
+            id="tea_1", username="ada", first_name=None, last_name=None
+        )
         draft = draft.model_copy(update={"author": author})
 
         summary = to_draft_summary(draft)

@@ -33,11 +33,11 @@ export { FrontappClient, type FrontappClientOptions } from './client.js';
 // Re-export error types and utilities
 export {
   AuthenticationError,
+  FrontappError,
   NetworkError,
   parseError,
   RateLimitError,
   ServerError,
-  FrontappError,
   ValidationError,
   type ValidationErrorDetail,
 } from './errors.js';

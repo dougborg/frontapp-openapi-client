@@ -37,7 +37,7 @@ Public surface:
 from __future__ import annotations
 
 import mimetypes
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -134,7 +134,7 @@ def _validate_path(raw: str | Path) -> Path:
 
 
 def preview_paths(
-    paths: list[str | Path] | None,
+    paths: Sequence[str | Path] | None,
 ) -> list[dict[str, Any]]:
     """Stat-only preview of attachment paths — no file bytes are read.
 
@@ -169,7 +169,7 @@ def preview_paths(
 
 
 def resolve_paths(
-    paths: list[str | Path] | None,
+    paths: Sequence[str | Path] | None,
 ) -> tuple[list[FileSpec], list[dict[str, Any]]]:
     """Resolve filesystem paths to FileSpec instances + a preview list.
 

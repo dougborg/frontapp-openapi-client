@@ -5,11 +5,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   AuthenticationError,
+  FrontappError,
   NetworkError,
   parseError,
   RateLimitError,
   ServerError,
-  FrontappError,
   ValidationError,
 } from '../src/errors.js';
 

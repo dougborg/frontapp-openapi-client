@@ -207,6 +207,7 @@ class TestDraftAttachmentPaths:
         assert result["confirmed"] is True
         # Helper called with FileSpec list
         call = lifespan.client.drafts.create_on_channel.await_args
+        assert call is not None
         attachments = call.kwargs["attachments"]
         assert len(attachments) == 2
         assert all(isinstance(a, FileSpec) for a in attachments)

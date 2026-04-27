@@ -111,6 +111,9 @@ def mcp_tool_capture():
         class FakeMCP:
             def tool(self, **kwargs: object):
                 name = kwargs["name"]
+                assert isinstance(name, str), (
+                    f"tool name must be a str, got {type(name).__name__}"
+                )
 
                 def decorator(fn):
                     captured[name] = fn

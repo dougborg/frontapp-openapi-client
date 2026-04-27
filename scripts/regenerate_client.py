@@ -78,6 +78,7 @@ def run_command_streaming(
     if timeout:
         print(f"   ⏱️  Timeout: {timeout}s")
 
+    process: subprocess.Popen[str] | None = None
     try:
         process = subprocess.Popen(
             cmd,
@@ -99,7 +100,7 @@ def run_command_streaming(
 
     except subprocess.TimeoutExpired:
         print(f"\n   ⏰ Command timed out after {timeout}s")
-        if process:
+        if process is not None:
             process.kill()
         return 124
     except Exception as e:

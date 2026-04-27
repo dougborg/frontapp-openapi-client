@@ -13,7 +13,7 @@ response and feeding the extracted ``page_token`` back to the next call.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Awaitable, Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, urlparse
 
 if TYPE_CHECKING:
@@ -74,8 +74,9 @@ class Base:
             max_items: Stop after yielding this many items (yields a
                 partial final page rather than fetching more). ``None``
                 means no per-iterator limit.
-            max_pages: Stop after this many page fetches. Defaults to the
-                ``FrontappClient(max_pages=...)`` config (100).
+            max_pages: Stop after this many page fetches. Falls back to
+                the legacy ``FrontappClient(max_pages=...)`` setting when
+                present, otherwise defaults to 100.
             **request_kwargs: Forwarded to every ``endpoint_call`` invocation
                 (q, limit, path-id args, etc.). ``client=`` and
                 ``page_token=`` are managed internally — don't pass them.
@@ -87,7 +88,10 @@ class Base:
         from frontapp_public_api_client.utils import unwrap
 
         if max_pages is None:
-            max_pages = getattr(self._client, "max_pages", 100)
+            # Fallback to the client-level cap if it has one (legacy behavior),
+            # otherwise default to 100. The cast keeps pyright narrow since
+            # getattr returns Any.
+            max_pages = cast(int, getattr(self._client, "max_pages", 100))
         logger = getattr(self._client, "logger", None)
 
         request_kwargs.pop("client", None)

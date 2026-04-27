@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from http import HTTPStatus
-from typing import Any, overload
+from typing import Any, Literal, overload
 
 from .client_types import Response, Unset
 from .domain.converters import unwrap_unset
@@ -75,11 +75,11 @@ class ServerError(APIError):
 
 
 @overload
-def unwrap[T](response: Response[T], *, raise_on_error: bool = True) -> T: ...
+def unwrap[T](response: Response[T], *, raise_on_error: Literal[True] = True) -> T: ...
 
 
 @overload
-def unwrap[T](response: Response[T], *, raise_on_error: bool = False) -> T | None: ...
+def unwrap[T](response: Response[T], *, raise_on_error: Literal[False]) -> T | None: ...
 
 
 def unwrap[T](response: Response[T], *, raise_on_error: bool = True) -> T | None:
@@ -136,13 +136,13 @@ def unwrap[T](response: Response[T], *, raise_on_error: bool = True) -> T | None
 
 @overload
 def unwrap_data[T](
-    response: Response[T], *, raise_on_error: bool = True, default: None = None
+    response: Response[T], *, raise_on_error: Literal[True] = True, default: None = None
 ) -> Any: ...
 
 
 @overload
 def unwrap_data[T](
-    response: Response[T], *, raise_on_error: bool = False, default: None = None
+    response: Response[T], *, raise_on_error: Literal[False], default: None = None
 ) -> Any | None: ...
 
 
@@ -150,7 +150,7 @@ def unwrap_data[T](
 def unwrap_data[T, DataT](
     response: Response[T],
     *,
-    raise_on_error: bool = False,
+    raise_on_error: bool = ...,
     default: list[DataT],
 ) -> Any: ...
 
@@ -208,7 +208,7 @@ def unwrap_as[T, ExpectedT](
     response: Response[T],
     expected_type: type[ExpectedT],
     *,
-    raise_on_error: bool = True,
+    raise_on_error: Literal[True] = True,
 ) -> ExpectedT: ...
 
 
@@ -217,7 +217,7 @@ def unwrap_as[T, ExpectedT](
     response: Response[T],
     expected_type: type[ExpectedT],
     *,
-    raise_on_error: bool = False,
+    raise_on_error: Literal[False],
 ) -> ExpectedT | None: ...
 
 
