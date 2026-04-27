@@ -9,19 +9,22 @@ _HELP_MARKDOWN = """\
 
 ## Resources (slow-changing reference data, cached 60s)
 
-| URI                              | Use it to…                                                       |
-| -------------------------------- | ---------------------------------------------------------------- |
-| `frontapp://help`                | Read this reference (you're reading it).                         |
-| `frontapp://tags`                | Translate tag names ("urgent", "vip") into `tag_*` ids.          |
-| `frontapp://inboxes`             | Translate inbox names ("Support", "Sales") into `inb_*` ids.     |
-| `frontapp://teammates`           | Translate a teammate name or email into a `tea_*` id.            |
-| `frontapp://conversations/recent`| Orient at session start — 20 most recent conversations.          |
+| URI                               | Use it to…                                                                               |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| `frontapp://help`                 | Read this reference (you're reading it).                                                 |
+| `frontapp://me`                   | Workspace identity (`cmp_*`, name). Session-start smoke test — does NOT identify teammate. |
+| `frontapp://tags`                 | Translate tag names ("urgent", "vip") into `tag_*` ids.                                  |
+| `frontapp://inboxes`              | Translate inbox names ("Support", "Sales") into `inb_*` ids.                             |
+| `frontapp://teammates`            | Translate a teammate name or email into a `tea_*` id.                                    |
+| `frontapp://teams`                | Translate a team name ("Support") into a `tim_*` id.                                     |
+| `frontapp://custom_fields`        | Every custom field schema in the workspace, grouped by scope. Translate field name → `cf_*` id. |
+| `frontapp://conversations/recent` | Orient at session start — 20 most recent conversations.                                  |
 
 Read these resources before calling mutating tools — they give you the
-`tag_*` / `inb_*` / `tea_*` ids you'll need for `update_conversation` and
-similar tools without asking the user. (Only conversation list/read tools
-are registered today; tags / inboxes / teammates are exposed only as
-resources.)
+`tag_*` / `inb_*` / `tea_*` / `tim_*` / `cf_*` ids you'll need for
+`update_conversation` and similar tools without asking the user. (Only
+conversation list/read tools are registered today; tags / inboxes /
+teammates / teams / custom_fields are exposed only as resources.)
 
 ## Conversations
 
