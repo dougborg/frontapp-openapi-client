@@ -303,9 +303,12 @@ class TestMutations:
         transport, recorded = make_recording_transport({}, status=202)
         client = attach_transport(transport)
 
-        await client.conversations.reply(
+        result = await client.conversations.reply(
             "cnv_abc", body="Thanks for reaching out.", author_id="tea_xyz"
         )
+        # Helper unwraps the generated response into a dict (or None for
+        # empty 2xx) — same shape the multipart-attachments path returns.
+        assert result is None or isinstance(result, dict)
         assert recorded[0].method == "POST"
         body = json.loads(recorded[0].content)
         assert body["body"] == "Thanks for reaching out."
@@ -360,11 +363,67 @@ class TestMutations:
         transport, recorded = make_recording_transport(comment_payload(), status=201)
         client = attach_transport(transport)
 
-        await client.conversations.add_comment(
+        result = await client.conversations.add_comment(
             "cnv_abc", body="VIP customer", author_id="tea_xyz"
         )
+        # Helper unwraps the 201 response into a dict — same shape the
+        # multipart-attachments path returns.
+        assert isinstance(result, dict)
+        assert result["id"] == "com_1"
         body = json.loads(recorded[0].content)
         assert body == {"body": "VIP customer", "author_id": "tea_xyz"}
+
+    async def test_reply_returns_dict_or_none_in_both_paths(
+        self, attach_transport, make_recording_transport
+    ):
+        """Acceptance criterion: ``reply`` returns ``dict | None`` whether
+        or not attachments triggered the multipart bypass. PR #65 left the
+        no-attachment path returning the generated ``Response``; issue
+        #66 normalised it.
+        """
+        from frontapp_public_api_client.helpers.attachments import FileSpec
+
+        # Standard path: generated response → dict via to_dict().
+        transport, _ = make_recording_transport(
+            {"status": "accepted", "message_uid": "msg_1"}, status=202
+        )
+        client = attach_transport(transport)
+        no_attach = await client.conversations.reply("cnv_abc", body="Hi")
+        assert no_attach is None or isinstance(no_attach, dict)
+
+        # Multipart path: post_multipart returns dict|None directly.
+        transport2, _ = make_recording_transport({}, status=202)
+        client2 = attach_transport(transport2)
+        with_attach = await client2.conversations.reply(
+            "cnv_abc",
+            body="Hi",
+            attachments=[FileSpec(filename="x.txt", content=b"x")],
+        )
+        assert with_attach is None or isinstance(with_attach, dict)
+
+    async def test_add_comment_returns_dict_in_both_paths(
+        self, attach_transport, make_recording_transport
+    ):
+        """Acceptance criterion: ``add_comment`` returns ``dict`` whether
+        or not attachments triggered the multipart bypass.
+        """
+        from frontapp_public_api_client.helpers.attachments import FileSpec
+
+        transport, _ = make_recording_transport(comment_payload(), status=201)
+        client = attach_transport(transport)
+        no_attach = await client.conversations.add_comment("cnv_abc", body="Note")
+        assert isinstance(no_attach, dict)
+
+        transport2, _ = make_recording_transport(
+            {"id": "com_2", "body": "Note"}, status=201
+        )
+        client2 = attach_transport(transport2)
+        with_attach = await client2.conversations.add_comment(
+            "cnv_abc",
+            body="Note",
+            attachments=[FileSpec(filename="x.txt", content=b"x")],
+        )
+        assert isinstance(with_attach, dict)
 
     async def test_update_with_status_serializes_enum(
         self, attach_transport, make_recording_transport
