@@ -5,10 +5,15 @@ The core ``_paginate`` machinery is exhaustively tested in
 tests just verify each variant correctly:
 
 1. forwards its path-id / query kwargs to the right generated endpoint,
-2. applies the right projection (domain model vs raw attrs),
-3. respects ``max_items`` (proxy for "uses _paginate at all").
+2. applies the right projection (domain model vs raw attrs).
 
-One short test per new method — exhaustive matrix lives on iter_all.
+Pagination behavior (multi-page walking, ``max_items`` early-stop,
+``max_pages``, empty-page-with-cursor terminal, UNSET-pagination, etc.)
+is covered exhaustively in ``tests/test_pagination.py`` and applies
+uniformly to every variant since they all go through ``Base._paginate``.
+A couple of tests below add a ``max_items`` assertion as a
+proxy-for-``_paginate``-being-invoked check; the rest are pure
+smoke-tests on routing + projection.
 """
 
 from __future__ import annotations
