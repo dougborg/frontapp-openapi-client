@@ -450,6 +450,7 @@ automatically with exponential backoff. Expect ~60 req/min on most endpoints.
   frontapp://teammates             — all teammates (translate name/email → id)
   frontapp://teams                 — all teams (translate name → tim_* id)
   frontapp://custom_fields         — every custom field schema, grouped by scope
+  frontapp://rules                 — automation rules (read-only) — explain workspace automation
   frontapp://conversations/recent  — 20 most recent conversations as summaries
 
 Resources are slow-changing reference data, cached for 60 seconds. Read

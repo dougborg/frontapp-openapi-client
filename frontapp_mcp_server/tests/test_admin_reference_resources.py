@@ -238,3 +238,58 @@ class TestTeamsResource:
         body = await resources["frontapp://teams"](context)
         parsed = json.loads(body)
         assert parsed == []
+
+
+# ---------------------------------------------------------------------------
+# frontapp://rules (#84)
+# ---------------------------------------------------------------------------
+
+
+class TestRulesResource:
+    async def test_returns_rule_refs(self, resources, make_client):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert request.url.path == "/rules"
+            return httpx.Response(
+                200,
+                json={
+                    "_links": {"self": "https://api.frontapp.test/rules"},
+                    "_results": [
+                        {
+                            "_links": {"self": "x", "related": {}},
+                            "id": "rul_1",
+                            "name": "Auto-archive spam",
+                            "actions": ["archive"],
+                            "is_private": False,
+                        },
+                        {
+                            "_links": {"self": "y", "related": {}},
+                            "id": "rul_2",
+                            "name": "Tag urgent",
+                            "actions": ["add_tag"],
+                            "is_private": True,
+                        },
+                    ],
+                },
+            )
+
+        context = _make_context(make_client(handler))
+        body = await resources["frontapp://rules"](context)
+        parsed = json.loads(body)
+        assert len(parsed) == 2
+        assert {row["id"] for row in parsed} == {"rul_1", "rul_2"}
+        assert {row["name"] for row in parsed} == {
+            "Auto-archive spam",
+            "Tag urgent",
+        }
+        # Confirm the actions list and privacy flag round-trip.
+        rul_1 = next(r for r in parsed if r["id"] == "rul_1")
+        assert rul_1["actions"] == ["archive"]
+        assert rul_1["is_private"] is False
+
+    async def test_empty_workspace_returns_empty_list(self, resources, make_client):
+        def handler(_request: httpx.Request) -> httpx.Response:
+            return httpx.Response(200, json={"_links": {"self": "x"}, "_results": []})
+
+        context = _make_context(make_client(handler))
+        body = await resources["frontapp://rules"](context)
+        assert json.loads(body) == []

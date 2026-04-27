@@ -6,6 +6,7 @@ boilerplate for common workflows. Each helper is accessed as an attribute on
 """
 
 from frontapp_public_api_client.helpers.analytics import Analytics
+from frontapp_public_api_client.helpers.applications import Applications
 from frontapp_public_api_client.helpers.attachments import (
     MAX_ATTACHMENT_BYTES,
     Attachments,
@@ -22,10 +23,12 @@ from frontapp_public_api_client.helpers.knowledge_bases import KnowledgeBases
 from frontapp_public_api_client.helpers.messages import Messages
 from frontapp_public_api_client.helpers.tags import Tags
 from frontapp_public_api_client.helpers.teammates import Teammates
+from frontapp_public_api_client.helpers.teams import Teams
 
 __all__ = [
     "MAX_ATTACHMENT_BYTES",
     "Analytics",
+    "Applications",
     "Attachments",
     "Base",
     "ContactGroups",
@@ -39,4 +42,5 @@ __all__ = [
     "Messages",
     "Tags",
     "Teammates",
+    "Teams",
 ]
