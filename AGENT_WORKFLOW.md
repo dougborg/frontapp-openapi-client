@@ -194,9 +194,6 @@ If multiple agents are working on the project simultaneously:
 - `frontapp_public_api_client/docs/guide.md` — Python client guide
 - `frontapp_mcp_server/docs/README.md` — MCP server docs
 - `packages/frontapp-client/README.md` — TypeScript client
-- `.github/agents/guides/shared/VALIDATION_TIERS.md` — fuller tier rationale
-- `.github/agents/guides/shared/COMMIT_STANDARDS.md` — semantic commit format
-- `.github/agents/guides/shared/FILE_ORGANIZATION.md` — what goes where
 
 ---
 

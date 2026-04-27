@@ -67,7 +67,8 @@ for a specific workflow stage:
 
 - Add tier reference to AGENT_WORKFLOW.md (complete guide)
 - Add tier summary to CLAUDE.md (Claude Code quick reference)
-- Add tier details to .github/copilot-instructions.md (GitHub Copilot)
+- Reference from `.github/copilot-instructions.md` so GitHub Copilot picks them up via
+  the canonical CLAUDE.md
 - Include in timeout reference tables
 
 ## Consequences

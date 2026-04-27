@@ -39,7 +39,12 @@ We use the format proposed by Michael Nygard in his article
 
 - [ADR-009: Migrate from Poetry to uv Package Manager](0009-migrate-from-poetry-to-uv.md)
 - [ADR-013: Module-Local Documentation Structure](0013-module-local-documentation.md)
+- [ADR-018: Claude-only Agent Harness](0018-claude-only-agent-harness.md)
+
+### Superseded
+
 - [ADR-014: GitHub Copilot Custom Agents with Three-Tier Architecture](0014-github-copilot-custom-agents.md)
+  — superseded by ADR-018
 
 ## Creating a New ADR
 

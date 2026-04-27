@@ -352,14 +352,13 @@ mid-task, prefer `domain-advisor` over grep+ls.
 
 **Discover on-demand** - read these when working on specific areas:
 
-| Topic             | File                                                                                                             |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Agent workflows   | [AGENT_WORKFLOW.md](AGENT_WORKFLOW.md)                                                                           |
-| Validation tiers  | [.github/agents/guides/shared/VALIDATION_TIERS.md](.github/agents/guides/shared/VALIDATION_TIERS.md)             |
-| Commit standards  | [.github/agents/guides/shared/COMMIT_STANDARDS.md](.github/agents/guides/shared/COMMIT_STANDARDS.md)             |
-| File organization | [.github/agents/guides/shared/FILE_ORGANIZATION.md](.github/agents/guides/shared/FILE_ORGANIZATION.md)           |
-| Architecture      | [.github/agents/guides/shared/ARCHITECTURE_QUICK_REF.md](.github/agents/guides/shared/ARCHITECTURE_QUICK_REF.md) |
-| Client guide      | [frontapp_public_api_client/docs/guide.md](frontapp_public_api_client/docs/guide.md)                             |
-| MCP docs          | [frontapp_mcp_server/docs/README.md](frontapp_mcp_server/docs/README.md)                                         |
-| TypeScript client | [packages/frontapp-client/README.md](packages/frontapp-client/README.md)                                         |
-| ADRs              | [docs/adr/README.md](docs/adr/README.md)                                                                         |
+| Topic             | File                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| Agent workflows   | [AGENT_WORKFLOW.md](AGENT_WORKFLOW.md)                                               |
+| Client guide      | [frontapp_public_api_client/docs/guide.md](frontapp_public_api_client/docs/guide.md) |
+| MCP docs          | [frontapp_mcp_server/docs/README.md](frontapp_mcp_server/docs/README.md)             |
+| TypeScript client | [packages/frontapp-client/README.md](packages/frontapp-client/README.md)             |
+| ADRs              | [docs/adr/README.md](docs/adr/README.md)                                             |
+
+Validation tiers, commit standards, and file rules are documented inline in this file —
+see "Essential Commands", "Commit Standards", and "File Rules" above.
