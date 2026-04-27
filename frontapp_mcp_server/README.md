@@ -80,6 +80,11 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 Restart Claude Desktop and the Frontapp tools will appear.
 
+> **Running off a local checkout (dev mode)?** The package isn't on PyPI yet (issue
+> #10), and `uvx` resolves from PyPI. To dogfood from a local clone, see
+> [MCP_CLAUDE_DESKTOP_DEV.md](MCP_CLAUDE_DESKTOP_DEV.md) — it covers the
+> `uv run --directory <repo>` config + `.env` setup.
+
 ### 5. Use with Claude.ai (streamable-http)
 
 Claude.ai requires **HTTPS** and a **publicly reachable URL**. For local development,
