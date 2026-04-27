@@ -20,7 +20,7 @@ import logging
 import os
 import stat
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -242,6 +242,23 @@ class TestErrorLoggingTransport:
         msg = logger.error.call_args[0][0]
         assert "secret" not in msg
         assert "***" in msg
+
+    async def test_aclose_delegates_to_wrapped_transport(self):
+        """Closing the wrapper must close the wrapped transport's pool too.
+
+        ErrorLoggingTransport extends AsyncHTTPTransport, so super().__init__()
+        allocates an unused parent pool. Without the aclose override, only
+        the unused pool would close on shutdown — the wrapped transport's
+        pool would leak. Regression test for issue #77.
+        """
+        wrapped_aclose = AsyncMock()
+        wrapped = MagicMock(spec=httpx.AsyncBaseTransport)
+        wrapped.aclose = wrapped_aclose
+        transport = ErrorLoggingTransport(
+            wrapped_transport=wrapped, logger=MagicMock(spec=logging.Logger)
+        )
+        await transport.aclose()
+        wrapped_aclose.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
