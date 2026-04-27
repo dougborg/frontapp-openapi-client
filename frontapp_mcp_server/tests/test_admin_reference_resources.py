@@ -21,16 +21,35 @@ from frontapp_mcp.resources.reference import register_resources
 from frontapp_public_api_client import FrontappClient
 
 
-def _make_client(handler) -> FrontappClient:
-    """Build a FrontappClient whose httpx transport is a mock."""
-    client = FrontappClient(api_key="test-key", base_url="https://api.frontapp.test")
-    client.set_async_httpx_client(
-        httpx.AsyncClient(
-            transport=httpx.MockTransport(handler),
-            base_url="https://api.frontapp.test",
+@pytest.fixture
+async def make_client():
+    """Factory: build a FrontappClient with a mocked httpx transport.
+
+    Yields a callable that takes a request handler and returns a
+    fully-configured ``FrontappClient``. Every client created via the
+    factory is closed automatically on test teardown so the underlying
+    ``httpx.AsyncClient`` doesn't leak (the unclosed-client warning was
+    flagged on PR #94 review).
+    """
+    created: list[FrontappClient] = []
+
+    def factory(handler) -> FrontappClient:
+        client = FrontappClient(
+            api_key="test-key", base_url="https://api.frontapp.test"
         )
-    )
-    return client
+        client.set_async_httpx_client(
+            httpx.AsyncClient(
+                transport=httpx.MockTransport(handler),
+                base_url="https://api.frontapp.test",
+            )
+        )
+        created.append(client)
+        return client
+
+    yield factory
+
+    for client in created:
+        await client.get_async_httpx_client().aclose()
 
 
 def _make_context(client: FrontappClient):
@@ -71,7 +90,7 @@ def resources():
 
 
 class TestMeResource:
-    async def test_returns_workspace_identity(self, resources):
+    async def test_returns_workspace_identity(self, resources, make_client):
         def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path == "/me"
             return httpx.Response(
@@ -83,7 +102,7 @@ class TestMeResource:
                 },
             )
 
-        context = _make_context(_make_client(handler))
+        context = _make_context(make_client(handler))
         body = await resources["frontapp://me"](context)
         parsed = json.loads(body)
         # The resource wraps the single identity in a list for consistency
@@ -100,7 +119,7 @@ class TestMeResource:
 
 
 class TestCustomFieldsResource:
-    async def test_combines_all_seven_scopes(self, resources):
+    async def test_combines_all_seven_scopes(self, resources, make_client):
         # Each scope has its own URL path; we return distinct fake fields per
         # scope so the test asserts the resource correctly tags each.
         scope_paths = {
@@ -132,7 +151,7 @@ class TestCustomFieldsResource:
                 },
             )
 
-        context = _make_context(_make_client(handler))
+        context = _make_context(make_client(handler))
         body = await resources["frontapp://custom_fields"](context)
         parsed = json.loads(body)
 
@@ -151,14 +170,14 @@ class TestCustomFieldsResource:
             assert parsed[scope][0]["id"] == f"cf_{scope}"
             assert parsed[scope][0]["name"] == f"{scope}-field"
 
-    async def test_empty_results_per_scope_handled(self, resources):
+    async def test_empty_results_per_scope_handled(self, resources, make_client):
         def handler(_request: httpx.Request) -> httpx.Response:
             return httpx.Response(
                 200,
                 json={"_links": {"self": "x"}, "_results": []},
             )
 
-        context = _make_context(_make_client(handler))
+        context = _make_context(make_client(handler))
         body = await resources["frontapp://custom_fields"](context)
         parsed = json.loads(body)
         # Every scope key still present, just empty.
@@ -181,7 +200,7 @@ class TestCustomFieldsResource:
 
 
 class TestTeamsResource:
-    async def test_returns_team_refs(self, resources):
+    async def test_returns_team_refs(self, resources, make_client):
         def handler(request: httpx.Request) -> httpx.Response:
             assert request.url.path == "/teams"
             return httpx.Response(
@@ -203,7 +222,7 @@ class TestTeamsResource:
                 },
             )
 
-        context = _make_context(_make_client(handler))
+        context = _make_context(make_client(handler))
         body = await resources["frontapp://teams"](context)
         parsed = json.loads(body)
         assert isinstance(parsed, list)
@@ -211,11 +230,11 @@ class TestTeamsResource:
         assert {row["id"] for row in parsed} == {"tim_support", "tim_sales"}
         assert {row["name"] for row in parsed} == {"Support", "Sales"}
 
-    async def test_empty_workspace_returns_empty_list(self, resources):
+    async def test_empty_workspace_returns_empty_list(self, resources, make_client):
         def handler(_request: httpx.Request) -> httpx.Response:
             return httpx.Response(200, json={"_links": {"self": "x"}, "_results": []})
 
-        context = _make_context(_make_client(handler))
+        context = _make_context(make_client(handler))
         body = await resources["frontapp://teams"](context)
         parsed = json.loads(body)
         assert parsed == []
