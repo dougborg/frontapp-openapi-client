@@ -213,8 +213,17 @@ wrappers needed:
 - **Sensitive-data redaction**: `Authorization` headers and common secret field names
   (`api_key`, `password`, `token`, etc.) are scrubbed from log output.
 
-Auto-pagination for Front's cursor-token paging is in progress — today, callers pass
-`page_token` from `_pagination.next` back to the list endpoint.
+**Auto-pagination** for Front's cursor-token paging — call `iter_all()` (or `iter_*`
+variants) on any helper that exposes a paginated list method:
+
+```python
+async for conv in client.conversations.iter_all(q="status:open", max_items=500):
+    print(conv.id, conv.subject)
+```
+
+The iterator walks `_pagination.next` until exhausted or a safety limit (`max_items`,
+`max_pages`) trips. Pass `page_token` manually to the underlying `list()` if you need
+cursor control instead.
 
 ## Project Structure
 

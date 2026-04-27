@@ -7,25 +7,18 @@ reply, list_comments, add_comment}`` with domain-model return values.
 from __future__ import annotations
 
 import builtins
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
-from urllib.parse import parse_qs, urlparse
 
-from frontapp_public_api_client.helpers.base import Base
+from frontapp_public_api_client.helpers.base import Base, extract_page_token
 
 if TYPE_CHECKING:
     from frontapp_public_api_client.domain import Conversation
 
 
-def _extract_page_token(next_url: str | None) -> str | None:
-    """Pull the ``page_token`` query param out of Front's next-page URL."""
-    if not next_url:
-        return None
-    try:
-        query = urlparse(next_url).query
-        tokens = parse_qs(query).get("page_token", [])
-        return tokens[0] if tokens else None
-    except (ValueError, IndexError):
-        return None
+# Re-export for backwards compatibility — the helper used to expose this
+# as a private module function before the move to helpers/base.py.
+_extract_page_token = extract_page_token
 
 
 class Conversations(Base):
@@ -76,6 +69,64 @@ class Conversations(Base):
         parsed = unwrap(response)
         results = getattr(parsed, "field_results", None) or []
         return [Conversation.model_validate(c.to_dict()) for c in results]
+
+    async def iter_all(
+        self,
+        *,
+        q: str | None = None,
+        limit: int | None = None,
+        sort_by: str | None = None,
+        sort_order: str | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Conversation]:
+        """Auto-paginated async iterator yielding every matching conversation.
+
+        Walks Front's cursor pagination by reading ``_pagination.next``
+        off each response and feeding the extracted ``page_token`` back
+        in, until either the API runs out of pages or one of the safety
+        limits trips.
+
+        Use this instead of repeated ``list(page_token=...)`` calls when
+        you need to iterate every conversation in a query — the cursor
+        plumbing is hidden.
+
+        Args:
+            q: Front search syntax (same as ``list``).
+            limit: Page size (max 100, default 50). Doesn't cap total
+                items — use ``max_items`` for that.
+            sort_by: Sort field, same as ``list``.
+            sort_order: ``"asc"`` or ``"desc"``, same as ``list``.
+            max_items: Stop after yielding this many items. ``None`` =
+                no per-iterator cap.
+            max_pages: Stop after this many page fetches. Defaults to the
+                ``FrontappClient(max_pages=...)`` config (100).
+        """
+        from frontapp_public_api_client.api.conversations import list_conversations
+        from frontapp_public_api_client.domain import Conversation
+
+        kwargs: dict[str, Any] = {}
+        if q is not None:
+            kwargs["q"] = q
+        if limit is not None:
+            kwargs["limit"] = limit
+        if sort_by is not None:
+            kwargs["sort_by"] = sort_by
+        if sort_order is not None:
+            from frontapp_public_api_client.models.list_conversations_sort_order import (
+                ListConversationsSortOrder,
+            )
+
+            kwargs["sort_order"] = ListConversationsSortOrder(sort_order)
+
+        async for item in self._paginate(
+            list_conversations.asyncio_detailed,
+            projector=lambda c: Conversation.model_validate(c.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
 
     async def search(
         self,

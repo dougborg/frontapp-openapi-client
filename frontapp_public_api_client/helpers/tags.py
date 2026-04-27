@@ -35,6 +35,7 @@ Quirks worth knowing:
 from __future__ import annotations
 
 import builtins
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Literal
 
 from frontapp_public_api_client.helpers.base import Base
@@ -82,6 +83,34 @@ class Tags(Base):
         parsed = unwrap(response)
         results = getattr(parsed, "field_results", None) or []
         return [Tag.model_validate(t.to_dict()) for t in results]
+
+    async def iter_all(
+        self,
+        *,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Tag]:
+        """Auto-paginated async iterator over every workspace tag.
+
+        See :meth:`list` for the underlying call. ``max_items`` and
+        ``max_pages`` are safety limits.
+        """
+        from frontapp_public_api_client.api.tags import list_tags
+        from frontapp_public_api_client.domain import Tag
+
+        kwargs: dict[str, Any] = {}
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            list_tags.asyncio_detailed,
+            projector=lambda t: Tag.model_validate(t.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
 
     async def list_company(
         self,
