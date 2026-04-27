@@ -213,6 +213,17 @@ class ErrorLoggingTransport(AsyncHTTPTransport):
 
         return response
 
+    async def aclose(self) -> None:
+        """Close the wrapped transport's connection pool, then our own.
+
+        ``super().__init__()`` allocated an unused ``AsyncHTTPTransport`` pool
+        (this class delegates every request to ``_wrapped_transport``); without
+        this override only the unused pool would close on shutdown and the
+        wrapped transport's pool would leak.
+        """
+        await self._wrapped_transport.aclose()
+        await super().aclose()
+
     async def _log_client_error(
         self, response: httpx.Response, request: httpx.Request
     ) -> None:
