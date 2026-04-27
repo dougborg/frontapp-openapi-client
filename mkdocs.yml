@@ -149,7 +149,8 @@ nav:
           - ADR-004 Defer Observability to httpx: client/adr/0004-defer-observability-to-httpx.md
           - ADR-005 Sync and Async APIs: client/adr/0005-sync-async-apis.md
           - ADR-006 Response Unwrapping Utilities: client/adr/0006-response-unwrapping-utilities.md
-          - ADR-008 Avoid Builder Pattern (Proposed): client/adr/0008-avoid-builder-pattern.md
+          - ADR-0007 Domain Helper Classes: client/adr/0007-domain-helper-classes.md
+          - ADR-008 Avoid Builder Pattern: client/adr/0008-avoid-builder-pattern.md
           - ADR-011 Pydantic Domain Models: client/adr/0011-pydantic-domain-models.md
           - ADR-012 Validation Tiers: client/adr/0012-validation-tiers-for-agent-workflows.md
   - MCP Server:
@@ -161,6 +162,7 @@ nav:
       - Logging: mcp-server/LOGGING.md
       - ADRs:
           - Overview: mcp-server/adr/README.md
+          - ADR-0010 MCP Server Architecture: mcp-server/adr/0010-mcp-server-architecture.md
           - ADR-0016 Tool Interface Pattern: mcp-server/adr/0016-tool-interface-pattern.md
           - ADR-0017 Automated Tool Documentation: mcp-server/adr/0017-automated-tool-documentation.md
   - API Reference: reference/

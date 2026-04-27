@@ -197,10 +197,10 @@ it.
 ### Neutral
 
 1. **`help.py` resource is hand-maintained** — the
-   [Help resource drift](../../../CLAUDE.md#known-pitfalls) pitfall is that
-   `resources/help.py` contains tool-doc Markdown that has to stay in sync with each
-   tool module. ADR-0017 (Automated Tool Documentation) tracks moving this to generated
-   content.
+   [Help resource drift](https://github.com/dougborg/frontapp-openapi-client/blob/main/CLAUDE.md#known-pitfalls)
+   pitfall is that `resources/help.py` contains tool-doc Markdown that has to stay in
+   sync with each tool module. ADR-0017 (Automated Tool Documentation) tracks moving
+   this to generated content.
 2. **`instructions=` is the runtime cheat-sheet** — the FastMCP `instructions` block in
    `server.py` is loaded into every agent session and is the canonical place to document
    tool-selection rules and safety patterns. New verticals add a section.
@@ -307,7 +307,7 @@ when FastMCP upstream merges the equivalent fix.
   — `require_confirmation` and `ConfirmationResult`
 - [`projections.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/src/frontapp_mcp/projections.py)
   — summary projections for tool responses
-- [ADR-0007: Domain Helper Classes](../../../frontapp_public_api_client/docs/adr/0007-domain-helper-classes.md)
+- [ADR-0007: Domain Helper Classes](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/adr/0007-domain-helper-classes.md)
   — the helper layer that every tool module delegates to
 - [ADR-0016: Tool Interface Pattern](0016-tool-interface-pattern.md) — per-parameter
   Pydantic annotations and drafts-first outbound
