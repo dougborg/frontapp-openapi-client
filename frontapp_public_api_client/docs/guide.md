@@ -62,13 +62,14 @@ async with FrontappClient() as client:
 
 | Helper                 | Status     | Covers                                                                                                                                                               |
 | ---------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `client.conversations` | ✅ shipped | list/get/search/update/list_messages/list_comments/add_comment                                                                                                       |
+| `client.conversations` | ✅ shipped | list/get/search/update/reply/list_messages/list_comments/add_comment                                                                                                 |
 | `client.drafts`        | ✅ shipped | list_for_conversation/create_on_channel/create_reply/edit/delete                                                                                                     |
 | `client.contacts`      | ✅ shipped | list/get/search_by_email/list_for_team/list_for_teammate/list_conversations/list_notes/create (+team/teammate)/update/merge/delete/add_note/add_handle/delete_handle |
-| `client.messages`      | ⏳ planned | See issue tracker                                                                                                                                                    |
-| `client.tags`          | ⏳ planned | See issue tracker                                                                                                                                                    |
-| `client.inboxes`       | ⏳ planned | See issue tracker                                                                                                                                                    |
-| `client.teammates`     | ⏳ planned | See issue tracker                                                                                                                                                    |
+| `client.messages`      | ✅ shipped | get/seen_status/mark_seen                                                                                                                                            |
+| `client.tags`          | ✅ shipped | list (+ company/team/teammate scopes)/get/list_children/list_tagged_conversations/apply_to_conversation/remove_from_conversation/create/create_child/update/delete   |
+| `client.inboxes`       | ✅ shipped | list (+ team/teammate scopes)/get/list_conversations/list_channels/list_access/create (+ team)/grant_access/revoke_access                                            |
+| `client.teammates`     | ✅ shipped | list/get/list_inboxes/list_assigned_conversations/update                                                                                                             |
+| `client.attachments`   | ✅ shipped | download/stream + `attachments=[FileSpec(...)]` parameter on every draft / reply / comment helper                                                                    |
 
 Outbound replies go through `client.drafts.create_reply(...)` rather than
 `client.conversations.reply(...)` — the latter still exists at the helper level for
@@ -124,9 +125,17 @@ the client honors it; otherwise retries fall back to exponential backoff.
 ### Cursor-token pagination
 
 Front uses cursor-based pagination: list responses include `_pagination.next` as a full
-URL. Pass the `page_token` query parameter back to the list endpoint to fetch the next
-page. The helpers on `client.conversations` accept `limit=` and `page_token=` directly.
-Full auto-pagination (walk all pages) is on the roadmap.
+URL. Every list helper accepts `limit=` and `page_token=` for manual paging, and has a
+sibling `iter_*` async iterator that walks all pages automatically (extracts the next
+token, terminates on empty pages, respects `max_items` / `max_pages` caps):
+
+```python
+async for conv in client.conversations.iter_all(q="status:open", max_items=500):
+    ...
+```
+
+See [ADR-003: Transparent Automatic Pagination](adr/0003-transparent-pagination.md) for
+the design.
 
 ### Sensitive-data redaction
 
