@@ -37,6 +37,7 @@ Quirks worth knowing:
 from __future__ import annotations
 
 import builtins
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Literal
 
 from frontapp_public_api_client.helpers.base import Base
@@ -87,6 +88,47 @@ class Contacts(Base):
         parsed = unwrap(response)
         results = getattr(parsed, "field_results", None) or []
         return [Contact.model_validate(c.to_dict()) for c in results]
+
+    async def iter_all(
+        self,
+        *,
+        q: str | None = None,
+        limit: int | None = None,
+        sort_by: str | None = None,
+        sort_order: Literal["asc", "desc"] | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Contact]:
+        """Auto-paginated async iterator yielding every matching contact.
+
+        See :meth:`list` for ``q`` / ``sort_*`` semantics. ``max_items``
+        and ``max_pages`` are safety limits that stop iteration early
+        without fetching further pages.
+        """
+        from frontapp_public_api_client.api.contacts import list_contacts
+        from frontapp_public_api_client.domain import Contact
+        from frontapp_public_api_client.models.list_contacts_sort_order import (
+            ListContactsSortOrder,
+        )
+
+        kwargs: dict[str, Any] = {}
+        if q is not None:
+            kwargs["q"] = q
+        if limit is not None:
+            kwargs["limit"] = limit
+        if sort_by is not None:
+            kwargs["sort_by"] = sort_by
+        if sort_order is not None:
+            kwargs["sort_order"] = ListContactsSortOrder(sort_order)
+
+        async for item in self._paginate(
+            list_contacts.asyncio_detailed,
+            projector=lambda c: Contact.model_validate(c.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
 
     async def search_by_email(self, email: str) -> builtins.list[Contact]:
         """Best-effort lookup of contacts by email.
