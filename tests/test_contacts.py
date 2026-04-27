@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import httpx
+import json
+
 import pydantic
 import pytest
 
@@ -101,49 +102,21 @@ class TestContactNoteDomain:
 
 
 class TestContactsHelper:
-    """Helper-level integration via httpx.MockTransport.
+    """Helper-level integration via the shared transport fixtures."""
 
-    Mirrors tests/test_drafts.py — uses set_async_httpx_client to inject
-    a MockTransport so we exercise the full request-construction path
-    without hitting the network.
-    """
-
-    def _mock_response(
-        self, payload: dict | list, status: int = 200
-    ) -> httpx.MockTransport:
-        def handler(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(status, json=payload)
-
-        return httpx.MockTransport(handler)
-
-    def _mock_recording(
-        self, payload: dict | list, status: int = 200
-    ) -> tuple[httpx.MockTransport, list[httpx.Request]]:
-        recorded: list[httpx.Request] = []
-
-        def handler(request: httpx.Request) -> httpx.Response:
-            recorded.append(request)
-            return httpx.Response(status, json=payload)
-
-        return httpx.MockTransport(handler), recorded
-
-    async def test_list_unwraps_field_results(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(
-                    {
-                        "_results": [
-                            {"id": "crd_1", "name": "Alice"},
-                            {"id": "crd_2", "name": "Bob"},
-                        ],
-                        "_pagination": {},
-                        "_links": {},
-                    }
-                ),
-                base_url=mock_api_credentials["base_url"],
+    async def test_list_unwraps_field_results(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(
+            make_mock_transport(
+                {
+                    "_results": [
+                        {"id": "crd_1", "name": "Alice"},
+                        {"id": "crd_2", "name": "Bob"},
+                    ],
+                    "_pagination": {},
+                    "_links": {},
+                }
             )
         )
 
@@ -151,37 +124,28 @@ class TestContactsHelper:
         assert [c.id for c in contacts] == ["crd_1", "crd_2"]
         assert all(isinstance(c, Contact) for c in contacts)
 
-    async def test_search_by_email_passes_q_param(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording(
+    async def test_search_by_email_passes_q_param(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport(
             {"_results": [], "_pagination": {}, "_links": {}}
         )
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+        client = attach_transport(transport)
 
         await client.contacts.search_by_email("a@example.com")
         assert len(recorded) == 1
         assert recorded[0].url.params.get("q") == "a@example.com"
 
-    async def test_get_returns_domain_contact(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(
-                    {
-                        "id": "crd_abc",
-                        "name": "Alice",
-                        "handles": [{"handle": "a@example.com", "source": "email"}],
-                    }
-                ),
-                base_url=mock_api_credentials["base_url"],
+    async def test_get_returns_domain_contact(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(
+            make_mock_transport(
+                {
+                    "id": "crd_abc",
+                    "name": "Alice",
+                    "handles": [{"handle": "a@example.com", "source": "email"}],
+                }
             )
         )
 
@@ -190,18 +154,13 @@ class TestContactsHelper:
         assert contact.id == "crd_abc"
         assert contact.handles[0].handle == "a@example.com"
 
-    async def test_create_sends_handles_and_returns_contact(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording(
+    async def test_create_sends_handles_and_returns_contact(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport(
             {"id": "crd_new", "name": "Alice", "handles": []}, status=201
         )
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+        client = attach_transport(transport)
 
         contact = await client.contacts.create(
             handles=[{"handle": "a@example.com", "source": "email"}],
@@ -209,127 +168,83 @@ class TestContactsHelper:
         )
         assert isinstance(contact, Contact)
         assert contact.id == "crd_new"
-        # Body should round-trip the handle structure.
-        import json
-
         body = json.loads(recorded[0].content)
         assert body["handles"] == [{"handle": "a@example.com", "source": "email"}]
         assert body["name"] == "Alice"
 
-    async def test_create_handles_tuple_form(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording({"id": "crd_new"}, status=201)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+    async def test_create_handles_tuple_form(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport({"id": "crd_new"}, status=201)
+        client = attach_transport(transport)
 
         await client.contacts.create(
             handles=[("a@example.com", "email"), ("+15551234", "phone")]
         )
-        import json
-
         body = json.loads(recorded[0].content)
         assert len(body["handles"]) == 2
 
-    async def test_create_handles_rejects_bad_shape(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response({}),
-                base_url=mock_api_credentials["base_url"],
-            )
-        )
+    async def test_create_handles_rejects_bad_shape(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(make_mock_transport({}))
 
         with pytest.raises(TypeError):
             await client.contacts.create(handles=["just a string"])
 
-    async def test_update_skips_handles(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording({}, status=204)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+    async def test_update_skips_handles(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport({}, status=204)
+        client = attach_transport(transport)
 
         success = await client.contacts.update(
             "crd_abc", name="Alice Updated", description="VIP"
         )
         assert success is True
-        import json
-
         body = json.loads(recorded[0].content)
         assert body == {"name": "Alice Updated", "description": "VIP"}
         assert "handles" not in body
 
-    async def test_merge_returns_contact(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording(
+    async def test_merge_returns_contact(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport(
             {"id": "crd_target", "name": "Merged"}, status=200
         )
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+        client = attach_transport(transport)
 
         contact = await client.contacts.merge(
             contact_ids=["crd_1", "crd_2"], target_contact_id="crd_target"
         )
         assert isinstance(contact, Contact)
         assert contact.id == "crd_target"
-        import json
-
         body = json.loads(recorded[0].content)
         assert body["contact_ids"] == ["crd_1", "crd_2"]
         assert body["target_contact_id"] == "crd_target"
 
-    async def test_add_handle_serializes_source_enum(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording({}, status=204)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+    async def test_add_handle_serializes_source_enum(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport({}, status=204)
+        client = attach_transport(transport)
 
         success = await client.contacts.add_handle(
             "crd_abc", handle="b@example.com", source="email"
         )
         assert success is True
-        import json
-
         body = json.loads(recorded[0].content)
         assert body == {"handle": "b@example.com", "source": "email"}
 
-    async def test_delete_handle_with_force(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording({}, status=204)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+    async def test_delete_handle_with_force(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport({}, status=204)
+        client = attach_transport(transport)
 
         await client.contacts.delete_handle(
             "crd_abc", handle="b@example.com", source="email", force=True
         )
-        import json
-
         body = json.loads(recorded[0].content)
         assert body == {
             "handle": "b@example.com",
@@ -337,58 +252,39 @@ class TestContactsHelper:
             "force": True,
         }
 
-    async def test_add_note_requires_author(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
+    async def test_add_note_requires_author(
+        self, attach_transport, make_recording_transport
+    ):
         # Status 200 (not 201) skips _parse_response so we don't have to mock
         # the full nested ContactNoteResponses shape; this test asserts the
         # request body only.
-        transport, recorded = self._mock_recording({}, status=200)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+        transport, recorded = make_recording_transport({}, status=200)
+        client = attach_transport(transport)
 
         await client.contacts.add_note(
             "crd_abc", body="VIP customer", author_id="tea_xyz"
         )
-        import json
-
         body = json.loads(recorded[0].content)
         assert body == {"author_id": "tea_xyz", "body": "VIP customer"}
 
-    async def test_list_notes_handles_202_status(self, mock_api_credentials):
+    async def test_list_notes_handles_202_status(
+        self, attach_transport, make_mock_transport
+    ):
         """list_notes returns HTTP 202, not 200 — verify unwrap dispatches correctly."""
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(
-                    {"_results": [], "_pagination": {}, "_links": {}},
-                    status=202,
-                ),
-                base_url=mock_api_credentials["base_url"],
+        client = attach_transport(
+            make_mock_transport(
+                {"_results": [], "_pagination": {}, "_links": {}},
+                status=202,
             )
         )
 
         notes = await client.contacts.list_notes("crd_abc")
         assert notes == []
 
-    async def test_delete_returns_true_on_204(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=httpx.MockTransport(
-                    lambda req: httpx.Response(204, content=b"")
-                ),
-                base_url=mock_api_credentials["base_url"],
-            )
-        )
+    async def test_delete_returns_true_on_204(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(make_mock_transport(None, status=204))
 
         success = await client.contacts.delete("crd_abc")
         assert success is True

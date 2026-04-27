@@ -19,29 +19,10 @@ from frontapp_public_api_client.domain import Draft
 from .conftest import create_mock_context
 
 
-def _make_mcp() -> tuple[object, dict]:
-    """Build a fake FastMCP that captures registered tool functions by name."""
-    captured: dict[str, object] = {}
-
-    class FakeMCP:
-        def tool(self, **kwargs: object):
-            name = kwargs["name"]
-
-            def decorator(fn):
-                captured[name] = fn
-                return fn
-
-            return decorator
-
-    return FakeMCP(), captured
-
-
 @pytest.fixture
-def drafts_tools() -> dict[str, object]:
+def drafts_tools(mcp_tool_capture) -> dict[str, object]:
     """Register all draft tools and return the captured function dict."""
-    mcp, captured = _make_mcp()
-    register_tools(mcp)  # type: ignore[arg-type]
-    return captured
+    return mcp_tool_capture(register_tools)
 
 
 # ---------------------------------------------------------------------------

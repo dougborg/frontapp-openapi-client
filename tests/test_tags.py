@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 
-import httpx
 import pydantic
 import pytest
 
@@ -55,65 +54,35 @@ class TestTagDomain:
 # ---------------------------------------------------------------------------
 
 
+def _tag_payload(**overrides) -> dict:
+    """Minimal valid TagResponse-shaped dict."""
+    base = {
+        "_links": {"self": "https://x", "related": {}},
+        "id": "tag_abc",
+        "name": "urgent",
+        "description": None,
+        "highlight": None,
+        "is_private": False,
+        "is_visible_in_conversation_lists": False,
+    }
+    base.update(overrides)
+    return base
+
+
 class TestTagsHelper:
-    """Helper-level integration via ``httpx.MockTransport``."""
-
-    def _mock_response(
-        self, payload: dict | list | None, status: int = 200
-    ) -> httpx.MockTransport:
-        def handler(_request: httpx.Request) -> httpx.Response:
-            if payload is None:
-                return httpx.Response(status, content=b"")
-            return httpx.Response(status, json=payload)
-
-        return httpx.MockTransport(handler)
-
-    def _mock_recording(
-        self, payload: dict | list | None, status: int = 200
-    ) -> tuple[httpx.MockTransport, list[httpx.Request]]:
-        recorded: list[httpx.Request] = []
-
-        def handler(request: httpx.Request) -> httpx.Response:
-            recorded.append(request)
-            if payload is None:
-                return httpx.Response(status, content=b"")
-            return httpx.Response(status, json=payload)
-
-        return httpx.MockTransport(handler), recorded
-
-    async def test_list_returns_domain_tags(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(
-                    {
-                        "_results": [
-                            {
-                                "_links": {"self": "https://x", "related": {}},
-                                "id": "tag_1",
-                                "name": "urgent",
-                                "description": None,
-                                "highlight": None,
-                                "is_private": False,
-                                "is_visible_in_conversation_lists": False,
-                            },
-                            {
-                                "_links": {"self": "https://x", "related": {}},
-                                "id": "tag_2",
-                                "name": "vip",
-                                "description": None,
-                                "highlight": None,
-                                "is_private": False,
-                                "is_visible_in_conversation_lists": False,
-                            },
-                        ],
-                        "_pagination": {},
-                        "_links": {},
-                    }
-                ),
-                base_url=mock_api_credentials["base_url"],
+    async def test_list_returns_domain_tags(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(
+            make_mock_transport(
+                {
+                    "_results": [
+                        _tag_payload(id="tag_1", name="urgent"),
+                        _tag_payload(id="tag_2", name="vip"),
+                    ],
+                    "_pagination": {},
+                    "_links": {},
+                }
             )
         )
 
@@ -122,26 +91,17 @@ class TestTagsHelper:
         assert all(isinstance(t, Tag) for t in tags)
         assert [t.name for t in tags] == ["urgent", "vip"]
 
-    async def test_get_returns_tag_with_timestamps(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(
-                    {
-                        "_links": {"self": "https://x", "related": {}},
-                        "id": "tag_abc",
-                        "name": "urgent",
-                        "description": None,
-                        "highlight": "red",
-                        "is_private": False,
-                        "is_visible_in_conversation_lists": True,
-                        "created_at": 1701292639,
-                        "updated_at": 1701292700,
-                    }
-                ),
-                base_url=mock_api_credentials["base_url"],
+    async def test_get_returns_tag_with_timestamps(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(
+            make_mock_transport(
+                _tag_payload(
+                    highlight="red",
+                    is_visible_in_conversation_lists=True,
+                    created_at=1701292639,
+                    updated_at=1701292700,
+                )
             )
         )
 
@@ -151,27 +111,14 @@ class TestTagsHelper:
         assert tag.is_visible_in_conversation_lists is True
         assert isinstance(tag.created_at, datetime)
 
-    async def test_create_serializes_highlight_enum(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording(
-            {
-                "_links": {"self": "https://x", "related": {}},
-                "id": "tag_new",
-                "name": "urgent",
-                "description": None,
-                "highlight": "red",
-                "is_private": False,
-                "is_visible_in_conversation_lists": False,
-            },
+    async def test_create_serializes_highlight_enum(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport(
+            _tag_payload(id="tag_new", highlight="red"),
             status=201,
         )
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+        client = attach_transport(transport)
 
         tag = await client.tags.create(name="urgent", highlight="red")
         assert tag.id == "tag_new"
@@ -179,46 +126,30 @@ class TestTagsHelper:
         assert body["name"] == "urgent"
         assert body["highlight"] == "red"
 
-    async def test_update_skips_unset_fields(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording(None, status=204)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+    async def test_update_skips_unset_fields(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport(None, status=204)
+        client = attach_transport(transport)
 
         success = await client.tags.update("tag_abc", name="renamed")
         assert success is True
         body = json.loads(recorded[0].content)
         assert body == {"name": "renamed"}
 
-    async def test_delete_returns_true_on_204(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(None, status=204),
-                base_url=mock_api_credentials["base_url"],
-            )
-        )
+    async def test_delete_returns_true_on_204(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(make_mock_transport(None, status=204))
 
         success = await client.tags.delete("tag_abc")
         assert success is True
 
-    async def test_apply_to_conversation_sends_tag_ids_list(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording(None, status=204)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+    async def test_apply_to_conversation_sends_tag_ids_list(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport(None, status=204)
+        client = attach_transport(transport)
 
         success = await client.tags.apply_to_conversation(
             "cnv_abc", tag_ids=["tag_1", "tag_2"]
@@ -229,16 +160,11 @@ class TestTagsHelper:
         assert recorded[0].method == "POST"
         assert recorded[0].url.path.endswith("/conversations/cnv_abc/tags")
 
-    async def test_remove_from_conversation_uses_delete(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        transport, recorded = self._mock_recording(None, status=204)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=transport, base_url=mock_api_credentials["base_url"]
-            )
-        )
+    async def test_remove_from_conversation_uses_delete(
+        self, attach_transport, make_recording_transport
+    ):
+        transport, recorded = make_recording_transport(None, status=204)
+        client = attach_transport(transport)
 
         success = await client.tags.remove_from_conversation(
             "cnv_abc", tag_ids=["tag_1"]
