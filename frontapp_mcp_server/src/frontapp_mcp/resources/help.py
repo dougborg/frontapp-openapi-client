@@ -146,6 +146,19 @@ Front exposes no inbox PATCH endpoint — name and visibility are immutable
 post-creation. The only post-create mutations are the access grant/revoke
 pair.
 
+## Teammates
+
+Human users in the workspace. The `frontapp://teammates` resource is the
+preferred name-to-id lookup at session start.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `list_teammates` | `GET /teammates` | Every teammate in the workspace (no pagination). |
+| `get_teammate` | `GET /teammates/{id}` | Full detail for one teammate. |
+| `list_teammate_inboxes` | `GET /teammates/{id}/inboxes` | Inboxes this teammate has access to. |
+| `list_assigned_conversations` | `GET /teammates/{id}/conversations` | Conversations currently assigned to this teammate. Returns `ConversationSummary`s. |
+| `update_teammate` | `PATCH /teammates/{id}` | Update username / first_name / last_name / is_available. Email and admin status are NOT changeable here. Two-step confirm. |
+
 ### Workflow recipe — "what else do we have on this customer?"
 
 ```

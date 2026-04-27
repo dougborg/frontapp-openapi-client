@@ -142,7 +142,7 @@ highest-value subset. Current status:
 | Messages      | ✅ `.messages`               | get / seen_status / mark_seen                                                                                                                                                                    |
 | Tags          | ✅ `.tags`                   | list (+ company/team/teammate scopes) / get / list_children / list_tagged_conversations / add_tag_to_conversation / remove_tag_from_conversation / create / create_child / update / delete       |
 | Inboxes       | ✅ `.inboxes`                | list (+ team/teammate scopes) / get / list_conversations / list_channels / list_access / create (+ team) / grant_access / revoke_access                                                          |
-| Teammates     | ⏳ planned                   | ⏳ planned (currently `frontapp://teammates` resource)                                                                                                                                           |
+| Teammates     | ✅ `.teammates`              | list / get / list_inboxes / list_assigned_conversations / update                                                                                                                                 |
 | Analytics     | ⏳ planned                   | ⏳ planned (create→poll recipe)                                                                                                                                                                  |
 
 See the [issue tracker](https://github.com/dougborg/frontapp-openapi-client/issues) for

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from .helpers.inboxes import Inboxes
     from .helpers.messages import Messages
     from .helpers.tags import Tags
+    from .helpers.teammates import Teammates
 
 import httpx
 from dotenv import load_dotenv
@@ -1034,6 +1035,7 @@ class FrontappClient(AuthenticatedClient):
         self._messages: Messages | None = None
         self._tags: Tags | None = None
         self._inboxes: Inboxes | None = None
+        self._teammates: Teammates | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
         # Event hooks for observability - start with our defaults
@@ -1185,6 +1187,20 @@ class FrontappClient(AuthenticatedClient):
         if self._inboxes is None:
             self._inboxes = Inboxes(self)
         return self._inboxes
+
+    @property
+    def teammates(self) -> "Teammates":
+        """Ergonomic operations over Frontapp's teammate roster.
+
+        Covers list / get / update + per-teammate inbox + assigned-
+        conversation lookups. Email and admin status are read-only at
+        this surface — managed via Front's admin UI.
+        """
+        from .helpers.teammates import Teammates
+
+        if self._teammates is None:
+            self._teammates = Teammates(self)
+        return self._teammates
 
     # Event hooks for observability
     async def _capture_pagination_metadata(self, response: httpx.Response) -> None:

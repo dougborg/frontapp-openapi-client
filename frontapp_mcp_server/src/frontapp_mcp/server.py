@@ -305,6 +305,20 @@ Inboxes are channel containers. Every conversation belongs to one. Read
 Front exposes no general inbox PATCH — name and visibility are immutable
 post-creation. Only access can be changed after that.
 
+## Teammates
+
+Human users in the workspace. Read `frontapp://teammates` at session
+start to translate names/emails into `tea_*` ids.
+
+**Listing & detail:**
+  list_teammates | get_teammate | list_teammate_inboxes |
+  list_assigned_conversations (with `q=` search syntax filter)
+
+**Mutations (two-step confirm):**
+  update_teammate (username / first_name / last_name / is_available
+  only — email and admin status are read-only via this API; manage
+  those in Front's admin UI)
+
 ## Front Search Syntax (q parameter)
 
   status:open | status:archived | tag:urgent | assignee:me |
@@ -372,6 +386,10 @@ _READ_ONLY_TOOLS = [
     "list_inbox_conversations",
     "list_inbox_channels",
     "list_inbox_access",
+    "list_teammates",
+    "get_teammate",
+    "list_teammate_inboxes",
+    "list_assigned_conversations",
 ]
 
 mcp.add_middleware(

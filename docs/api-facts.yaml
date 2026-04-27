@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-26T22:43:24+00:00'
-generated_from_commit: ef58d8d6aed55813d6a573962f7acf7310afdfce
+generated_at: '2026-04-27T02:15:08+00:00'
+generated_from_commit: a48a528e7c082accdf9cf33d6766baa94eaf678a
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -247,12 +247,14 @@ summary:
     - inboxes
     - messages
     - tags
+    - teammates
   tags_with_domain:
     - contacts
     - conversations
     - drafts
     - inboxes
     - tags
+    - teammates
 tags:
   accounts:
     spec_tag: Accounts
@@ -1934,13 +1936,13 @@ tags:
     spec_tag: Teammates
     api_dir: frontapp_public_api_client/api/teammates
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/teammates.py
+      class: Teammates
     domain:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/domain/teammate.py
+      class: Teammate
     endpoints:
       - module: get_teammate
         method: GET
