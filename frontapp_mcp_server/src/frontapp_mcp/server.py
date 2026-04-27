@@ -375,6 +375,28 @@ endpoint for fetching them back out.
   and writes them to a local file. Two-step confirm protects the local
   filesystem; the response includes only metadata (path, size).
 
+## Analytics
+
+Front's analytics endpoints are server-side asynchronous: a POST creates
+a compute job and returns immediately; the result lands seconds later.
+The MCP tools wrap the create-then-poll loop into a single call.
+
+  run_analytics_report(start, end, metrics, [filters], timeout_seconds=30)
+    Compute scalar metrics over a time window. Pass exactly one filter
+    category (inbox_ids OR tag_ids OR teammate_ids OR team_ids OR
+    channel_ids OR account_ids) — Front rejects combined categories.
+    Returns the final report dict with `metrics` populated.
+
+  run_analytics_export(export_type, columns, timeout_seconds=120)
+    Bulk-export teammate-activity rows or message-level rows to a CSV.
+    Returns a download URL when ready. If Front responds `too_big`,
+    narrow the date range or column set and retry.
+
+Both tools poll until done, fail (status `failed` / `too_big`), or the
+`timeout_seconds` budget elapses (`status: "timeout"` in the result).
+The server-side job continues running on Front; library callers can
+resume via `client.analytics.get_report(uid)` / `get_export(id)`.
+
 ## Front Search Syntax (q parameter)
 
   status:open | status:archived | tag:urgent | assignee:me |

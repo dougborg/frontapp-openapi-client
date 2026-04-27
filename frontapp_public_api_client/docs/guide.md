@@ -72,6 +72,7 @@ async with FrontappClient() as client:
 | `client.inboxes`        | ✅ shipped | list (+ team/teammate scopes)/get/list_conversations/list_channels/list_access/create (+ team)/grant_access/revoke_access                                            |
 | `client.teammates`      | ✅ shipped | list/get/list_inboxes/list_assigned_conversations/update                                                                                                             |
 | `client.attachments`    | ✅ shipped | download/stream + `attachments=[FileSpec(...)]` parameter on every draft / reply / comment helper                                                                    |
+| `client.analytics`      | ✅ shipped | create*report/get_report/run_report + create_export/get_export/run_export. The `run*\*` methods wrap the create-then-poll loop into a single call.                   |
 
 Outbound replies go through `client.drafts.create_reply(...)` rather than
 `client.conversations.reply(...)` — the latter still exists at the helper level for
@@ -271,6 +272,35 @@ async with FrontappClient() as client:
     )
     assert response.status_code in (200, 204)
 ```
+
+### Run an analytics report (async create→poll)
+
+Front's analytics endpoints are server-side asynchronous: a POST creates a job and
+returns an id; a follow-up GET polls until `status == "done"`. The helper wraps the loop
+into a single call.
+
+```python
+from datetime import datetime, timezone
+from frontapp_public_api_client.models.analytics_metric_id import AnalyticsMetricId
+from frontapp_public_api_client.models.inbox_ids import InboxIds
+
+async with FrontappClient() as client:
+    report = await client.analytics.run_report(
+        start=datetime(2026, 4, 1, tzinfo=timezone.utc),
+        end=datetime(2026, 4, 30, tzinfo=timezone.utc),
+        metrics=[AnalyticsMetricId.AVG_FIRST_RESPONSE_TIME],
+        filters=InboxIds(inbox_ids=["inb_abc"]),
+        max_attempts=20,
+        interval=1.0,
+    )
+    print(report.status, report.metrics)
+```
+
+`run_report` raises `TimeoutError` after `max_attempts * interval` seconds (the report
+keeps running on Front; resume with `client.analytics.get_report(uid)`). It raises
+`APIError` if Front returns `status: "failed"`. The same shape applies to
+`run_export(body, ...)` for `/analytics/exports`, plus a `too_big` terminal status that
+maps to `APIError` with a date-range narrowing hint.
 
 ### Raw generated API for uncovered resources
 

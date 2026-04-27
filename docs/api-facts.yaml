@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-27T05:04:16+00:00'
-generated_from_commit: e7cedf939409d95a10c1ed173704838b8ad179f1
+generated_at: '2026-04-27T15:54:45+00:00'
+generated_from_commit: 48172d1a7373084ab7c2ddb083548c57c8940826
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -241,6 +241,7 @@ summary:
     - tags.update_a_tag
     - teammate_groups.update_a_company_teammate_group
   tags_with_helper:
+    - analytics
     - contact_groups
     - contact_lists
     - contacts
@@ -323,9 +324,9 @@ tags:
     spec_tag: Analytics
     api_dir: frontapp_public_api_client/api/analytics
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/analytics.py
+      class: Analytics
     domain:
       built: false
       path: null

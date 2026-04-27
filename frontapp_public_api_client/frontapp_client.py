@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, quote, urlparse, urlunparse
 
 if TYPE_CHECKING:
+    from .helpers.analytics import Analytics
     from .helpers.attachments import Attachments
     from .helpers.contact_groups import ContactGroups
     from .helpers.contact_lists import ContactLists
@@ -553,6 +554,7 @@ class FrontappClient(AuthenticatedClient):
             )
 
         # Domain helper instances (lazy-loaded via properties)
+        self._analytics: Analytics | None = None
         self._attachments: Attachments | None = None
         self._conversations: Conversations | None = None
         self._contacts: Contacts | None = None
@@ -639,6 +641,22 @@ class FrontappClient(AuthenticatedClient):
         return self
 
     # Domain properties for ergonomic access
+    @property
+    def analytics(self) -> "Analytics":
+        """Ergonomic operations over Frontapp's async ``/analytics/*`` endpoints.
+
+        Wraps the create-then-poll pattern so callers can issue a single
+        ``client.analytics.run_report(...)`` (or ``run_export``) instead of
+        manually polling. See ``helpers.analytics`` for the helper surface
+        (``create_report`` / ``get_report`` / ``run_report``, plus the
+        export equivalents).
+        """
+        from .helpers.analytics import Analytics
+
+        if self._analytics is None:
+            self._analytics = Analytics(self)
+        return self._analytics
+
     @property
     def attachments(self) -> "Attachments":
         """Ergonomic operations over Frontapp attachments — upload + download.
