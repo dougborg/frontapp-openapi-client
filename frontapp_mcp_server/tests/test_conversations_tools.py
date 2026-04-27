@@ -94,6 +94,10 @@ class TestReadTools:
             context, conversation_id="cnv_a"
         )
 
+        # Assert .to_dict() was called per item, so removing the projection
+        # logic from the tool would fail this test (not just the equality).
+        msg1.to_dict.assert_called_once()
+        msg2.to_dict.assert_called_once()
         assert len(result) == 2
         assert result[0] == {"id": "msg_1", "type": "email"}
 

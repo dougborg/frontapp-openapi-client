@@ -151,6 +151,16 @@ class TestIncrement:
         next_retry = retry.increment()
         assert isinstance(next_retry, RateLimitAwareRetry)
 
+    def test_method_preserved_across_chained_increments(self, retry):
+        """Real retry chains call increment() repeatedly — every link
+        must keep the original method so the 5xx-vs-429 dispatch stays
+        consistent across attempts (without this, attempt #2 of a POST/5xx
+        could silently switch to permissive mode)."""
+        retry.is_retryable_method("POST")
+        chain = retry.increment().increment().increment()
+        assert chain._current_method == "POST"
+        assert isinstance(chain, RateLimitAwareRetry)
+
 
 # ---------------------------------------------------------------------------
 # IDEMPOTENT_METHODS — class constant must include exactly the right set

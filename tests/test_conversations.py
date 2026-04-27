@@ -23,6 +23,11 @@ from frontapp_public_api_client.helpers.conversations import _extract_page_token
 
 # ---------------------------------------------------------------------------
 # Payload helpers — minimal-valid responses for the strict from_dict path
+#
+# Many generated response models mark fields like _links / assignee /
+# recipient / metadata as required (Front's spec is overly strict). These
+# helpers build minimum-valid payloads so test bodies can stay focused on
+# the assertion under test rather than schema-satisfaction scaffolding.
 # ---------------------------------------------------------------------------
 
 
@@ -55,8 +60,12 @@ def _recipient_payload(**overrides: Any) -> dict[str, Any]:
     return base
 
 
-def _conversation_payload(**overrides: Any) -> dict[str, Any]:
-    """Minimal valid ``ConversationResponse``-shaped dict."""
+def conversation_payload(**overrides: Any) -> dict[str, Any]:
+    """Minimal valid ``ConversationResponse``-shaped dict.
+
+    Public (no underscore) so future per-vertical test files can import
+    it directly until we promote it to a shared helper module.
+    """
     base: dict[str, Any] = {
         "_links": {"self": "https://x", "related": {}},
         "id": "cnv_abc",
@@ -76,7 +85,7 @@ def _conversation_payload(**overrides: Any) -> dict[str, Any]:
     return base
 
 
-def _comment_payload(**overrides: Any) -> dict[str, Any]:
+def comment_payload(**overrides: Any) -> dict[str, Any]:
     """Minimal valid ``CommentResponse``-shaped dict."""
     base: dict[str, Any] = {
         "_links": {"related": {}},
@@ -128,8 +137,8 @@ class TestListAndSearch:
             make_mock_transport(
                 {
                     "_results": [
-                        _conversation_payload(id="cnv_1", subject="Hello"),
-                        _conversation_payload(id="cnv_2", subject="World"),
+                        conversation_payload(id="cnv_1", subject="Hello"),
+                        conversation_payload(id="cnv_2", subject="World"),
                     ],
                     "_pagination": {},
                     "_links": {},
@@ -200,7 +209,7 @@ class TestListAndSearch:
     ):
         client = attach_transport(
             make_mock_transport(
-                _conversation_payload(
+                conversation_payload(
                     id="cnv_abc", subject="Order #1234", created_at=1701292639
                 )
             )
@@ -268,7 +277,7 @@ class TestListSubResources:
         client = attach_transport(
             make_mock_transport(
                 {
-                    "_results": [_comment_payload(id="com_1", body="Note 1")],
+                    "_results": [comment_payload(id="com_1", body="Note 1")],
                     "_pagination": {},
                     "_links": {},
                 }
@@ -338,7 +347,7 @@ class TestMutations:
     ):
         # add_comment returns 201 with the created comment; send a minimally
         # valid CommentResponse-shaped payload.
-        transport, recorded = make_recording_transport(_comment_payload(), status=201)
+        transport, recorded = make_recording_transport(comment_payload(), status=201)
         client = attach_transport(transport)
 
         await client.conversations.add_comment("cnv_abc", body="Internal note")
@@ -348,7 +357,7 @@ class TestMutations:
     async def test_add_comment_with_author_id(
         self, attach_transport, make_recording_transport
     ):
-        transport, recorded = make_recording_transport(_comment_payload(), status=201)
+        transport, recorded = make_recording_transport(comment_payload(), status=201)
         client = attach_transport(transport)
 
         await client.conversations.add_comment(

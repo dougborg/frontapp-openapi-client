@@ -83,8 +83,11 @@ def mcp_tool_capture():
     """Factory: register a tools module against a fake FastMCP and return
     the captured ``{name: callable}`` dict.
 
-    Replaces the per-file ``_make_mcp`` + ``register_tools`` boilerplate
-    that was duplicated across every MCP tool test module.
+    New tool test files should use this fixture. Existing per-vertical
+    test files (test_contacts_tools, test_drafts_tools, test_messages_tools,
+    test_tags_tools, test_inboxes_tools) still define their own copy of
+    the same pattern — migration is tracked as follow-up cleanup so this
+    PR doesn't churn 5 working test files.
     """
 
     def factory(register_tools_fn) -> dict[str, object]:

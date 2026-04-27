@@ -70,25 +70,21 @@ class TestTimestampValidator:
 
 
 class TestExtraFields:
-    def test_unknown_fields_silently_ignored(self):
-        """extra=ignore — Front's response includes _links, metadata, scheduled_reminders
-        etc. that aren't in the projection."""
+    def test_unknown_fields_silently_dropped(self):
+        """extra=ignore — Front's response includes _links, metadata,
+        scheduled_reminders etc. that aren't in the projection. Extras
+        must accept silently AND not appear as instance attrs."""
         c = Conversation.model_validate(
             {
                 "id": "cnv_a",
                 "_links": {"self": "https://x"},
                 "metadata": {"headers": {}},
                 "scheduled_reminders": [],
-                "ticket_ids": ["tic_1"],  # Not in projection — ignored.
+                "ticket_ids": ["tic_1"],
                 "totally_made_up_field": 42,
             }
         )
         assert c.id == "cnv_a"
-        # Should not raise; not assertable that the extras are absent —
-        # extra="ignore" silently drops them.
-
-    def test_no_unknown_attribute_appears_on_instance(self):
-        c = Conversation.model_validate({"id": "cnv_a", "totally_made_up_field": 42})
         with pytest.raises(AttributeError):
             _ = c.totally_made_up_field  # type: ignore[attr-defined]
 

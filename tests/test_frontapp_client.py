@@ -5,6 +5,12 @@ order: explicit ``api_key`` param > ``FRONTAPP_API_KEY`` env var (which
 includes ``.env`` via load_dotenv) > ``~/.netrc``. These tests pin that
 ordering and the related config knobs (base_url, timeout, max_retries,
 max_pages).
+
+Note: ``__init__`` calls ``load_dotenv()``, which walks up from CWD
+looking for a ``.env`` file. Tests that need to assert the *absence* of
+an env var (netrc fallback, no-credentials failure) ``chdir`` to a
+fresh ``tmp_path`` first so a contributor's local ``.env`` at the repo
+root doesn't pollute the result.
 """
 
 from __future__ import annotations
@@ -31,6 +37,8 @@ class TestAuthResolutionOrdering:
 
     def test_netrc_used_when_no_param_or_env(self, monkeypatch, tmp_path):
         monkeypatch.delenv("FRONTAPP_API_KEY", raising=False)
+        # Isolate from any local .env at the repo root that load_dotenv() finds.
+        monkeypatch.chdir(tmp_path)
 
         netrc_file = tmp_path / ".netrc"
         netrc_file.write_text(
@@ -42,13 +50,13 @@ class TestAuthResolutionOrdering:
             client = FrontappClient(base_url="https://api2.frontapp.com")
         assert client.token == "netrc-token"
 
-    def test_raises_value_error_when_no_credentials(self, monkeypatch):
+    def test_raises_value_error_when_no_credentials(self, monkeypatch, tmp_path):
         """No param, no env, no .env, no netrc → fail fast."""
         monkeypatch.delenv("FRONTAPP_API_KEY", raising=False)
+        monkeypatch.chdir(tmp_path)
 
-        # Point home at an empty dir so netrc can't find anything.
         with (
-            patch.object(Path, "home", return_value=Path("/nonexistent-test-home-xyz")),
+            patch.object(Path, "home", return_value=tmp_path),
             pytest.raises(ValueError, match="API key required"),
         ):
             FrontappClient()

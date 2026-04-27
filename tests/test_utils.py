@@ -141,6 +141,12 @@ class TestUnwrap:
             unwrap(_resp(403, parsed=SimpleNamespace()))
         assert "Front API returned status 403" in str(exc.value)
 
+    def test_synthesizes_error_message_when_message_is_empty_string(self):
+        """Empty string is falsy; treated the same as a missing attribute."""
+        with pytest.raises(APIError) as exc:
+            unwrap(_resp(403, parsed=SimpleNamespace(message="")))
+        assert "Front API returned status 403" in str(exc.value)
+
 
 # ---------------------------------------------------------------------------
 # unwrap_as — type-asserted unwrap
