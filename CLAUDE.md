@@ -144,10 +144,25 @@ Common mistakes to avoid:
 
 ## Using the LSP tool
 
-Both Python (pyright) and TypeScript (typescript-language-server) LSPs are configured
-and active. **Prefer LSP operations over `Read` + `Grep` for type and call-graph
-questions** — they are faster, more accurate, and cross-reference the real type system
-(including third-party libraries in `.venv`).
+Both Python (pyright) and TypeScript (typescript-language-server) LSPs are wired through
+Claude Code plugins (`pyright-lsp@claude-plugins-official` and
+`typescript-lsp@claude-plugins-official`, enabled in `.claude/settings.json` →
+`enabledPlugins`). The plugins only register the language servers — the binaries
+themselves must be installed and on PATH:
+
+```bash
+uv tool install pyright                              # pyright + pyright-langserver → ~/.local/bin
+npm install --prefix ~/.local typescript-language-server typescript
+# then symlink both binaries into a directory already on PATH (e.g. ~/bin/)
+```
+
+If `LSP <op>` returns `No LSP server available for file type: .py` (or `.ts`), the
+plugin isn't enabled or the binary isn't reachable — verify `which pyright-langserver` /
+`which typescript-language-server` and restart Claude Code after enabling the plugin.
+
+**Prefer LSP operations over `Read` + `Grep` for type and call-graph questions** — they
+are faster, more accurate, and cross-reference the real type system (including
+third-party libraries in `.venv`).
 
 | When you need to…                                             | Use                  |
 | ------------------------------------------------------------- | -------------------- |
