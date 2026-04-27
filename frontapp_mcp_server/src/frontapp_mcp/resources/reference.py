@@ -75,8 +75,10 @@ class TeamRef(BaseModel):
 class CustomFieldRef(BaseModel):
     """Schema for one custom field on Front objects.
 
-    The ``scope`` discriminator is added by the resource — it's not in
-    the underlying ``CustomFieldResponse`` model.
+    Custom fields are grouped by scope at the top level of the resource
+    response (``{"global": [...], "account": [...], ...}``). This model
+    represents an individual field entry — there is no per-item ``scope``
+    property; the dict key carries that information.
     """
 
     id: str
@@ -200,6 +202,8 @@ def register_resources(mcp: FastMCP) -> None:
         mime_type="application/json",
     )
     async def custom_fields_resource(context: Context) -> str:
+        import asyncio
+
         from frontapp_public_api_client.api.custom_fields import (
             list_account_custom_fields,
             list_contact_custom_fields,
@@ -220,9 +224,14 @@ def register_resources(mcp: FastMCP) -> None:
             "link": list_link_custom_fields.asyncio_detailed,
             "teammate": list_teammate_custom_fields.asyncio_detailed,
         }
+        # Fan out the 7 list calls concurrently — sequential await would
+        # add unnecessary latency on session start (the resource gets
+        # consumed at session warm-up, before the first conversation tool).
+        responses = await asyncio.gather(
+            *(list_fn(client=services.client) for list_fn in scopes.values())
+        )
         result: dict[str, list[dict[str, Any]]] = {}
-        for scope, list_fn in scopes.items():
-            response = await list_fn(client=services.client)
+        for scope, response in zip(scopes.keys(), responses, strict=True):
             parsed = unwrap(response)
             results = getattr(parsed, "field_results", None) or []
             result[scope] = [_project(CustomFieldRef, item) for item in results]
