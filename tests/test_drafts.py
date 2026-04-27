@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import httpx
 import pydantic
 import pytest
 
@@ -98,52 +97,24 @@ class TestDraftDomain:
 
 
 class TestDraftsHelper:
-    """Helper-level integration via httpx.MockTransport.
-
-    The drafts vertical is the first to add helper tests under tests/; the
-    conversations vertical landed without unit tests. Future verticals should
-    follow this pattern.
-    """
-
-    def _mock_response(
-        self, payload: list[dict] | dict, status: int = 200
-    ) -> httpx.MockTransport:
-        """Build a MockTransport that returns ``payload`` for every request."""
-
-        def handler(request: httpx.Request) -> httpx.Response:
-            return httpx.Response(status, json=payload)
-
-        return httpx.MockTransport(handler)
-
-    @pytest.fixture
-    def drafts_client(self, mock_api_credentials):
-        """A FrontappClient whose transport will be patched per test."""
-        from frontapp_public_api_client import FrontappClient
-
-        return FrontappClient(**mock_api_credentials)
+    """Helper-level integration via the shared transport fixtures."""
 
     async def test_list_for_conversation_unwraps_field_results(
-        self, mock_api_credentials
+        self, attach_transport, make_mock_transport
     ):
         """list_conversation_drafts returns the standard field_results wrapper
         of ListConversationDraftsResponse200, like every other Front list
         endpoint."""
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(
-                    {
-                        "_results": [
-                            {"id": "msg_1", "type": "email", "is_inbound": False},
-                            {"id": "msg_2", "type": "email", "is_inbound": False},
-                        ],
-                        "_pagination": {},
-                        "_links": {},
-                    }
-                ),
-                base_url=mock_api_credentials["base_url"],
+        client = attach_transport(
+            make_mock_transport(
+                {
+                    "_results": [
+                        {"id": "msg_1", "type": "email", "is_inbound": False},
+                        {"id": "msg_2", "type": "email", "is_inbound": False},
+                    ],
+                    "_pagination": {},
+                    "_links": {},
+                }
             )
         )
 
@@ -151,41 +122,31 @@ class TestDraftsHelper:
         assert len(drafts) == 2
         assert [d.id for d in drafts] == ["msg_1", "msg_2"]
 
-    async def test_list_for_conversation_empty(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(
-                    {"_results": [], "_pagination": {}, "_links": {}}
-                ),
-                base_url=mock_api_credentials["base_url"],
-            )
+    async def test_list_for_conversation_empty(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(
+            make_mock_transport({"_results": [], "_pagination": {}, "_links": {}})
         )
 
         drafts = await client.drafts.list_for_conversation("cnv_abc")
         assert drafts == []
 
-    async def test_create_on_channel_returns_domain_draft(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=self._mock_response(
-                    {
-                        "id": "msg_new",
-                        "type": "email",
-                        "is_inbound": False,
-                        "draft_mode": "shared",
-                        "subject": "Hello",
-                        "body": "<p>Hi there</p>",
-                        "blurb": "Hi there",
-                        "created_at": 1701292639,
-                    }
-                ),
-                base_url=mock_api_credentials["base_url"],
+    async def test_create_on_channel_returns_domain_draft(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(
+            make_mock_transport(
+                {
+                    "id": "msg_new",
+                    "type": "email",
+                    "is_inbound": False,
+                    "draft_mode": "shared",
+                    "subject": "Hello",
+                    "body": "<p>Hi there</p>",
+                    "blurb": "Hi there",
+                    "created_at": 1701292639,
+                }
             )
         )
 
@@ -201,18 +162,10 @@ class TestDraftsHelper:
         # Unix-seconds → AwareDatetime via the validator.
         assert isinstance(draft.created_at, datetime)
 
-    async def test_delete_returns_true_on_204(self, mock_api_credentials):
-        from frontapp_public_api_client import FrontappClient
-
-        client = FrontappClient(**mock_api_credentials)
-        client.set_async_httpx_client(
-            httpx.AsyncClient(
-                transport=httpx.MockTransport(
-                    lambda req: httpx.Response(204, content=b"")
-                ),
-                base_url=mock_api_credentials["base_url"],
-            )
-        )
+    async def test_delete_returns_true_on_204(
+        self, attach_transport, make_mock_transport
+    ):
+        client = attach_transport(make_mock_transport(None, status=204))
 
         success = await client.drafts.delete("msg_abc")
         assert success is True

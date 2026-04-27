@@ -13,27 +13,9 @@ from frontapp_public_api_client.domain import Tag
 from .conftest import create_mock_context
 
 
-def _make_mcp() -> tuple[object, dict]:
-    captured: dict[str, object] = {}
-
-    class FakeMCP:
-        def tool(self, **kwargs: object):
-            name = kwargs["name"]
-
-            def decorator(fn):
-                captured[name] = fn
-                return fn
-
-            return decorator
-
-    return FakeMCP(), captured
-
-
 @pytest.fixture
-def tags_tools() -> dict[str, object]:
-    mcp, captured = _make_mcp()
-    register_tools(mcp)  # type: ignore[arg-type]
-    return captured
+def tags_tools(mcp_tool_capture) -> dict[str, object]:
+    return mcp_tool_capture(register_tools)
 
 
 # ---------------------------------------------------------------------------
