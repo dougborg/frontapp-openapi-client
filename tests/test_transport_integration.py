@@ -145,7 +145,7 @@ class TestErrorLoggingTransport:
     """Wraps a MockTransport so we drive ``handle_async_request`` end-to-end."""
 
     def _build_transport(
-        self, status: int, body, *, request_body: bytes | None = None
+        self, status: int, body
     ) -> tuple[ErrorLoggingTransport, MagicMock]:
         if isinstance(body, (dict, list)):
             mock = httpx.MockTransport(lambda req: httpx.Response(status, json=body))
@@ -204,10 +204,12 @@ class TestErrorLoggingTransport:
         assert "hunter2" not in msg
         assert "***" in msg
 
-    async def test_4xx_with_non_json_body_logs_text(self):
+    async def test_5xx_is_not_logged_by_error_logger(self):
+        """``ErrorLoggingTransport`` only logs 4xx (client errors). 5xx
+        responses pass through silently — server errors get their own
+        logging path via the retry transport."""
         transport, logger = self._build_transport(503, "raw html error page")
         async with httpx.AsyncClient(transport=transport) as client:
-            # 503 is 5xx (not logged by ErrorLoggingTransport).
             resp = await client.get("https://x.invalid/x")
         assert resp.status_code == 503
         logger.error.assert_not_called()
@@ -319,24 +321,29 @@ class TestResponseMetricsHook:
         for record in caplog.records:
             assert "secret" not in record.message
 
-    async def test_handles_runtime_error_on_elapsed(self, mock_api_credentials, caplog):
+    async def test_handles_runtime_error_on_elapsed(
+        self, mock_api_credentials, caplog, monkeypatch
+    ):
         """``response.elapsed`` raises RuntimeError before the response is
-        read; the hook should fall back to 0.0s and still log."""
+        read; the hook should fall back to 0.0s and still log.
+
+        Uses ``monkeypatch.setattr`` so the override is automatically
+        restored after the test — patching ``type(response).elapsed``
+        directly would leak into subsequent tests since
+        ``httpx.Response`` ships its own ``elapsed`` property.
+        """
         client = FrontappClient(**mock_api_credentials)
         request = httpx.Request("GET", "https://x.invalid/x")
         response = httpx.Response(200, request=request)
 
-        # Force the RuntimeError path by replacing ``elapsed`` access.
-        type(response).elapsed = property(  # type: ignore[assignment,misc]
-            lambda self: (_ for _ in ()).throw(RuntimeError("not yet"))
-        )
-        try:
-            with caplog.at_level(logging.DEBUG):
-                await client._log_response_metrics(response)
-            assert any("0.00s" in r.message for r in caplog.records)
-        finally:
-            # Don't leak the property override into other tests.
-            del type(response).elapsed
+        def _raise_runtime(_self):
+            raise RuntimeError("not yet")
+
+        monkeypatch.setattr(httpx.Response, "elapsed", property(_raise_runtime))
+
+        with caplog.at_level(logging.DEBUG):
+            await client._log_response_metrics(response)
+        assert any("0.00s" in r.message for r in caplog.records)
 
 
 # ---------------------------------------------------------------------------
