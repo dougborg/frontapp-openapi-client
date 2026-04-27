@@ -225,6 +225,30 @@ preferred name-to-id lookup at session start.
 | `list_assigned_conversations` | `GET /teammates/{id}/conversations` | Conversations currently assigned to this teammate. Returns `ConversationSummary`s. |
 | `update_teammate` | `PATCH /teammates/{id}` | Update username / first_name / last_name / is_available. Email and admin status are NOT changeable here. Two-step confirm. |
 
+## Analytics
+
+Front's analytics endpoints are server-side asynchronous: the POST returns
+immediately with a job id; a follow-up GET polls until `status == "done"`.
+The MCP tools wrap that loop into a single call. No two-step confirm —
+these are read/query operations; the server-side job is just how Front
+computes the result.
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `run_analytics_report` | `POST /analytics/reports` + `GET /analytics/reports/{uid}` | Compute scalar metrics over a time window. Pass exactly one filter category (`inbox_ids` OR `tag_ids` OR `teammate_ids` OR `team_ids` OR `channel_ids` OR `account_ids`) — Front rejects combined categories. Returns final dict with `metrics`. |
+| `run_analytics_export` | `POST /analytics/exports` + `GET /analytics/exports/{id}` | Bulk-export teammate-activity rows (`export_type="activities"`) or message-level rows (`export_type="messages"`) to CSV. Returns a download URL. If Front responds `too_big`, narrow the date range or column set and retry. |
+
+Both tools poll until `done`, fail (`failed` or `too_big`), or
+`timeout_seconds` elapses (returns `{"status": "timeout"}`). The
+server-side job keeps running on Front after a tool timeout — library
+callers can resume via `client.analytics.get_report(uid)` /
+`get_export(id)`.
+
+Defaults: `run_analytics_report` polls once a second for 30s;
+`run_analytics_export` polls every 2 seconds for 120s. Both honor a
+`Retry-After` response header if
+Front sends one.
+
 ### Workflow recipe — "what else do we have on this customer?"
 
 ```
