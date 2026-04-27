@@ -275,16 +275,16 @@ class Conversations(Base):
         cc: builtins.list[str] | None = None,
         bcc: builtins.list[str] | None = None,
         attachments: builtins.list[FileSpec] | None = None,
-    ) -> Any:
+    ) -> dict[str, Any] | None:
         """Send an outbound reply on an existing conversation.
 
-        Uses the channel the conversation was opened on. Returns the raw
-        response (Front replies with 202 Accepted; the message is enqueued).
+        Uses the channel the conversation was opened on. Front returns
+        ``202 Accepted`` once the message is enqueued; the parsed body
+        is normalised to ``dict | None`` regardless of whether attachments
+        triggered the multipart path.
 
         Pass ``attachments=[FileSpec(...), ...]`` to attach files; the
-        request is then sent as ``multipart/form-data``. Returns the parsed
-        JSON dict (or ``None``) instead of the generated ``Response`` when
-        attachments are used.
+        request is then sent as ``multipart/form-data``.
         """
         from urllib.parse import quote as _quote
 
@@ -292,6 +292,7 @@ class Conversations(Base):
         from frontapp_public_api_client.models.outbound_reply_message import (
             OutboundReplyMessage,
         )
+        from frontapp_public_api_client.utils import unwrap
 
         if attachments:
             payload = {
@@ -328,9 +329,11 @@ class Conversations(Base):
             payload_kwargs["bcc"] = bcc
 
         message = OutboundReplyMessage(**payload_kwargs)
-        return await create_message_reply.asyncio_detailed(
+        response = await create_message_reply.asyncio_detailed(
             conversation_id=conversation_id, client=self._client, body=message
         )
+        parsed = unwrap(response)
+        return parsed.to_dict() if parsed is not None else None
 
     async def add_comment(
         self,
@@ -339,17 +342,21 @@ class Conversations(Base):
         body: str,
         author_id: str | None = None,
         attachments: builtins.list[FileSpec] | None = None,
-    ) -> Any:
+    ) -> dict[str, Any] | None:
         """Add an internal comment (visible to teammates only).
 
+        Front returns ``201 Created`` with the new comment as JSON; the
+        parsed body is normalised to ``dict | None`` regardless of whether
+        attachments triggered the multipart path.
+
         Pass ``attachments=[FileSpec(...), ...]`` to attach files; the
-        request is then sent as ``multipart/form-data`` and returns the
-        parsed JSON dict instead of the generated ``Response``.
+        request is then sent as ``multipart/form-data``.
         """
         from urllib.parse import quote as _quote
 
         from frontapp_public_api_client.api.comments import add_comment
         from frontapp_public_api_client.models.create_comment import CreateComment
+        from frontapp_public_api_client.utils import unwrap
 
         if attachments:
             payload = {
@@ -371,9 +378,11 @@ class Conversations(Base):
             payload_kwargs["author_id"] = author_id
 
         comment = CreateComment(**payload_kwargs)
-        return await add_comment.asyncio_detailed(
+        response = await add_comment.asyncio_detailed(
             conversation_id=conversation_id, client=self._client, body=comment
         )
+        parsed = unwrap(response)
+        return parsed.to_dict() if parsed is not None else None
 
     async def update(
         self,

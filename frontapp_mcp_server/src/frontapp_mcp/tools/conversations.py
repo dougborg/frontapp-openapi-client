@@ -237,7 +237,7 @@ def register_tools(mcp: FastMCP) -> None:
         if result is not ConfirmationResult.CONFIRMED:
             return {"preview": preview, "confirmed": False, "result": result.value}
 
-        response = await services.client.conversations.add_comment(
+        comment = await services.client.conversations.add_comment(
             conversation_id, body=body, author_id=author_id
         )
-        return {"confirmed": True, "status_code": response.status_code}
+        return {"confirmed": True, "comment": comment}

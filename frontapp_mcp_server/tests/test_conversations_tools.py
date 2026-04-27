@@ -293,10 +293,9 @@ class TestAddConversationComment:
 
     async def test_confirmed_calls_helper(self, conversations_tools):
         context, lifespan = create_mock_context()
-        response = MagicMock()
-        response.status_code = 201
+        comment = {"id": "com_abc", "body": "VIP customer", "author_id": "tea_xyz"}
         lifespan.client = AsyncMock()
-        lifespan.client.conversations.add_comment = AsyncMock(return_value=response)
+        lifespan.client.conversations.add_comment = AsyncMock(return_value=comment)
 
         result = await conversations_tools["add_conversation_comment"](
             context,
@@ -309,4 +308,4 @@ class TestAddConversationComment:
         lifespan.client.conversations.add_comment.assert_awaited_once_with(
             "cnv_a", body="VIP customer", author_id="tea_xyz"
         )
-        assert result == {"confirmed": True, "status_code": 201}
+        assert result == {"confirmed": True, "comment": comment}
