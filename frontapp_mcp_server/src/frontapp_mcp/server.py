@@ -419,17 +419,26 @@ automatically with exponential backoff. Expect ~60 req/min on most endpoints.
 ## Resources (read these before mutating tools)
 
   frontapp://help                  — full tool reference + workflow recipes
+  frontapp://me                    — workspace identity (cmp_*, name)
   frontapp://tags                  — all workspace tags (translate name → id)
   frontapp://inboxes               — all inboxes (translate name → id)
   frontapp://teammates             — all teammates (translate name/email → id)
+  frontapp://teams                 — all teams (translate name → tim_* id)
+  frontapp://custom_fields         — every custom field schema, grouped by scope
   frontapp://conversations/recent  — 20 most recent conversations as summaries
 
 Resources are slow-changing reference data, cached for 60 seconds. Read
 them at session start to translate human-readable names ("Support" inbox,
-"Alice Cooper" assignee) into the `inb_*` / `tea_*` / `tag_*` ids that
-mutating tools require — instead of asking the user for ids or assuming
-list-* tools exist for those resources (the only list-* tools currently
-registered are for conversations).
+"Alice Cooper" assignee, "Severity" custom field) into the `inb_*` /
+`tea_*` / `tag_*` / `tim_*` / `cf_*` ids that mutating tools require —
+instead of asking the user for ids or assuming list-* tools exist for
+those resources (the only list-* tools currently registered are for
+conversations).
+
+`frontapp://me` is the workspace company identity (`cmp_*`, name) — use
+as a session-start smoke test to confirm the token is valid; it does NOT
+identify the teammate the token represents (Front doesn't expose that
+mapping).
 """,
 )
 

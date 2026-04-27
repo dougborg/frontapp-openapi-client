@@ -10,6 +10,9 @@ from the existing ``ResponseCachingMiddleware``.
 | ``frontapp://inboxes`` | All inboxes (id, name, privacy). |
 | ``frontapp://teammates`` | All teammates (id, username, email, name, availability). |
 | ``frontapp://conversations/recent`` | The 20 most recent conversations as light summaries. |
+| ``frontapp://me`` | Workspace company identity (id, name) — confirms the token works and which workspace it's bound to. |
+| ``frontapp://custom_fields`` | All custom field schemas, grouped by scope (global / account / contact / conversation / inbox / link / teammate). |
+| ``frontapp://teams`` | All workspace teams (id, name) — translate team names to ids. |
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ from pydantic import BaseModel
 
 from frontapp_mcp.projections import to_summary
 from frontapp_mcp.services import get_services
-from frontapp_public_api_client.utils import unwrap
+from frontapp_public_api_client.utils import unwrap, unwrap_as
 
 
 class TagRef(BaseModel):
@@ -47,6 +50,40 @@ class TeammateRef(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     is_available: bool | None = None
+
+
+class MeRef(BaseModel):
+    """Identity of the workspace company the API token is bound to.
+
+    Front's ``GET /me`` returns the company-level identity — id ``cmp_*``
+    and the workspace's display name — not the teammate the token
+    represents. There's no programmatic way to recover the token's
+    teammate from the API; that mapping lives in Front's admin UI.
+    Use this resource as a token-validity smoke check at session start
+    and to display the workspace name for context.
+    """
+
+    id: str
+    name: str | None = None
+
+
+class TeamRef(BaseModel):
+    id: str
+    name: str | None = None
+
+
+class CustomFieldRef(BaseModel):
+    """Schema for one custom field on Front objects.
+
+    The ``scope`` discriminator is added by the resource — it's not in
+    the underlying ``CustomFieldResponse`` model.
+    """
+
+    id: str
+    name: str | None = None
+    description: str | None = None
+    type: str | None = None
+    values: list[dict[str, Any]] | None = None
 
 
 def _project(model: type[BaseModel], item: Any) -> dict[str, Any]:
@@ -127,6 +164,85 @@ def register_resources(mcp: FastMCP) -> None:
         return await _list_field_results(
             context, list_teammates.asyncio_detailed, TeammateRef
         )
+
+    @mcp.resource(
+        uri="frontapp://me",
+        name="Workspace identity",
+        description=(
+            "Workspace company identity — `id` (cmp_*) and display name "
+            "of the workspace this API token is bound to. Use as a "
+            "session-start smoke test to confirm the token is valid, and "
+            "for displaying workspace context. Note: this does NOT identify "
+            "the teammate the token represents (Front doesn't expose that)."
+        ),
+        mime_type="application/json",
+    )
+    async def me_resource(context: Context) -> str:
+        from frontapp_public_api_client.api.token_identity import api_token_details
+        from frontapp_public_api_client.models.identity_response import (
+            IdentityResponse,
+        )
+
+        services = get_services(context)
+        response = await api_token_details.asyncio_detailed(client=services.client)
+        identity = unwrap_as(response, IdentityResponse)
+        return _dump([_project(MeRef, identity)])
+
+    @mcp.resource(
+        uri="frontapp://custom_fields",
+        name="Custom fields (all scopes)",
+        description=(
+            "All custom field schemas in the workspace, grouped by scope "
+            "(global / account / contact / conversation / inbox / link / "
+            "teammate). Use to translate a custom field name into its "
+            "`cf_*` id before reading or writing field values on objects."
+        ),
+        mime_type="application/json",
+    )
+    async def custom_fields_resource(context: Context) -> str:
+        from frontapp_public_api_client.api.custom_fields import (
+            list_account_custom_fields,
+            list_contact_custom_fields,
+            list_conversation_custom_fields,
+            list_custom_fields,
+            list_inbox_custom_fields,
+            list_link_custom_fields,
+            list_teammate_custom_fields,
+        )
+
+        services = get_services(context)
+        scopes: dict[str, Callable[..., Any]] = {
+            "global": list_custom_fields.asyncio_detailed,
+            "account": list_account_custom_fields.asyncio_detailed,
+            "contact": list_contact_custom_fields.asyncio_detailed,
+            "conversation": list_conversation_custom_fields.asyncio_detailed,
+            "inbox": list_inbox_custom_fields.asyncio_detailed,
+            "link": list_link_custom_fields.asyncio_detailed,
+            "teammate": list_teammate_custom_fields.asyncio_detailed,
+        }
+        result: dict[str, list[dict[str, Any]]] = {}
+        for scope, list_fn in scopes.items():
+            response = await list_fn(client=services.client)
+            parsed = unwrap(response)
+            results = getattr(parsed, "field_results", None) or []
+            result[scope] = [_project(CustomFieldRef, item) for item in results]
+        return json.dumps(result, sort_keys=True)
+
+    @mcp.resource(
+        uri="frontapp://teams",
+        name="Teams",
+        description=(
+            "All workspace teams (id, name). Use to translate a team name "
+            "('Support', 'Sales') into a `tim_*` id before passing to "
+            "team-scoped tools like `list_team_inboxes` or "
+            "`create_team_signature`."
+        ),
+        mime_type="application/json",
+    )
+    async def teams_resource(context: Context) -> str:
+        from frontapp_public_api_client.api.teams import list_teams
+
+        return await _list_field_results(context, list_teams.asyncio_detailed, TeamRef)
 
     @mcp.resource(
         uri="frontapp://conversations/recent",
