@@ -151,6 +151,34 @@ class Conversations(Base):
         results = getattr(parsed, "field_results", None) or []
         return [Conversation.model_validate(c.to_dict()) for c in results]
 
+    async def iter_search(
+        self,
+        query: str,
+        *,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Conversation]:
+        """Auto-paginated async iterator over search results.
+
+        Variant of :meth:`search` that walks every matching page.
+        """
+        from frontapp_public_api_client.api.conversations import search_conversations
+        from frontapp_public_api_client.domain import Conversation
+
+        kwargs: dict[str, Any] = {"query": query}
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            search_conversations.asyncio_detailed,
+            projector=lambda c: Conversation.model_validate(c.to_dict()),
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
+
     async def get(self, conversation_id: str) -> Conversation:
         """Fetch one conversation by id (e.g. ``"cnv_abc123"``)."""
         from frontapp_public_api_client.api.conversations import (
@@ -190,6 +218,35 @@ class Conversations(Base):
         response = await list_conversation_messages.asyncio_detailed(**kwargs)
         parsed = unwrap(response)
         return list(getattr(parsed, "field_results", None) or [])
+
+    async def iter_messages(
+        self,
+        conversation_id: str,
+        *,
+        limit: int | None = None,
+        max_items: int | None = None,
+        max_pages: int | None = None,
+    ) -> AsyncIterator[Any]:
+        """Auto-paginated async iterator over messages in a conversation.
+
+        Yields raw attrs ``MessageResponse`` items (no domain projection
+        — the messages vertical deferred its Pydantic model).
+        """
+        from frontapp_public_api_client.api.conversations import (
+            list_conversation_messages,
+        )
+
+        kwargs: dict[str, Any] = {"conversation_id": conversation_id}
+        if limit is not None:
+            kwargs["limit"] = limit
+
+        async for item in self._paginate(
+            list_conversation_messages.asyncio_detailed,
+            max_items=max_items,
+            max_pages=max_pages,
+            **kwargs,
+        ):
+            yield item
 
     async def list_comments(self, conversation_id: str) -> builtins.list[Any]:
         """List internal comments on a conversation."""
