@@ -2,9 +2,12 @@
 
 ## Status
 
-Accepted
+**Superseded** by
+[ADR-0018: Claude-only Agent Harness](0018-claude-only-agent-harness.md) on 2026-04-26.
+The `.github/agents/`, `.github/instructions/`, and `.github/prompts/` trees described
+here have been removed; the active harness lives entirely under `.claude/`.
 
-Date: 2026-04-24
+Originally accepted: 2026-04-24
 
 ## Context
 
