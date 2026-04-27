@@ -26,7 +26,9 @@ from pydantic import Field
 
 from frontapp_mcp.projections import DraftSummary, to_draft_summary
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import (
+    confirm_or_preview,
+)
 from frontapp_public_api_client.helpers.attachments import (
     preview_paths,
     resolve_paths,
@@ -115,14 +117,14 @@ def register_tools(mcp: FastMCP) -> None:
             "mode": mode,
             "attachments": attachment_preview,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Create draft on channel {channel_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create draft on channel {channel_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         draft = await services.client.drafts.create_on_channel(
             channel_id,
@@ -198,14 +200,14 @@ def register_tools(mcp: FastMCP) -> None:
             "mode": mode,
             "attachments": attachment_preview,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Create draft reply on conversation {conversation_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create draft reply on conversation {conversation_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         draft = await services.client.drafts.create_reply(
             conversation_id,
@@ -290,14 +292,14 @@ def register_tools(mcp: FastMCP) -> None:
             "version": version,
             "attachments": attachment_preview,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Edit draft {draft_id}? This replaces the current draft body."
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Edit draft {draft_id}? This replaces the current draft body.",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         draft = await services.client.drafts.edit(
             draft_id,
@@ -328,12 +330,14 @@ def register_tools(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         services = get_services(context)
         preview = {"action": "delete_draft", "draft_id": draft_id}
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(context, f"Delete draft {draft_id}?")
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Delete draft {draft_id}?",
+        )
+        if gate is not None:
+            return gate
 
         success = await services.client.drafts.delete(draft_id)
         return {"confirmed": True, "deleted": success}

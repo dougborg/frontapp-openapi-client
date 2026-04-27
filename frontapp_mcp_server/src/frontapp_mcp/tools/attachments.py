@@ -23,7 +23,9 @@ from fastmcp import Context, FastMCP
 from pydantic import Field
 
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import (
+    confirm_or_preview,
+)
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -95,15 +97,17 @@ def register_tools(mcp: FastMCP) -> None:
             "parent_exists": True,
             "will_overwrite": path.exists(),
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
         message = f"Download attachment to {path}?" + (
             " (will OVERWRITE existing file)" if path.exists() else ""
         )
-        result = await require_confirmation(context, message)
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=message,
+        )
+        if gate is not None:
+            return gate
 
         services = get_services(context)
         # Stream to disk so we don't buffer large attachments in memory.

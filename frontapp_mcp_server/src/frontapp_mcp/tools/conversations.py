@@ -18,7 +18,9 @@ from pydantic import Field
 
 from frontapp_mcp.projections import ConversationSummary, to_summary
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import (
+    confirm_or_preview,
+)
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -184,15 +186,15 @@ def register_tools(mcp: FastMCP) -> None:
                 "confirmed": False,
                 "result": "no_changes_requested",
             }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
         summary = ", ".join(f"{k}={v}" for k, v in changes.items())
-        result = await require_confirmation(
-            context, f"Update conversation {conversation_id}: {summary}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Update conversation {conversation_id}: {summary}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         response = await services.client.conversations.update(
             conversation_id,
@@ -228,14 +230,14 @@ def register_tools(mcp: FastMCP) -> None:
             "body_preview": body[:200] + ("…" if len(body) > 200 else ""),
             "author_id": author_id,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Add internal comment to conversation {conversation_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Add internal comment to conversation {conversation_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         comment = await services.client.conversations.add_comment(
             conversation_id, body=body, author_id=author_id

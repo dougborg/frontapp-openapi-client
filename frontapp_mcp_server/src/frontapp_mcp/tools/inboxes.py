@@ -27,7 +27,7 @@ from frontapp_mcp.projections import (
     to_summary,
 )
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import confirm_or_preview
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -161,14 +161,14 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_ids": teammate_ids,
             "is_public": is_public,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Create workspace inbox '{name}'?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create workspace inbox '{name}'?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         inbox = await services.client.inboxes.create(
             name=name, teammate_ids=teammate_ids, is_public=is_public
@@ -201,14 +201,14 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_ids": teammate_ids,
             "is_public": is_public,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Create team inbox '{name}' on team {team_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create team inbox '{name}' on team {team_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         inbox = await services.client.inboxes.create_for_team(
             team_id, name=name, teammate_ids=teammate_ids, is_public=is_public
@@ -234,15 +234,16 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_count": len(teammate_ids),
             "teammate_ids": teammate_ids,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"Grant inbox {inbox_id} access to {len(teammate_ids)} teammate(s)?",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"Grant inbox {inbox_id} access to {len(teammate_ids)} teammate(s)?"
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.inboxes.grant_access(
             inbox_id, teammate_ids=teammate_ids
@@ -271,15 +272,16 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_count": len(teammate_ids),
             "teammate_ids": teammate_ids,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"Revoke inbox {inbox_id} access from {len(teammate_ids)} teammate(s)?",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"Revoke inbox {inbox_id} access from {len(teammate_ids)} teammate(s)?"
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.inboxes.revoke_access(
             inbox_id, teammate_ids=teammate_ids

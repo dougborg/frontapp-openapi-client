@@ -19,7 +19,9 @@ from fastmcp import Context, FastMCP
 from pydantic import Field
 
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import (
+    confirm_or_preview,
+)
 from frontapp_public_api_client.domain.converters import unwrap_unset
 from frontapp_public_api_client.models.message_response import MessageResponse
 from frontapp_public_api_client.models.seen_receipt_response import SeenReceiptResponse
@@ -147,16 +149,18 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_id": teammate_id,
             "rate_limit": "10 req/msg/hour",
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
         prompt = f"Mark message {message_id} seen"
         if teammate_id:
             prompt += f" as teammate {teammate_id}"
         prompt += "?"
-        result = await require_confirmation(context, prompt)
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=prompt,
+        )
+        if gate is not None:
+            return gate
 
         success = await services.client.messages.mark_seen(
             message_id, teammate_id=teammate_id

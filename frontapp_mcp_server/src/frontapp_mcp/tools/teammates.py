@@ -19,7 +19,9 @@ from pydantic import Field
 
 from frontapp_mcp.projections import ConversationSummary, to_summary
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import (
+    confirm_or_preview,
+)
 from frontapp_public_api_client.domain import Inbox, Teammate
 
 
@@ -142,15 +144,15 @@ def register_tools(mcp: FastMCP) -> None:
                 "confirmed": False,
                 "result": "no_changes_requested",
             }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
         summary = ", ".join(f"{k}={v}" for k, v in changes.items())
-        result = await require_confirmation(
-            context, f"Update teammate {teammate_id}: {summary}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Update teammate {teammate_id}: {summary}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.teammates.update(
             teammate_id,

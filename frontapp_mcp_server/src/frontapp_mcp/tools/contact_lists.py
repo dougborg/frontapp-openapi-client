@@ -20,10 +20,10 @@ from frontapp_mcp.projections import (
     to_contact_summary,
 )
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import confirm_or_preview
 from frontapp_public_api_client.helpers.constants import (
     CONTACT_BUCKET_REMOVE_CAP,
-    CONTACT_BUCKET_REMOVE_OVER_CAP_MSG,
+    cap_error_message,
 )
 
 
@@ -121,16 +121,17 @@ def register_tools(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         services = get_services(context)
         preview = {"action": "create_contact_list", "name": name}
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"Create workspace-scoped contact list {name!r}? (Targets the "
-            "oldest active workspace.)",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"Create workspace-scoped contact list {name!r}? (Targets the "
+                "oldest active workspace.)"
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         await services.client.contact_lists.create(name)
         return {"confirmed": True, "name": name}
@@ -156,14 +157,14 @@ def register_tools(mcp: FastMCP) -> None:
             "team_id": team_id,
             "name": name,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Create contact list {name!r} for team {team_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create contact list {name!r} for team {team_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         await services.client.contact_lists.create_for_team(team_id, name)
         return {"confirmed": True, "team_id": team_id, "name": name}
@@ -188,15 +189,16 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_id": teammate_id,
             "name": name,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"Create private contact list {name!r} for teammate {teammate_id}?",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"Create private contact list {name!r} for teammate {teammate_id}?"
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         await services.client.contact_lists.create_for_teammate(teammate_id, name)
         return {"confirmed": True, "teammate_id": teammate_id, "name": name}
@@ -222,16 +224,17 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_list_id": contact_list_id,
             "note": "Dissolves the list; contacts NOT deleted.",
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"Delete contact list {contact_list_id}? (Members are kept; "
-            "only the list is removed.)",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"Delete contact list {contact_list_id}? (Members are kept; "
+                "only the list is removed.)"
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         await services.client.contact_lists.delete(contact_list_id)
         return {"confirmed": True, "contact_list_id": contact_list_id}
@@ -262,15 +265,16 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_ids": contact_ids,
             "count": len(contact_ids),
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"Add {len(contact_ids)} contact(s) to list {contact_list_id}?",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"Add {len(contact_ids)} contact(s) to list {contact_list_id}?"
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         await services.client.contact_lists.add_contacts(contact_list_id, contact_ids)
         return {
@@ -309,20 +313,23 @@ def register_tools(mcp: FastMCP) -> None:
         }
         if len(contact_ids) > CONTACT_BUCKET_REMOVE_CAP:
             return {
-                "error": CONTACT_BUCKET_REMOVE_OVER_CAP_MSG.format(
-                    count=len(contact_ids)
+                "error": cap_error_message(
+                    count=len(contact_ids),
+                    cap=CONTACT_BUCKET_REMOVE_CAP,
+                    operation="remove_contacts",
                 ),
                 "confirmed": False,
             }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"Remove {len(contact_ids)} contact(s) from list {contact_list_id}?",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"Remove {len(contact_ids)} contact(s) from list {contact_list_id}?"
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         await services.client.contact_lists.remove_contacts(
             contact_list_id, contact_ids

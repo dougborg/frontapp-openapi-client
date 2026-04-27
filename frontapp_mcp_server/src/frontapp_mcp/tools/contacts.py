@@ -28,7 +28,9 @@ from frontapp_mcp.projections import (
     to_summary,
 )
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_mcp.tools.schemas import (
+    confirm_or_preview,
+)
 
 # Mirrors ``ContactHandleSource`` in the domain module; duplicated here
 # (rather than imported) because Pydantic Field annotations are evaluated
@@ -217,12 +219,14 @@ def register_tools(mcp: FastMCP) -> None:
             "group_names": group_names,
             "list_names": list_names,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(context, f"Create contact '{name}'?")
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create contact '{name}'?",
+        )
+        if gate is not None:
+            return gate
 
         contact = await services.client.contacts.create(
             handles=handles,
@@ -260,14 +264,14 @@ def register_tools(mcp: FastMCP) -> None:
             "name": name,
             "handles": handles,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Create team contact on {team_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create team contact on {team_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         contact = await services.client.contacts.create_for_team(
             team_id,
@@ -302,14 +306,14 @@ def register_tools(mcp: FastMCP) -> None:
             "name": name,
             "handles": handles,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Create teammate contact on {teammate_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Create teammate contact on {teammate_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         contact = await services.client.contacts.create_for_teammate(
             teammate_id,
@@ -365,15 +369,15 @@ def register_tools(mcp: FastMCP) -> None:
                 "confirmed": False,
                 "result": "no_changes_requested",
             }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
         summary = ", ".join(f"{k}={v}" for k, v in changes.items())
-        result = await require_confirmation(
-            context, f"Update contact {contact_id}: {summary}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Update contact {contact_id}: {summary}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.contacts.update(
             contact_id,
@@ -412,18 +416,17 @@ def register_tools(mcp: FastMCP) -> None:
             "target_contact_id": target_contact_id,
             "warning": "IRREVERSIBLE: merged contacts are deleted; their conversations move to the target.",
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            (
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
                 f"IRREVERSIBLE: merge {len(contact_ids)} contacts "
                 f"(target={target_contact_id or 'auto'})?"
             ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         contact = await services.client.contacts.merge(
             contact_ids=contact_ids, target_contact_id=target_contact_id
@@ -448,15 +451,16 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_id": contact_id,
             "warning": "PERMANENT: removes the contact and all its handles. Cannot be undone.",
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"PERMANENTLY DELETE contact {contact_id}? This deletes customer data.",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"PERMANENTLY DELETE contact {contact_id}? This deletes customer data."
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.contacts.delete(contact_id)
         return {"confirmed": True, "deleted": success}
@@ -482,14 +486,14 @@ def register_tools(mcp: FastMCP) -> None:
             "author_id": author_id,
             "body_preview": body[:200] + ("…" if len(body) > 200 else ""),
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Add internal note to contact {contact_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Add internal note to contact {contact_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         response = await services.client.contacts.add_note(
             contact_id, body=body, author_id=author_id
@@ -519,14 +523,14 @@ def register_tools(mcp: FastMCP) -> None:
             "handle": handle,
             "source": source,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
-            context, f"Add {source} handle '{handle}' to contact {contact_id}?"
+        gate = await confirm_or_preview(
+            context,
+            preview=preview,
+            confirm=confirm,
+            elicit_message=f"Add {source} handle '{handle}' to contact {contact_id}?",
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.contacts.add_handle(
             contact_id, handle=handle, source=source
@@ -562,15 +566,16 @@ def register_tools(mcp: FastMCP) -> None:
             "source": source,
             "force": force,
         }
-        if not confirm:
-            return {"preview": preview, "confirmed": False}
-
-        result = await require_confirmation(
+        gate = await confirm_or_preview(
             context,
-            f"Remove {source} handle '{handle}' from contact {contact_id}?",
+            preview=preview,
+            confirm=confirm,
+            elicit_message=(
+                f"Remove {source} handle '{handle}' from contact {contact_id}?"
+            ),
         )
-        if result is not ConfirmationResult.CONFIRMED:
-            return {"preview": preview, "confirmed": False, "result": result.value}
+        if gate is not None:
+            return gate
 
         success = await services.client.contacts.delete_handle(
             contact_id, handle=handle, source=source, force=force

@@ -65,7 +65,7 @@ point that the server calls at startup:
 ```
 tools/
 ├── __init__.py        # register_all_tools fan-out
-├── schemas.py         # ConfirmationResult, require_confirmation
+├── schemas.py         # confirm_or_preview, ConfirmationResult, require_confirmation
 ├── conversations.py   # 7 tools (5 read, 2 mutate)
 ├── contacts.py        # 12 tools
 ├── drafts.py          # 5 tools (drafts-first outbound — see ADR-0016)
@@ -90,29 +90,34 @@ async def update_conversation(
     status: str | None = None,
     confirm: Annotated[bool, Field(description="Must be true to apply")] = False,
 ) -> dict[str, Any]:
-    if not confirm:
-        # Preview: return what would change without executing
-        return {"action": "update_conversation", "preview": ..., "confirm_required": True}
-
-    # Confirm via FastMCP elicitation — the client surfaces a yes/no prompt to the user
-    result = await require_confirmation(
-        context, f"Update conversation {conversation_id}?"
-    )
-    if result is not ConfirmationResult.CONFIRMED:
-        return {"status": "cancelled", ...}
-
-    # Execute
     services = get_services(context)
+    preview = {"action": "update_conversation", "id": conversation_id, "status": status}
+
+    gate = await confirm_or_preview(
+        context,
+        preview=preview,
+        confirm=confirm,
+        elicit_message=f"Update conversation {conversation_id}?",
+    )
+    if gate is not None:
+        return gate
+
     await services.client.conversations.update(conversation_id, status=status)
-    return {"status": "updated", ...}
+    return {"status": "updated", "id": conversation_id}
 ```
 
-`require_confirmation` (in `tools/schemas.py`) wraps
-`ctx.elicit(message, ConfirmationSchema)` and returns one of `CONFIRMED` / `CANCELLED` /
-`DECLINED`. The `confirm=False` preview path is the agent's contract: it sees what would
-happen, can narrate it to the user, then re-invokes with `confirm=True` to actually
-apply. The elicitation step is a second backstop — if the user is sitting at the client,
-they explicitly approve before the call lands on Front.
+`confirm_or_preview` (in `tools/schemas.py`) collapses the preview-then-elicit cascade
+into one call: it returns the response dict to bail with on the preview path or declined
+elicitation, or `None` when the caller should proceed with the mutation. Internally it
+wraps `ctx.elicit(message, ConfirmationSchema)` (via `require_confirmation`) and
+dispatches the returned `ConfirmationResult` (`CONFIRMED` / `CANCELLED` / `DECLINED`) —
+those names are now an internal detail of the helper and only get imported by tools that
+need to branch on `DECLINED` vs `CANCELLED` directly.
+
+The `confirm=False` preview path is the agent's contract: it sees what would happen, can
+narrate it to the user, then re-invokes with `confirm=True` to actually apply. The
+elicitation step is a second backstop — if the user is sitting at the client, they
+explicitly approve before the call lands on Front.
 
 The confirm gate is **per-tool**, not transport-level. Every mutating tool wires it in
 the same shape; the helpers (ADR-0007) themselves don't gate.
@@ -270,7 +275,8 @@ Encoded in the `/new-vertical` skill. Mirror the canonical template
 1. Create `tools/<resource>.py` with a `register_tools(mcp)` function.
 2. For each helper method, write a `@mcp.tool(name=..., description=...)` async function
    that calls the helper through `get_services(context)`.
-3. Mutations get `confirm: bool = False` + a preview branch + `require_confirmation`.
+3. Mutations get `confirm: bool = False` and run the gate via `confirm_or_preview`
+   (single helper call instead of the 6-line preview/elicit/dispatch cascade).
 4. Wire `register_<resource>_tools(mcp)` into `tools/__init__.py:register_all_tools`.
 5. Add read-only tool names to `_READ_ONLY_TOOLS` in `server.py` for caching.
 6. Extend the `instructions=` block in `server.py` with a section on the new vertical
@@ -304,7 +310,8 @@ when FastMCP upstream merges the equivalent fix.
 - [`tools/conversations.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/src/frontapp_mcp/tools/conversations.py)
   — canonical tool-module template
 - [`tools/schemas.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/src/frontapp_mcp/tools/schemas.py)
-  — `require_confirmation` and `ConfirmationResult`
+  — `confirm_or_preview` (canonical gate) plus the underlying `require_confirmation` and
+  `ConfirmationResult` primitives
 - [`projections.py`](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_mcp_server/src/frontapp_mcp/projections.py)
   — summary projections for tool responses
 - [ADR-0007: Domain Helper Classes](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/adr/0007-domain-helper-classes.md)

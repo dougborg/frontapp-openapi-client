@@ -5,6 +5,7 @@ tool modules to ensure consistency and avoid duplication.
 """
 
 from enum import StrEnum
+from typing import Any
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
@@ -54,4 +55,62 @@ async def require_confirmation(context: Context, message: str) -> ConfirmationRe
     return ConfirmationResult.CONFIRMED
 
 
-__all__ = ["ConfirmationResult", "ConfirmationSchema", "require_confirmation"]
+async def confirm_or_preview(
+    context: Context,
+    *,
+    preview: dict[str, Any],
+    confirm: bool,
+    elicit_message: str,
+) -> dict[str, Any] | None:
+    """Standard preview-then-elicit gate for mutating MCP tools.
+
+    Encapsulates the preview/confirm/elicit cascade that every two-step-confirm
+    tool runs. Returns the response dict the caller should return verbatim
+    when the gate blocks execution, or ``None`` when the caller should
+    proceed with the mutation.
+
+    Args:
+        context: FastMCP context — passed through to ``require_confirmation``.
+        preview: The preview dict for the tool's planned action. Surfaced
+            on both the preview path (``confirm=False``) and the
+            declined-elicitation path so the agent can show the user
+            what would have happened.
+        confirm: The tool's ``confirm`` parameter. When ``False`` the gate
+            short-circuits to the preview response without elicitation.
+        elicit_message: Human-readable confirmation prompt for
+            ``ctx.elicit`` (e.g. ``"Update conversation cnv_abc?"``).
+
+    Returns:
+        ``None`` if the user explicitly confirmed the action — caller proceeds.
+        Otherwise a dict with ``confirmed: False`` (and optional
+        ``preview`` / ``result`` keys) suitable for returning directly
+        from the tool.
+
+    Example:
+        >>> preview = {"action": "update", "id": conversation_id}
+        >>> gate = await confirm_or_preview(
+        ...     context,
+        ...     preview=preview,
+        ...     confirm=confirm,
+        ...     elicit_message=f"Update conversation {conversation_id}?",
+        ... )
+        >>> if gate is not None:
+        ...     return gate
+        >>> # ... proceed with mutation
+    """
+    if not confirm:
+        return {"preview": preview, "confirmed": False}
+
+    result = await require_confirmation(context, elicit_message)
+    if result is not ConfirmationResult.CONFIRMED:
+        return {"preview": preview, "confirmed": False, "result": result.value}
+
+    return None
+
+
+__all__ = [
+    "ConfirmationResult",
+    "ConfirmationSchema",
+    "confirm_or_preview",
+    "require_confirmation",
+]
