@@ -25,12 +25,10 @@ We use the format proposed by Michael Nygard in
 - [ADR-004: Defer Observability to httpx](0004-defer-observability-to-httpx.md)
 - [ADR-005: Provide Both Sync and Async APIs](0005-sync-async-apis.md)
 - [ADR-006: Utility Functions for Response Unwrapping](0006-response-unwrapping-utilities.md)
+- [ADR-0007: Domain Helper Classes](0007-domain-helper-classes.md)
+- [ADR-008: Avoid Traditional Builder Pattern](0008-avoid-builder-pattern.md)
 - [ADR-011: Pydantic Domain Models for Business Entities](0011-pydantic-domain-models.md)
 - [ADR-012: Validation Tiers for Agent Workflows](0012-validation-tiers-for-agent-workflows.md)
-
-### Proposed
-
-- [ADR-008: Avoid Traditional Builder Pattern](0008-avoid-builder-pattern.md)
 
 ## Related
 

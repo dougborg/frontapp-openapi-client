@@ -19,6 +19,7 @@ We use the format proposed by Michael Nygard in
 
 ### Accepted
 
+- [ADR-0010: Frontapp MCP Server Architecture](0010-mcp-server-architecture.md)
 - [ADR-0016: Tool Interface Pattern](0016-tool-interface-pattern.md)
 - [ADR-0017: Automated Tool Documentation](0017-automated-tool-documentation.md)
 
