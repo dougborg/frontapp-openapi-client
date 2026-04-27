@@ -127,7 +127,12 @@ class Base:
 
             at_max_items = max_items is not None and yielded >= max_items
             at_max_pages = page_count >= max_pages
-            no_more_pages = next_token is None
+            # An empty page with a non-null cursor would otherwise infinite-loop
+            # (Front shouldn't do this, but observed in practice with rapidly-
+            # mutating filters). Treat it as terminal — better to under-fetch
+            # than drain the rate limit.
+            empty_page = not results
+            no_more_pages = next_token is None or empty_page
 
             if logger is not None:
                 if no_more_pages or at_max_items or at_max_pages:
@@ -136,6 +141,8 @@ class Base:
                         if at_max_items
                         else "max_pages"
                         if at_max_pages
+                        else "empty_page_with_cursor"
+                        if empty_page and next_token is not None
                         else "final"
                     )
                     logger.debug(

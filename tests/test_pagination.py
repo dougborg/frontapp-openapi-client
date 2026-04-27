@@ -14,11 +14,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import httpx
-import pytest
 
 from frontapp_public_api_client.domain import Conversation, Tag
 from frontapp_public_api_client.helpers.base import extract_page_token
-
 
 # ---------------------------------------------------------------------------
 # extract_page_token
@@ -220,6 +218,43 @@ class TestIterAllConversations:
 
         assert ids == ["cnv_1"]
         assert len(recorded) == 1
+
+    async def test_empty_page_with_cursor_stops_iteration(self, attach_transport):
+        """Defensive: if Front returns an empty page WITH a non-null cursor
+        (shouldn't happen, but observed in the wild with rapidly-mutating
+        filters), treat the empty page as terminal rather than chasing the
+        cursor forever and draining the rate limit."""
+        # Page 1 has results + a next cursor.
+        page1 = {
+            "_results": [_conv_payload("cnv_1")],
+            "_pagination": {
+                "next": "https://api.frontapp.test/conversations?page_token=PAGE2"
+            },
+            "_links": {},
+        }
+        # Page 2 is empty BUT still advertises a next cursor — should stop
+        # here, not chase cnv_3 (which we'd never see anyway since we'd be
+        # in an infinite loop).
+        page2 = {
+            "_results": [],
+            "_pagination": {
+                "next": "https://api.frontapp.test/conversations?page_token=PAGE3"
+            },
+            "_links": {},
+        }
+        # Page 3 should never be fetched.
+        page3 = {
+            "_results": [_conv_payload("cnv_3")],
+            "_pagination": {"next": None},
+            "_links": {},
+        }
+        transport, recorded = _multi_page_transport([page1, page2, page3])
+        client = attach_transport(transport)
+
+        ids = [c.id async for c in client.conversations.iter_all()]
+
+        assert ids == ["cnv_1"]
+        assert len(recorded) == 2  # Did not chase the cursor on the empty page.
 
     async def test_pagination_next_unset_stops_iteration(self, attach_transport):
         """Generated pagination model types ``next_`` as ``None | str | Unset``.
