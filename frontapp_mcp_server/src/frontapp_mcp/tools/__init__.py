@@ -16,6 +16,7 @@ def register_all_tools(mcp: FastMCP) -> None:
     from .inboxes import register_tools as register_inboxes_tools
     from .messages import register_tools as register_messages_tools
     from .tags import register_tools as register_tags_tools
+    from .teammates import register_tools as register_teammates_tools
 
     register_contacts_tools(mcp)
     register_conversations_tools(mcp)
@@ -23,6 +24,7 @@ def register_all_tools(mcp: FastMCP) -> None:
     register_inboxes_tools(mcp)
     register_messages_tools(mcp)
     register_tags_tools(mcp)
+    register_teammates_tools(mcp)
 
 
 __all__ = ["register_all_tools"]

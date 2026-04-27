@@ -12,6 +12,7 @@ from frontapp_public_api_client.helpers.drafts import Drafts
 from frontapp_public_api_client.helpers.inboxes import Inboxes
 from frontapp_public_api_client.helpers.messages import Messages
 from frontapp_public_api_client.helpers.tags import Tags
+from frontapp_public_api_client.helpers.teammates import Teammates
 
 __all__ = [
     "Base",
@@ -21,4 +22,5 @@ __all__ = [
     "Inboxes",
     "Messages",
     "Tags",
+    "Teammates",
 ]

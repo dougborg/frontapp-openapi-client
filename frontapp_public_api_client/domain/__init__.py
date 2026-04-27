@@ -33,6 +33,7 @@ from .converters import to_unset, unwrap_unset
 from .draft import AttachmentSummary, Draft
 from .inbox import Inbox
 from .tag import Tag
+from .teammate import Teammate
 
 __all__ = [
     "AttachmentSummary",
@@ -48,6 +49,7 @@ __all__ = [
     "RecipientSummary",
     "Tag",
     "TagSummary",
+    "Teammate",
     "TeammateSummary",
     "to_unset",
     "unwrap_unset",
