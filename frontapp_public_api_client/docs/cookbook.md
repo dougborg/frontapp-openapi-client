@@ -50,27 +50,27 @@ async with FrontappClient() as client:
 
 ## Walk a paginated list
 
+Every list helper has a sibling `iter_*` that walks Front's cursor pagination
+automatically. The cursor plumbing (extract `_pagination.next`, feed the token back as
+`page_token`, terminate on empty pages) is handled inside the client.
+
 ```python
 from frontapp_public_api_client import FrontappClient
 
-async def collect_all_open(client: FrontappClient) -> list:
-    all_convs = []
-    page_token = None
-    while True:
-        batch = await client.conversations.list(
-            q="status:open", limit=100, page_token=page_token
-        )
-        if not batch:
-            break
-        all_convs.extend(batch)
-        # (Helper for extracting next-page token is on the roadmap — for now,
-        # call the generated list_conversations directly to inspect
-        # `_pagination.next` on the attrs response.)
-        if len(batch) < 100:
-            break
-        page_token = _extract_next_token(...)  # TODO
-    return all_convs
+async with FrontappClient() as client:
+    open_convs = []
+    async for conv in client.conversations.iter_all(q="status:open"):
+        open_convs.append(conv)
+
+    # Cap the iterator to avoid unbounded fetches:
+    async for conv in client.conversations.iter_all(
+        q="status:open", max_items=500, max_pages=10
+    ):
+        ...
 ```
+
+The same pattern works on every paginated helper: `client.contacts.iter_all`,
+`client.tags.iter_all`, `client.inboxes.iter_all`, `client.teammates.iter_all`, etc.
 
 ## Reply to a conversation
 
@@ -86,6 +86,55 @@ async with FrontappClient() as client:
     # Front returns 202 Accepted; message is enqueued for delivery.
     assert response.status_code == 202
 ```
+
+## Draft a reply with a PDF attachment
+
+The drafts vertical is the safe-by-default outbound path: an agent creates the draft
+with attachments; the human reviews in Front's UI and clicks send.
+
+```python
+from frontapp_public_api_client import FileSpec, FrontappClient
+
+async with FrontappClient() as client:
+    draft = await client.drafts.create_reply(
+        "cnv_abc",
+        body="Updated proposal attached.",
+        channel_id="cha_xyz",
+        attachments=[
+            FileSpec.from_path("/absolute/path/to/proposal.pdf"),
+            # Construct directly when bytes already in memory:
+            FileSpec(
+                filename="cover-letter.txt",
+                content=b"Hello team,\n\n...",
+                mime_type="text/plain",
+            ),
+        ],
+    )
+    print(f"Draft {draft.id} created — review at https://app.frontapp.com")
+```
+
+When `attachments` is non-empty the helper bypasses the generated client and sends the
+request as `multipart/form-data` (Front rejects binary content sent as JSON). When
+`attachments` is `None` or empty, the standard JSON path is used. The same parameter
+works on `client.drafts.create_on_channel`, `client.drafts.edit`,
+`client.conversations.reply`, and `client.conversations.add_comment`.
+
+## Download an attachment
+
+`Attachment.url` (returned on every message attachment) is a fully-qualified download
+URL on the workspace's own subdomain. The helper validates the host against the client's
+`base_url` before sending the API token.
+
+```python
+async with FrontappClient() as client:
+    msg = await client.messages.get("msg_abc")
+    for attachment in msg.attachments:
+        bytes_ = await client.attachments.download(attachment.url)
+        Path(f"/tmp/{attachment.filename}").write_bytes(bytes_)
+```
+
+For large attachments, `client.attachments.stream(url)` yields 64 KiB chunks so you can
+pipe them straight to disk without buffering the full payload.
 
 ## Archive and retag in one call
 
