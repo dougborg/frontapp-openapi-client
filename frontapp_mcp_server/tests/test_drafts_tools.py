@@ -54,6 +54,7 @@ class TestPreviewPath:
                 "cc": None,
                 "bcc": None,
                 "mode": None,
+                "attachments": [],
             },
             "confirmed": False,
         }
@@ -173,6 +174,7 @@ class TestConfirmedExecution:
             cc=None,
             bcc=None,
             mode="shared",
+            attachments=None,
         )
         assert result["confirmed"] is True
         assert result["draft"]["id"] == "msg_new"

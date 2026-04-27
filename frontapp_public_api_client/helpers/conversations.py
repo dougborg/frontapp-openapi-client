@@ -10,6 +10,7 @@ import builtins
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
+from frontapp_public_api_client.helpers.attachments import FileSpec
 from frontapp_public_api_client.helpers.base import Base, extract_page_token
 
 if TYPE_CHECKING:
@@ -273,16 +274,46 @@ class Conversations(Base):
         to: builtins.list[str] | None = None,
         cc: builtins.list[str] | None = None,
         bcc: builtins.list[str] | None = None,
+        attachments: builtins.list[FileSpec] | None = None,
     ) -> Any:
         """Send an outbound reply on an existing conversation.
 
         Uses the channel the conversation was opened on. Returns the raw
         response (Front replies with 202 Accepted; the message is enqueued).
+
+        Pass ``attachments=[FileSpec(...), ...]`` to attach files; the
+        request is then sent as ``multipart/form-data``. Returns the parsed
+        JSON dict (or ``None``) instead of the generated ``Response`` when
+        attachments are used.
         """
+        from urllib.parse import quote as _quote
+
         from frontapp_public_api_client.api.messages import create_message_reply
         from frontapp_public_api_client.models.outbound_reply_message import (
             OutboundReplyMessage,
         )
+
+        if attachments:
+            payload = {
+                k: v
+                for k, v in {
+                    "body": body,
+                    "author_id": author_id,
+                    "subject": subject,
+                    "to": to,
+                    "cc": cc,
+                    "bcc": bcc,
+                }.items()
+                if v is not None
+            }
+            return await self._client.attachments.post_multipart(
+                method="POST",
+                path=(
+                    f"/conversations/{_quote(str(conversation_id), safe='')}/messages"
+                ),
+                fields=payload,
+                files=attachments,
+            )
 
         payload_kwargs: dict[str, Any] = {"body": body}
         if author_id is not None:
@@ -307,10 +338,33 @@ class Conversations(Base):
         *,
         body: str,
         author_id: str | None = None,
+        attachments: builtins.list[FileSpec] | None = None,
     ) -> Any:
-        """Add an internal comment (visible to teammates only)."""
+        """Add an internal comment (visible to teammates only).
+
+        Pass ``attachments=[FileSpec(...), ...]`` to attach files; the
+        request is then sent as ``multipart/form-data`` and returns the
+        parsed JSON dict instead of the generated ``Response``.
+        """
+        from urllib.parse import quote as _quote
+
         from frontapp_public_api_client.api.comments import add_comment
         from frontapp_public_api_client.models.create_comment import CreateComment
+
+        if attachments:
+            payload = {
+                k: v
+                for k, v in {"body": body, "author_id": author_id}.items()
+                if v is not None
+            }
+            return await self._client.attachments.post_multipart(
+                method="POST",
+                path=(
+                    f"/conversations/{_quote(str(conversation_id), safe='')}/comments"
+                ),
+                fields=payload,
+                files=attachments,
+            )
 
         payload_kwargs: dict[str, Any] = {"body": body}
         if author_id is not None:

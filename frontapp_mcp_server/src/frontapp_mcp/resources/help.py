@@ -52,6 +52,30 @@ programmatic ``send_draft``.
 | `edit_draft` | `PATCH /drafts/{id}/` | Full-replacement edit of an existing draft (`body` + `channel_id` required). Two-step confirm. |
 | `delete_draft` | `DELETE /drafts/{id}` | Discard a draft. Two-step confirm. |
 
+### Attachments on drafts / replies / comments
+
+`create_draft_on_channel`, `create_draft_reply`, and `edit_draft` accept an
+optional `attachment_paths=[...]` parameter — a list of ABSOLUTE filesystem
+paths read at tool-invocation time. Each path is validated (must exist, be
+a regular file, ≤25 MB), MIME-type-inferred, and shipped to Front as
+`multipart/form-data`. The preview includes filename + size for human
+review. Note: `edit_draft` REPLACES the attachment list — any file not
+listed is dropped.
+
+`add_conversation_comment` (in the conversations vertical) takes the same
+`attachment_paths` parameter when you want to attach files to an internal
+note.
+
+## Attachments
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `download_attachment` | `GET /download/{attachment_link_id}` (and 4 sibling paths) | Fetch attachment bytes by URL (the value Front returns on `Attachment.url`) and write to a local filesystem path. Two-step confirm protects against unintended writes. The five `/download/...` paths are stripped from the spec because openapi-python-client can't model binary responses; this tool bypasses the generated client. |
+
+The download tool writes bytes to disk and returns metadata only — never
+the raw bytes themselves, which would explode token usage. Pass an
+absolute `save_path` whose parent already exists.
+
 ## Contacts
 
 A contact is a person identified by one or more handles (email/phone/etc.).

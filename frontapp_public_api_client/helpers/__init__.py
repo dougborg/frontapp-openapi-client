@@ -5,6 +5,11 @@ boilerplate for common workflows. Each helper is accessed as an attribute on
 ``FrontappClient`` (e.g. ``client.conversations.list(...)``).
 """
 
+from frontapp_public_api_client.helpers.attachments import (
+    MAX_ATTACHMENT_BYTES,
+    Attachments,
+    FileSpec,
+)
 from frontapp_public_api_client.helpers.base import Base
 from frontapp_public_api_client.helpers.contacts import Contacts
 from frontapp_public_api_client.helpers.conversations import Conversations
@@ -15,10 +20,13 @@ from frontapp_public_api_client.helpers.tags import Tags
 from frontapp_public_api_client.helpers.teammates import Teammates
 
 __all__ = [
+    "MAX_ATTACHMENT_BYTES",
+    "Attachments",
     "Base",
     "Contacts",
     "Conversations",
     "Drafts",
+    "FileSpec",
     "Inboxes",
     "Messages",
     "Tags",
