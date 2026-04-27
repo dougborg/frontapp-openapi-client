@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from .helpers.conversations import Conversations
     from .helpers.drafts import Drafts
     from .helpers.inboxes import Inboxes
+    from .helpers.knowledge_bases import KnowledgeBases
     from .helpers.messages import Messages
     from .helpers.tags import Tags
     from .helpers.teammates import Teammates
@@ -564,6 +565,7 @@ class FrontappClient(AuthenticatedClient):
         self._messages: Messages | None = None
         self._tags: Tags | None = None
         self._inboxes: Inboxes | None = None
+        self._knowledge_bases: KnowledgeBases | None = None
         self._teammates: Teammates | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
@@ -786,6 +788,27 @@ class FrontappClient(AuthenticatedClient):
         if self._inboxes is None:
             self._inboxes = Inboxes(self)
         return self._inboxes
+
+    @property
+    def knowledge_bases(self) -> "KnowledgeBases":
+        """Ergonomic operations over Front's knowledge_bases surface.
+
+        Covers the read + contribute path: list KBs, list / iter / get
+        articles + categories (with optional ``with_content`` and
+        ``locale`` arguments), create / update articles + categories.
+        Pure-admin operations (KB-create, deletes) are deferred to
+        issue #87.
+
+        See ``helpers.knowledge_bases`` for the full method list and
+        the locale-routing behavior. Note: the ``status`` argument on
+        ``create_article`` defaults to ``"draft"`` — agent-authored
+        content stays unpublished until a human reviews.
+        """
+        from .helpers.knowledge_bases import KnowledgeBases
+
+        if self._knowledge_bases is None:
+            self._knowledge_bases = KnowledgeBases(self)
+        return self._knowledge_bases
 
     @property
     def teammates(self) -> "Teammates":
