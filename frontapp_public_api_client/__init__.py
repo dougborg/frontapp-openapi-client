@@ -2,6 +2,7 @@
 
 from .client import AuthenticatedClient, Client
 from .frontapp_client import FrontappClient
+from .helpers.attachments import MAX_ATTACHMENT_BYTES, FileSpec
 from .utils import (
     APIError,
     AuthenticationError,
@@ -18,10 +19,12 @@ from .utils import (
 )
 
 __all__ = [
+    "MAX_ATTACHMENT_BYTES",
     "APIError",
     "AuthenticatedClient",
     "AuthenticationError",
     "Client",
+    "FileSpec",
     "FrontappClient",
     "RateLimitError",
     "ServerError",

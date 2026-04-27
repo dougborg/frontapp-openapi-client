@@ -10,6 +10,7 @@ from fastmcp import FastMCP
 
 def register_all_tools(mcp: FastMCP) -> None:
     """Register every tool module with the FastMCP instance."""
+    from .attachments import register_tools as register_attachments_tools
     from .contacts import register_tools as register_contacts_tools
     from .conversations import register_tools as register_conversations_tools
     from .drafts import register_tools as register_drafts_tools
@@ -18,6 +19,7 @@ def register_all_tools(mcp: FastMCP) -> None:
     from .tags import register_tools as register_tags_tools
     from .teammates import register_tools as register_teammates_tools
 
+    register_attachments_tools(mcp)
     register_contacts_tools(mcp)
     register_conversations_tools(mcp)
     register_drafts_tools(mcp)

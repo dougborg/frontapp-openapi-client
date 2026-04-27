@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
 
 if TYPE_CHECKING:
+    from .helpers.attachments import Attachments
     from .helpers.contacts import Contacts
     from .helpers.conversations import Conversations
     from .helpers.drafts import Drafts
@@ -1029,6 +1030,7 @@ class FrontappClient(AuthenticatedClient):
             )
 
         # Domain helper instances (lazy-loaded via properties)
+        self._attachments: Attachments | None = None
         self._conversations: Conversations | None = None
         self._contacts: Contacts | None = None
         self._drafts: Drafts | None = None
@@ -1105,6 +1107,23 @@ class FrontappClient(AuthenticatedClient):
     # Users can now pass the FrontappClient instance directly to API methods
 
     # Domain properties for ergonomic access
+    @property
+    def attachments(self) -> "Attachments":
+        """Ergonomic operations over Frontapp attachments — upload + download.
+
+        Front's draft / message / comment endpoints accept binary attachments
+        as ``multipart/form-data`` (the generated client misencodes this as
+        JSON; see ``helpers.attachments`` for the multipart bypass). This
+        helper also exposes ``download(url)`` and ``stream(url)`` for the
+        five binary-download paths that ``scripts/vendor_spec.py`` strips
+        from the spec.
+        """
+        from .helpers.attachments import Attachments
+
+        if self._attachments is None:
+            self._attachments = Attachments(self)
+        return self._attachments
+
     @property
     def conversations(self) -> "Conversations":
         """Ergonomic operations over ``/conversations*`` endpoints."""

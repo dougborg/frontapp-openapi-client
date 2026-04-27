@@ -8,6 +8,13 @@ All four mutation tools (create-on-channel, create-reply, edit, delete) use
 the standard two-step confirm pattern: call with ``confirm=False`` for a
 preview, ``confirm=True`` to execute (which also elicits explicit user
 approval via ``ctx.elicit``).
+
+Attachments: every create/edit tool accepts an optional ``attachment_paths``
+parameter — a list of absolute filesystem paths. Each path is read at tool-
+invocation time, MIME-type-inferred, and shipped to Front as
+``multipart/form-data``. Paths must be absolute, exist, be regular files,
+and below Front's 25 MB per-attachment limit; the preview surfaces the
+filenames and sizes so the human can confirm before the upload runs.
 """
 
 from __future__ import annotations
@@ -20,6 +27,10 @@ from pydantic import Field
 from frontapp_mcp.projections import DraftSummary, to_draft_summary
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import ConfirmationResult, require_confirmation
+from frontapp_public_api_client.helpers.attachments import (
+    preview_paths,
+    resolve_paths,
+)
 
 
 def _preview_body(body: str) -> str:
@@ -78,11 +89,21 @@ def register_tools(mcp: FastMCP) -> None:
             Literal["private", "shared"] | None,
             Field(description="'private' (author-only) or 'shared' (all teammates)"),
         ] = None,
+        attachment_paths: Annotated[
+            list[str] | None,
+            Field(
+                description=(
+                    "Absolute filesystem paths to files to attach. Each must "
+                    "exist, be a regular file, and be ≤25 MB."
+                )
+            ),
+        ] = None,
         confirm: Annotated[
             bool, Field(description="Must be true to create the draft")
         ] = False,
     ) -> dict[str, Any]:
         services = get_services(context)
+        attachment_preview = preview_paths(attachment_paths)
         preview = {
             "action": "create_draft_on_channel",
             "channel_id": channel_id,
@@ -92,6 +113,7 @@ def register_tools(mcp: FastMCP) -> None:
             "cc": cc,
             "bcc": bcc,
             "mode": mode,
+            "attachments": attachment_preview,
         }
         if not confirm:
             return {"preview": preview, "confirmed": False}
@@ -111,6 +133,7 @@ def register_tools(mcp: FastMCP) -> None:
             cc=cc,
             bcc=bcc,
             mode=mode,
+            attachments=resolve_paths(attachment_paths)[0] or None,
         )
         return {"confirmed": True, "draft": to_draft_summary(draft).model_dump()}
 
@@ -149,11 +172,21 @@ def register_tools(mcp: FastMCP) -> None:
             Literal["private", "shared"] | None,
             Field(description="'private' or 'shared'"),
         ] = None,
+        attachment_paths: Annotated[
+            list[str] | None,
+            Field(
+                description=(
+                    "Absolute filesystem paths to files to attach. Each must "
+                    "exist, be a regular file, and be ≤25 MB."
+                )
+            ),
+        ] = None,
         confirm: Annotated[
             bool, Field(description="Must be true to create the draft")
         ] = False,
     ) -> dict[str, Any]:
         services = get_services(context)
+        attachment_preview = preview_paths(attachment_paths)
         preview = {
             "action": "create_draft_reply",
             "conversation_id": conversation_id,
@@ -163,6 +196,7 @@ def register_tools(mcp: FastMCP) -> None:
             "cc": cc,
             "bcc": bcc,
             "mode": mode,
+            "attachments": attachment_preview,
         }
         if not confirm:
             return {"preview": preview, "confirmed": False}
@@ -173,7 +207,7 @@ def register_tools(mcp: FastMCP) -> None:
         if result is not ConfirmationResult.CONFIRMED:
             return {"preview": preview, "confirmed": False, "result": result.value}
 
-        response = await services.client.drafts.create_reply(
+        draft = await services.client.drafts.create_reply(
             conversation_id,
             body=body,
             channel_id=channel_id,
@@ -183,10 +217,11 @@ def register_tools(mcp: FastMCP) -> None:
             cc=cc,
             bcc=bcc,
             mode=mode,
+            attachments=resolve_paths(attachment_paths)[0] or None,
         )
         return {
             "confirmed": True,
-            "status_code": response.status_code,
+            "draft": to_draft_summary(draft).model_dump(),
             "note": (
                 "Draft created. The human reviews in Front and clicks send; "
                 "there is no programmatic send_draft."
@@ -226,11 +261,22 @@ def register_tools(mcp: FastMCP) -> None:
             str | None,
             Field(description="Version token from a prior draft to avoid clobbers"),
         ] = None,
+        attachment_paths: Annotated[
+            list[str] | None,
+            Field(
+                description=(
+                    "Absolute filesystem paths for the new attachment set. "
+                    "Front's edit semantics replace the attachment list, so "
+                    "anything not listed here is dropped from the draft."
+                )
+            ),
+        ] = None,
         confirm: Annotated[
             bool, Field(description="Must be true to apply the edit")
         ] = False,
     ) -> dict[str, Any]:
         services = get_services(context)
+        attachment_preview = preview_paths(attachment_paths)
         preview = {
             "action": "edit_draft",
             "draft_id": draft_id,
@@ -242,6 +288,7 @@ def register_tools(mcp: FastMCP) -> None:
             "bcc": bcc,
             "mode": mode,
             "version": version,
+            "attachments": attachment_preview,
         }
         if not confirm:
             return {"preview": preview, "confirmed": False}
@@ -263,6 +310,7 @@ def register_tools(mcp: FastMCP) -> None:
             bcc=bcc,
             mode=mode,
             version=version,
+            attachments=resolve_paths(attachment_paths)[0] or None,
         )
         return {"confirmed": True, "draft": to_draft_summary(draft).model_dump()}
 

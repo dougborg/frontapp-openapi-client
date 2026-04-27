@@ -319,6 +319,27 @@ start to translate names/emails into `tea_*` ids.
   only — email and admin status are read-only via this API; manage
   those in Front's admin UI)
 
+## Attachments
+
+Front carries attachments as `multipart/form-data` on the create / edit
+endpoints (drafts, replies, comments) and exposes a binary `/download`
+endpoint for fetching them back out.
+
+**Uploading (on draft / reply / comment):**
+  Pass an `attachment_paths=[...]` list of ABSOLUTE filesystem paths to
+  `create_draft_reply` / `create_draft_on_channel` / `edit_draft`. Each
+  path is read at tool-invocation time, validated (must exist, be a
+  regular file, ≤25 MB), MIME-type-inferred, and shipped multipart. The
+  preview surfaces filename + size for human review before the upload
+  runs. Note: `edit_draft` REPLACES the attachment list — anything not
+  passed is dropped from the draft.
+
+**Downloading:**
+  download_attachment(attachment_url, save_path) — pulls bytes from
+  `Attachment.url` (the URL Front returns on every attachment record)
+  and writes them to a local file. Two-step confirm protects the local
+  filesystem; the response includes only metadata (path, size).
+
 ## Front Search Syntax (q parameter)
 
   status:open | status:archived | tag:urgent | assignee:me |

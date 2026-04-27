@@ -16,23 +16,53 @@ Notes:
   out of the standard ``field_results`` wrapper of
   ``ListConversationDraftsResponse200`` — same shape as every other Front
   list endpoint.
-- ``attachments`` is accepted as a typed pass-through (``list[File] | None``)
-  on all three mutation helpers; the actual upload mechanism is unresolved
-  upstream and tracked in #12. Callers who already have ``File`` objects (e.g.
-  from ``models.attachment``) can pass them through; the MCP tool surface
-  doesn't expose attachments yet because the upload flow needs to land first.
+- ``attachments`` accepts ``list[FileSpec]`` on every mutation helper. When
+  provided, the helper bypasses the generated client and sends the request
+  as ``multipart/form-data`` (the generated client serializes these endpoints
+  as ``application/json``, which Front rejects for binary content). When
+  ``attachments`` is ``None`` or empty, the standard generated path is used.
 """
 
 from __future__ import annotations
 
 import builtins
 from typing import TYPE_CHECKING, Any, Literal
+from urllib.parse import quote
 
+from frontapp_public_api_client.helpers.attachments import FileSpec
 from frontapp_public_api_client.helpers.base import Base
 
 if TYPE_CHECKING:
     from frontapp_public_api_client.domain import Draft
     from frontapp_public_api_client.models.message_response import MessageResponse
+
+
+async def _send_draft_multipart(
+    drafts: Drafts,
+    *,
+    method: Literal["POST", "PATCH"],
+    path: str,
+    files: builtins.list[FileSpec],
+    **fields: Any,
+) -> Draft:
+    """Shared multipart-bypass + Draft validation for the three draft mutations.
+
+    Folds the four lines that were copy-pasted across create_on_channel /
+    create_reply / edit (build payload → call attachments.post_multipart →
+    validate Draft) into one place. ``fields`` accepts the same kwargs the
+    callers expose; ``None`` values are dropped before encoding so missing
+    optional fields don't show up as empty multipart parts.
+    """
+    from frontapp_public_api_client.domain import Draft
+
+    payload = {k: v for k, v in fields.items() if v is not None}
+    data = await drafts._client.attachments.post_multipart(
+        method=method,
+        path=path,
+        fields=payload,
+        files=files,
+    )
+    return Draft.model_validate(data or {})
 
 
 class Drafts(Base):
@@ -70,7 +100,7 @@ class Drafts(Base):
         cc: builtins.list[str] | None = None,
         bcc: builtins.list[str] | None = None,
         quote_body: str | None = None,
-        attachments: builtins.list[Any] | None = None,
+        attachments: builtins.list[FileSpec] | None = None,
         mode: Literal["private", "shared"] | None = None,
         signature_id: str | None = None,
         should_add_default_signature: bool | None = None,
@@ -78,9 +108,28 @@ class Drafts(Base):
         """Create a new draft on a channel (no existing conversation).
 
         Returns the created ``Draft``. The human reviews it in Front and sends.
-        ``attachments`` accepts ``list[File]`` from ``models.attachment``;
-        upload mechanism is tracked in #12.
+        Pass ``attachments=[FileSpec(...), ...]`` to attach files; the request
+        is then sent as ``multipart/form-data`` (the generated client's
+        JSON-only path doesn't support binary).
         """
+        if attachments:
+            return await _send_draft_multipart(
+                self,
+                method="POST",
+                path=f"/channels/{quote(str(channel_id), safe='')}/drafts",
+                files=attachments,
+                body=body,
+                author_id=author_id,
+                subject=subject,
+                to=to,
+                cc=cc,
+                bcc=bcc,
+                quote_body=quote_body,
+                mode=mode,
+                signature_id=signature_id,
+                should_add_default_signature=should_add_default_signature,
+            )
+
         from frontapp_public_api_client.api.drafts import create_draft
         from frontapp_public_api_client.domain import Draft
         from frontapp_public_api_client.models.create_draft import CreateDraft
@@ -103,8 +152,6 @@ class Drafts(Base):
             payload_kwargs["bcc"] = bcc
         if quote_body is not None:
             payload_kwargs["quote_body"] = quote_body
-        if attachments is not None:
-            payload_kwargs["attachments"] = attachments
         if mode is not None:
             payload_kwargs["mode"] = CreateDraftMode(mode)
         if signature_id is not None:
@@ -133,7 +180,7 @@ class Drafts(Base):
         cc: builtins.list[str] | None = None,
         bcc: builtins.list[str] | None = None,
         quote_body: str | None = None,
-        attachments: builtins.list[Any] | None = None,
+        attachments: builtins.list[FileSpec] | None = None,
         mode: Literal["private", "shared"] | None = None,
         signature_id: str | None = None,
         should_add_default_signature: bool | None = None,
@@ -144,7 +191,29 @@ class Drafts(Base):
         outbound reply will eventually send through. Returns the created
         ``Draft`` (Front's ``_parse_response`` parses ``MessageResponse`` on
         200 — the spec's ``Any`` arm covers redirects only).
+
+        Pass ``attachments=[FileSpec(...), ...]`` to attach files; the request
+        is then sent as ``multipart/form-data``.
         """
+        if attachments:
+            return await _send_draft_multipart(
+                self,
+                method="POST",
+                path=(f"/conversations/{quote(str(conversation_id), safe='')}/drafts"),
+                files=attachments,
+                body=body,
+                channel_id=channel_id,
+                author_id=author_id,
+                subject=subject,
+                to=to,
+                cc=cc,
+                bcc=bcc,
+                quote_body=quote_body,
+                mode=mode,
+                signature_id=signature_id,
+                should_add_default_signature=should_add_default_signature,
+            )
+
         from frontapp_public_api_client.api.drafts import create_draft_reply
         from frontapp_public_api_client.domain import Draft
         from frontapp_public_api_client.models.create_draft_mode import (
@@ -167,8 +236,6 @@ class Drafts(Base):
             payload_kwargs["bcc"] = bcc
         if quote_body is not None:
             payload_kwargs["quote_body"] = quote_body
-        if attachments is not None:
-            payload_kwargs["attachments"] = attachments
         if mode is not None:
             payload_kwargs["mode"] = CreateDraftMode(mode)
         if signature_id is not None:
@@ -197,7 +264,7 @@ class Drafts(Base):
         cc: builtins.list[str] | None = None,
         bcc: builtins.list[str] | None = None,
         quote_body: str | None = None,
-        attachments: builtins.list[Any] | None = None,
+        attachments: builtins.list[FileSpec] | None = None,
         mode: Literal["shared"] | None = None,
         signature_id: str | None = None,
         should_add_default_signature: bool | None = None,
@@ -216,7 +283,30 @@ class Drafts(Base):
         The endpoint path is ``/drafts/{message_id}/`` — note the trailing
         slash and the parameter rename. The helper accepts ``draft_id`` and
         passes it through as ``message_id`` to the generated module.
+
+        Pass ``attachments=[FileSpec(...), ...]`` to replace the draft's
+        attachment set; the request is then sent as ``multipart/form-data``.
         """
+        if attachments:
+            return await _send_draft_multipart(
+                self,
+                method="PATCH",
+                path=f"/drafts/{quote(str(draft_id), safe='')}/",
+                files=attachments,
+                body=body,
+                channel_id=channel_id,
+                author_id=author_id,
+                subject=subject,
+                to=to,
+                cc=cc,
+                bcc=bcc,
+                quote_body=quote_body,
+                mode=mode,
+                signature_id=signature_id,
+                should_add_default_signature=should_add_default_signature,
+                version=version,
+            )
+
         from frontapp_public_api_client.api.drafts import edit_draft
         from frontapp_public_api_client.domain import Draft
         from frontapp_public_api_client.models.edit_draft import EditDraft
@@ -237,8 +327,6 @@ class Drafts(Base):
             payload_kwargs["bcc"] = bcc
         if quote_body is not None:
             payload_kwargs["quote_body"] = quote_body
-        if attachments is not None:
-            payload_kwargs["attachments"] = attachments
         if mode is not None:
             payload_kwargs["mode"] = EditDraftMode(mode)
         if signature_id is not None:
