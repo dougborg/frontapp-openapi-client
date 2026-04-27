@@ -76,3 +76,31 @@ def create_mock_context(elicit_confirm: bool = True):
 def mock_context():
     """Mock FastMCP context fixture."""
     return create_mock_context()
+
+
+@pytest.fixture
+def mcp_tool_capture():
+    """Factory: register a tools module against a fake FastMCP and return
+    the captured ``{name: callable}`` dict.
+
+    Replaces the per-file ``_make_mcp`` + ``register_tools`` boilerplate
+    that was duplicated across every MCP tool test module.
+    """
+
+    def factory(register_tools_fn) -> dict[str, object]:
+        captured: dict[str, object] = {}
+
+        class FakeMCP:
+            def tool(self, **kwargs: object):
+                name = kwargs["name"]
+
+                def decorator(fn):
+                    captured[name] = fn
+                    return fn
+
+                return decorator
+
+        register_tools_fn(FakeMCP())
+        return captured
+
+    return factory
