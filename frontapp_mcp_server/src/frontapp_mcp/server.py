@@ -91,13 +91,11 @@ async def lifespan(server: FastMCP) -> AsyncIterator[Services]:
             base_url=base_url,
             timeout=30.0,
             max_retries=5,
-            max_pages=100,
         ) as client:
             logger.info(
                 "client_initialized",
                 timeout=30.0,
                 max_retries=5,
-                max_pages=100,
             )
 
             context = Services(client=client)

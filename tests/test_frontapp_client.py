@@ -3,8 +3,7 @@
 The client's ``__init__`` resolves credentials from four sources, in this
 order: explicit ``api_key`` param > ``FRONTAPP_API_KEY`` env var (which
 includes ``.env`` via load_dotenv) > ``~/.netrc``. These tests pin that
-ordering and the related config knobs (base_url, timeout, max_retries,
-max_pages).
+ordering and the related config knobs (base_url, timeout, max_retries).
 
 Note: ``__init__`` calls ``load_dotenv()``, which walks up from CWD
 looking for a ``.env`` file. Tests that need to assert the *absence* of
@@ -81,16 +80,6 @@ class TestBaseUrlOverride:
 
 
 class TestConfigPlumbing:
-    def test_max_pages_default(self):
-        client = FrontappClient(api_key="x", base_url="https://test.invalid")
-        assert client.max_pages == 100
-
-    def test_max_pages_override(self):
-        client = FrontappClient(
-            api_key="x", base_url="https://test.invalid", max_pages=5
-        )
-        assert client.max_pages == 5
-
     def test_logger_defaults_to_module_logger(self):
         client = FrontappClient(api_key="x", base_url="https://test.invalid")
         assert isinstance(client.logger, logging.Logger)

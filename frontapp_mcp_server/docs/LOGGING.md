@@ -92,7 +92,6 @@ every tool call (or `tool_failed` on exception). A successful completion looks l
   "event": "client_initialized",
   "timeout": 30.0,
   "max_retries": 5,
-  "max_pages": 100,
   "level": "info"
 }
 ```

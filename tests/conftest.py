@@ -25,12 +25,6 @@ def frontapp_client(mock_api_credentials):
 
 
 @pytest.fixture
-def frontapp_client_limited_pages(mock_api_credentials):
-    """Create a FrontappClient with limited pagination for testing."""
-    return FrontappClient(max_pages=5, **mock_api_credentials)
-
-
-@pytest.fixture
 def mock_transport_handler():
     """Create a mock transport handler that can be customized per test."""
 

@@ -2,10 +2,22 @@
 
 ## Status
 
-Accepted (partial — auto-pagination helper planned; manual cursor token support is live
-today)
+Accepted
 
 Date: 2026-04-24
+
+> **Update (2026-04-27)**: The shipped design is **helper-layer pagination** via
+> `Base._paginate` (PR #57) plus per-resource `iter_all(...)` wrappers (PR #59). Safety
+> caps (`max_pages`, `max_items`) are **per-call helper arguments** —
+> `client.<resource>.iter_all(max_items=…, max_pages=…)`.
+>
+> A transport-layer `AutoPaginationTransport` was prototyped (it watched for an
+> `X-Pagination` HTTP response header inherited from a sibling project) but never fired
+> at runtime — Front uses the JSON `_pagination.next` envelope below, not headers — and
+> was removed in PR #62. Any references later in this ADR to a transport-layer
+> auto-paginator, a `FrontappClient(max_pages=…, max_items=…)` constructor knob, or
+> `self._client.max_pages` defaults are **historical / superseded** and should be read
+> against this update. The current API surface is `client.<resource>.iter_all(...)`.
 
 ## Context
 
@@ -49,10 +61,10 @@ Build pagination as a **two-tier feature**:
    it on the next call. This works for every paginated endpoint without special
    plumbing.
 
-2. **Transparent auto-pagination (planned)** — an async-iterator helper on the client
+2. **Transparent auto-pagination (live)** — an async-iterator helper on the client
    (`client.conversations.iter_all(q=..., max_items=500)`) that walks the cursor chain
-   internally and yields items as they arrive. Will honor `pagination.max_pages` /
-   `pagination.max_items` safety limits from the client config.
+   internally and yields items as they arrive. Honors `max_pages` / `max_items` safety
+   limits passed as per-call helper arguments (not client config).
 
 Both tiers use the same underlying helper signatures; the iterator just adds a loop. The
 transport layer stays simple (no response rewriting) — pagination lives at the helper
@@ -79,7 +91,7 @@ async with FrontappClient() as client:
         # generated list_conversations directly if you need the next token.)
 ```
 
-### Auto-paginated iterator (planned)
+### Auto-paginated iterator (live)
 
 ```python
 async with FrontappClient() as client:
@@ -133,8 +145,8 @@ retries + rate-limit handling.
 
 1. **Safety limits**: `max_pages` and `max_items` default to conservative values (100
    pages, unlimited items) — tune per workspace needs
-2. **Today's state**: only manual `page_token` is live. The iterator is planned work;
-   see issue tracker
+2. **Today's state**: both manual `page_token` and the auto-iterator are live (PRs #57,
+   #59). Per-call `max_pages` / `max_items` defaults are 100 / unbounded.
 
 ## Alternatives considered
 
@@ -194,40 +206,20 @@ def _extract_page_token(next_url: str | None) -> str | None:
 The same logic will go in `helpers/base.py` once we have multiple resources using
 iteration.
 
-### Safety limits (planned)
+### Safety limits (shipped)
+
+`max_pages` and `max_items` are passed per call to the helper iterator — there is no
+client-level default knob:
 
 ```python
-class FrontappClient:
-    def __init__(
-        self,
-        ...,
-        max_pages: int = 100,
-        max_items: int | None = None,
-    ):
-        ...
+async for conv in client.conversations.iter_all(
+    q="status:open", max_pages=10, max_items=500,
+):
+    ...
 ```
 
-Used by the (planned) `iter_all` methods:
-
-```python
-async def iter_all(self, **kwargs) -> AsyncIterator[Conversation]:
-    page_token: str | None = None
-    pages_walked = 0
-    items_yielded = 0
-    while True:
-        batch = await self.list(**kwargs, page_token=page_token)
-        for item in batch:
-            yield item
-            items_yielded += 1
-            if self._client.max_items is not None and items_yielded >= self._client.max_items:
-                return
-        pages_walked += 1
-        if pages_walked >= self._client.max_pages:
-            return
-        page_token = _extract_page_token_from_response(...)
-        if page_token is None:
-            return
-```
+Defaults: `max_pages=100`, `max_items=None` (unbounded items). See `Base._paginate` in
+`helpers/base.py` for the implementation.
 
 ### Observability
 
