@@ -16,7 +16,7 @@ from collections.abc import Awaitable, Callable
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
-from urllib.parse import parse_qs, quote, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qs, quote, urlparse, urlunparse
 
 if TYPE_CHECKING:
     from .helpers.attachments import Attachments
@@ -78,13 +78,13 @@ def _sanitize_url(url: str) -> str:
                 sanitized[k] = [_REDACTED]
             else:
                 sanitized[k] = values
-        # Use urlencode with custom quote function that preserves * characters
-        clean_query = urlencode(
-            sanitized,
-            doseq=True,
-            quote_via=lambda s, safe="", encoding=None, errors=None: quote(
-                s, safe=safe + "*", encoding=encoding, errors=errors
-            ),
+
+        # Build the query string manually so we can preserve `*` (Front uses
+        # `*` in some search-DSL values; the default urlencode percent-encodes it).
+        clean_query = "&".join(
+            f"{quote(k, safe='*')}={quote(v, safe='*')}"
+            for k, vs in sanitized.items()
+            for v in vs
         )
         return urlunparse(parsed._replace(query=clean_query))
     except Exception:
@@ -183,7 +183,7 @@ class ErrorLoggingTransport(AsyncHTTPTransport):
 
     def __init__(
         self,
-        wrapped_transport: AsyncHTTPTransport | None = None,
+        wrapped_transport: httpx.AsyncBaseTransport | None = None,
         logger: Logger | None = None,
         **kwargs: Any,
     ):
@@ -191,14 +191,16 @@ class ErrorLoggingTransport(AsyncHTTPTransport):
         Initialize the error logging transport.
 
         Args:
-            wrapped_transport: The transport to wrap. If None, creates a new AsyncHTTPTransport.
+            wrapped_transport: The transport to wrap. Any ``httpx.AsyncBaseTransport``
+                works (including ``MockTransport`` for tests). If None, creates a
+                new AsyncHTTPTransport.
             logger: Logger instance for capturing error details. If None, creates a default logger.
             **kwargs: Additional arguments passed to AsyncHTTPTransport if wrapped_transport is None.
         """
         super().__init__()
         if wrapped_transport is None:
             wrapped_transport = AsyncHTTPTransport(**kwargs)
-        self._wrapped_transport = wrapped_transport
+        self._wrapped_transport: httpx.AsyncBaseTransport = wrapped_transport
         self.logger: Logger = logger or logging.getLogger(__name__)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
@@ -616,6 +618,14 @@ class FrontappClient(AuthenticatedClient):
 
     # Remove the client property since we inherit from AuthenticatedClient
     # Users can now pass the FrontappClient instance directly to API methods
+
+    async def __aenter__(self) -> "FrontappClient":
+        # Override AuthenticatedClient.__aenter__ to return Self instead of
+        # the parent type, so `async with FrontappClient() as c` narrows c
+        # to FrontappClient and the .conversations / .drafts / etc. helpers
+        # are visible to type checkers.
+        await super().__aenter__()
+        return self
 
     # Domain properties for ergonomic access
     @property

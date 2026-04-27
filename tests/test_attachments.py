@@ -271,9 +271,9 @@ class TestPostMultipart:
                     name = piece[len("name=") :].strip('"')
                 elif piece.startswith("filename="):
                     filenames.append(piece[len("filename=") :].strip('"'))
-            parts_by_name.setdefault(name, []).append(
-                part.get_payload(decode=True) or b""
-            )
+            payload = part.get_payload(decode=True) or b""
+            assert isinstance(payload, bytes)
+            parts_by_name.setdefault(name, []).append(payload)
 
         assert parts_by_name.get("body") == [b"Hello"]
         assert parts_by_name.get("to") == [b"a@example.com", b"b@example.com"]

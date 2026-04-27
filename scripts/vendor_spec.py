@@ -138,7 +138,8 @@ def main() -> int:
             stripped_defaults += 1
     print(f"🧹 Stripped {stripped_defaults} inherited-default values")
 
-    spec = _replace_confusables(spec)
+    # _replace_confusables mutates dicts in place; the top-level node is always a dict.
+    _replace_confusables(spec)
     print("🧹 Replaced Unicode confusables")
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)

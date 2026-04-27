@@ -67,11 +67,13 @@ async def _list_field_results(
     """Boilerplate for `field_results`-shaped list endpoints.
 
     Three of the four reference resources (`tags`, `inboxes`, `teammates`)
-    follow the identical shape: call list_*.asyncio_detailed, unwrap field_results,
-    project each item through a Pydantic ref model, JSON-dump.
+    follow the identical shape: call ``list_*.asyncio_detailed``, unwrap
+    ``field_results``, project each item through a Pydantic ref model,
+    JSON-dump. Pass the ``asyncio_detailed`` function directly, e.g.
+    ``_list_field_results(context, list_tags.asyncio_detailed, TagRef)``.
     """
     services = get_services(context)
-    response = await list_fn.asyncio_detailed(client=services.client)
+    response = await list_fn(client=services.client)
     parsed = unwrap(response)
     results = getattr(parsed, "field_results", None) or []
     return _dump([_project(model, item) for item in results])
@@ -92,7 +94,7 @@ def register_resources(mcp: FastMCP) -> None:
     async def tags_resource(context: Context) -> str:
         from frontapp_public_api_client.api.tags import list_tags
 
-        return await _list_field_results(context, list_tags, TagRef)
+        return await _list_field_results(context, list_tags.asyncio_detailed, TagRef)
 
     @mcp.resource(
         uri="frontapp://inboxes",
@@ -106,7 +108,9 @@ def register_resources(mcp: FastMCP) -> None:
     async def inboxes_resource(context: Context) -> str:
         from frontapp_public_api_client.api.inboxes import list_inboxes
 
-        return await _list_field_results(context, list_inboxes, InboxRef)
+        return await _list_field_results(
+            context, list_inboxes.asyncio_detailed, InboxRef
+        )
 
     @mcp.resource(
         uri="frontapp://teammates",
@@ -120,7 +124,9 @@ def register_resources(mcp: FastMCP) -> None:
     async def teammates_resource(context: Context) -> str:
         from frontapp_public_api_client.api.teammates import list_teammates
 
-        return await _list_field_results(context, list_teammates, TeammateRef)
+        return await _list_field_results(
+            context, list_teammates.asyncio_detailed, TeammateRef
+        )
 
     @mcp.resource(
         uri="frontapp://conversations/recent",

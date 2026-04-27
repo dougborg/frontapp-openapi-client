@@ -111,13 +111,12 @@ def frontapp_client_with_mock_transport(mock_api_credentials, mock_transport):
     # Create a FrontappClient
     client = FrontappClient(**mock_api_credentials)
 
-    # Create a new httpx client with the mock transport and base_url
-    mock_httpx_client = httpx.AsyncClient(
-        transport=mock_transport, base_url=mock_api_credentials["base_url"]
+    # Replace the underlying httpx client with one that uses the mock transport.
+    client.set_async_httpx_client(
+        httpx.AsyncClient(
+            transport=mock_transport, base_url=mock_api_credentials["base_url"]
+        )
     )
-
-    # Replace the authenticated client's async client
-    client._client._async_client = mock_httpx_client
 
     return client
 
