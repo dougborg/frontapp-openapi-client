@@ -13,6 +13,7 @@ from the existing ``ResponseCachingMiddleware``.
 | ``frontapp://me`` | Workspace company identity (id, name) — confirms the token works and which workspace it's bound to. |
 | ``frontapp://custom_fields`` | All custom field schemas, grouped by scope (global / account / contact / conversation / inbox / link / teammate). |
 | ``frontapp://teams`` | All workspace teams (id, name) — translate team names to ids. |
+| ``frontapp://rules`` | All automation rules (read-only) — explain what automation might be firing on a conversation. |
 """
 
 from __future__ import annotations
@@ -86,6 +87,21 @@ class CustomFieldRef(BaseModel):
     description: str | None = None
     type: str | None = None
     values: list[dict[str, Any]] | None = None
+
+
+class RuleRef(BaseModel):
+    """Compact projection of an automation rule.
+
+    Front exposes rules as read-only via the API — they're created and
+    edited in Front's UI. This catalog lets the LLM explain *what
+    automation might be firing* on a conversation and avoid stepping on
+    rule-driven actions.
+    """
+
+    id: str
+    name: str | None = None
+    actions: list[str] | None = None
+    is_private: bool | None = None
 
 
 def _project(model: type[BaseModel], item: Any) -> dict[str, Any]:
@@ -236,6 +252,22 @@ def register_resources(mcp: FastMCP) -> None:
             results = getattr(parsed, "field_results", None) or []
             result[scope] = [_project(CustomFieldRef, item) for item in results]
         return json.dumps(result, sort_keys=True)
+
+    @mcp.resource(
+        uri="frontapp://rules",
+        name="Automation rules",
+        description=(
+            "All automation rules in the workspace (read-only — rules are "
+            "created and edited in Front's UI). Use to explain what "
+            "automation might be firing on a conversation, or to avoid "
+            "stepping on a rule-driven action."
+        ),
+        mime_type="application/json",
+    )
+    async def rules_resource(context: Context) -> str:
+        from frontapp_public_api_client.api.rules import list_rules
+
+        return await _list_field_results(context, list_rules.asyncio_detailed, RuleRef)
 
     @mcp.resource(
         uri="frontapp://teams",

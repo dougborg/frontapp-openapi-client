@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-27T17:32:45+00:00'
-generated_from_commit: 4870f653ddef899c6412401a9148d38ed6d05065
+generated_at: '2026-04-27T18:18:10+00:00'
+generated_from_commit: 8e18ee7ab4925b52c84bb38b0ef0e2595840f930
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -242,6 +242,7 @@ summary:
     - teammate_groups.update_a_company_teammate_group
   tags_with_helper:
     - analytics
+    - applications
     - contact_groups
     - contact_lists
     - contacts
@@ -252,6 +253,7 @@ summary:
     - messages
     - tags
     - teammates
+    - teams
   tags_with_domain:
     - contact_lists
     - contacts
@@ -361,9 +363,9 @@ tags:
     spec_tag: Applications
     api_dir: frontapp_public_api_client/api/applications
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/applications.py
+      class: Applications
     domain:
       built: false
       path: null
@@ -1983,9 +1985,9 @@ tags:
     spec_tag: Teams
     api_dir: frontapp_public_api_client/api/teams
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/teams.py
+      class: Teams
     domain:
       built: false
       path: null

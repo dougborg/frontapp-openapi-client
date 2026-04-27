@@ -20,6 +20,7 @@ from urllib.parse import parse_qs, quote, urlparse, urlunparse
 
 if TYPE_CHECKING:
     from .helpers.analytics import Analytics
+    from .helpers.applications import Applications
     from .helpers.attachments import Attachments
     from .helpers.contact_groups import ContactGroups
     from .helpers.contact_lists import ContactLists
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
     from .helpers.messages import Messages
     from .helpers.tags import Tags
     from .helpers.teammates import Teammates
+    from .helpers.teams import Teams
 
 import httpx
 from dotenv import load_dotenv
@@ -556,6 +558,7 @@ class FrontappClient(AuthenticatedClient):
 
         # Domain helper instances (lazy-loaded via properties)
         self._analytics: Analytics | None = None
+        self._applications: Applications | None = None
         self._attachments: Attachments | None = None
         self._conversations: Conversations | None = None
         self._contacts: Contacts | None = None
@@ -567,6 +570,7 @@ class FrontappClient(AuthenticatedClient):
         self._inboxes: Inboxes | None = None
         self._knowledge_bases: KnowledgeBases | None = None
         self._teammates: Teammates | None = None
+        self._teams: Teams | None = None
 
         # Extract client-level parameters that shouldn't go to the transport
         # Event hooks for observability - start with our defaults
@@ -658,6 +662,21 @@ class FrontappClient(AuthenticatedClient):
         if self._analytics is None:
             self._analytics = Analytics(self)
         return self._analytics
+
+    @property
+    def applications(self) -> "Applications":
+        """Ergonomic operations over Front's ``/applications/{uid}/events``
+        endpoint — partner-app event triggering.
+
+        Niche use case (partner integrations); the application catalog
+        is not enumerable via the API. See ``helpers.applications`` for
+        the single ``trigger_event`` method.
+        """
+        from .helpers.applications import Applications
+
+        if self._applications is None:
+            self._applications = Applications(self)
+        return self._applications
 
     @property
     def attachments(self) -> "Attachments":
@@ -823,6 +842,21 @@ class FrontappClient(AuthenticatedClient):
         if self._teammates is None:
             self._teammates = Teammates(self)
         return self._teammates
+
+    @property
+    def teams(self) -> "Teams":
+        """Ergonomic operations over Front's ``/teams*`` endpoints.
+
+        Covers list / get reads plus the membership mutation pair
+        (``add_teammates`` / ``remove_teammates``). Front exposes no
+        team create or delete via the API — those are admin actions in
+        Front's UI.
+        """
+        from .helpers.teams import Teams
+
+        if self._teams is None:
+            self._teams = Teams(self)
+        return self._teams
 
     # Event hooks for observability
     async def _capture_pagination_metadata(self, response: httpx.Response) -> None:
