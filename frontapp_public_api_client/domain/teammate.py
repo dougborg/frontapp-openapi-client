@@ -10,6 +10,8 @@ the full standalone projection used by the teammates vertical
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -19,6 +21,10 @@ class Teammate(BaseModel):
     Teammate IDs are strings with a ``tea_`` prefix (e.g. ``tea_abc123``).
     ``is_available`` is the teammate's manual availability toggle (used by
     Front's "out of office" routing). ``is_blocked`` is set by an admin.
+
+    ``custom_fields`` round-trips Front's per-workspace custom-field dict.
+    Same field is updatable via ``Teammates.update(custom_fields=...)``,
+    so callers can read the current values back through this projection.
     """
 
     id: str
@@ -30,6 +36,7 @@ class Teammate(BaseModel):
     is_available: bool = True
     is_blocked: bool = False
     type: str | None = Field(None, description="'user' or 'integration'")
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         frozen=True,

@@ -108,6 +108,15 @@ def register_tools(mcp: FastMCP) -> None:
             bool | None,
             Field(description="Set the teammate's availability flag"),
         ] = None,
+        custom_fields: Annotated[
+            dict[str, Any] | None,
+            Field(
+                description=(
+                    "Workspace-defined custom fields to set on the teammate. "
+                    "Replaces the full custom_fields object."
+                )
+            ),
+        ] = None,
         confirm: Annotated[bool, Field(description="Must be true")] = False,
     ) -> dict[str, Any]:
         services = get_services(context)
@@ -118,6 +127,7 @@ def register_tools(mcp: FastMCP) -> None:
                 "first_name": first_name,
                 "last_name": last_name,
                 "is_available": is_available,
+                "custom_fields": custom_fields,
             }.items()
             if v is not None
         }
@@ -148,6 +158,7 @@ def register_tools(mcp: FastMCP) -> None:
             first_name=first_name,
             last_name=last_name,
             is_available=is_available,
+            custom_fields=custom_fields,
         )
         return {"confirmed": True, "updated": success}
 

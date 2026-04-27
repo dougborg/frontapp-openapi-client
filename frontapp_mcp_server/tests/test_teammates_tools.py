@@ -176,5 +176,6 @@ class TestUpdateTeammate:
             first_name="Alicia",
             last_name=None,
             is_available=False,
+            custom_fields=None,
         )
         assert result == {"confirmed": True, "updated": True}
