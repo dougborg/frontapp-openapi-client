@@ -8,6 +8,8 @@ without one importing private symbols from the other.
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from frontapp_public_api_client.domain import (
@@ -218,17 +220,109 @@ def to_contact_list_summary(item: ContactList | ContactGroupRef) -> ContactListS
     return ContactListSummary(id=item.id, name=item.name, is_private=item.is_private)
 
 
+# ---------------------------------------------------------------------------
+# Knowledge base projections (#83)
+#
+# Helper returns raw attrs models; tools project to slim summaries for
+# list/catalog responses so the LLM context isn't bloated with article
+# bodies. ``get_kb_article(with_content=True)`` returns the full
+# ``to_dict()`` shape — no projection — since the body IS the payload.
+# ---------------------------------------------------------------------------
+
+
+class KbRef(BaseModel):
+    """Compact projection of a knowledge base for catalog browsing.
+
+    ``KnowledgeBaseSlimResponse`` carries an id, type, and locale list
+    but no display name — that's only available via the full
+    ``with_content=True`` get. Browse with the slim listing; fetch the
+    full payload (`get_kb(knowledge_base_id, with_content=True)`) to
+    get the workspace's human-readable name.
+    """
+
+    id: str | None = None
+    type: str | None = None  # "external" | "internal"
+    locales: list[str] | None = None
+
+
+class KbArticleSummary(BaseModel):
+    """Compact projection of a KB article (slim — no body, no title).
+
+    Front's slim article response carries `id`, `slug`, and `locales`
+    but no `subject` field (subject only appears on the full
+    ``with_content=True`` response). The slug is human-readable
+    (e.g. ``how-to-reset-password``), so use it as the picker key.
+    """
+
+    id: str | None = None
+    slug: str | None = None
+    locales: list[str] | None = None
+    updated_at: float | None = None
+
+
+class KbCategoryRef(BaseModel):
+    """Compact projection of a KB category (slim — no name, no description)."""
+
+    id: str | None = None
+    slug: str | None = None
+    is_hidden: bool | None = None
+    locales: list[str] | None = None
+
+
+def to_kb_ref(item: Any) -> KbRef:
+    """Project a ``KnowledgeBaseSlimResponse`` (attrs) to ``KbRef``."""
+    from frontapp_public_api_client.domain.converters import unwrap_unset
+
+    raw_type = unwrap_unset(getattr(item, "type_", None), None)
+    type_value = raw_type.value if raw_type is not None else None
+    return KbRef(
+        id=unwrap_unset(getattr(item, "id", None), None),
+        type=type_value,
+        locales=unwrap_unset(getattr(item, "locales", None), None),
+    )
+
+
+def to_kb_article_summary(item: Any) -> KbArticleSummary:
+    """Project a ``KnowledgeBaseArticleSlimResponse`` (attrs) to ``KbArticleSummary``."""
+    from frontapp_public_api_client.domain.converters import unwrap_unset
+
+    return KbArticleSummary(
+        id=unwrap_unset(getattr(item, "id", None), None),
+        slug=unwrap_unset(getattr(item, "slug", None), None),
+        locales=unwrap_unset(getattr(item, "locales", None), None),
+        updated_at=unwrap_unset(getattr(item, "updated_at", None), None),
+    )
+
+
+def to_kb_category_ref(item: Any) -> KbCategoryRef:
+    """Project a ``KnowledgeBaseCategorySlimResponse`` (attrs) to ``KbCategoryRef``."""
+    from frontapp_public_api_client.domain.converters import unwrap_unset
+
+    return KbCategoryRef(
+        id=unwrap_unset(getattr(item, "id", None), None),
+        slug=unwrap_unset(getattr(item, "slug", None), None),
+        is_hidden=unwrap_unset(getattr(item, "is_hidden", None), None),
+        locales=unwrap_unset(getattr(item, "locales", None), None),
+    )
+
+
 __all__ = [
     "ContactListSummary",
     "ContactSummary",
     "ConversationSummary",
     "DraftSummary",
     "InboxSummary",
+    "KbArticleSummary",
+    "KbCategoryRef",
+    "KbRef",
     "TagCatalogSummary",
     "to_contact_list_summary",
     "to_contact_summary",
     "to_draft_summary",
     "to_inbox_summary",
+    "to_kb_article_summary",
+    "to_kb_category_ref",
+    "to_kb_ref",
     "to_summary",
     "to_tag_catalog_summary",
 ]

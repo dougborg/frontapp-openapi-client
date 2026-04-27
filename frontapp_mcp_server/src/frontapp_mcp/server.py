@@ -375,6 +375,31 @@ endpoint for fetching them back out.
   and writes them to a local file. Two-step confirm protects the local
   filesystem; the response includes only metadata (path, size).
 
+## Knowledge Base
+
+Front's Knowledge Base — articles + categories grouped under one or more
+KBs — is wrapped here for both retrieval and authoring. Two workflows:
+
+**Retrieval** (find article content to quote / paraphrase in a reply):
+  list_knowledge_bases → list_kb_categories | list_kb_articles |
+  list_kb_articles_in_category → get_kb_article (with body)
+
+**Contribute** (turn a conversation resolution into a new article, or
+update an existing one):
+  create_kb_article — creates a NEW article AS A DRAFT (never published)
+  update_kb_article — edits subject/body/author of an existing article;
+    cannot flip draft↔published
+  create_kb_category / update_kb_category — organize content
+
+**Drafts only** — agents never publish KB articles. By design, mirroring
+drafts-first outbound for replies (ADR-0016): create_kb_article always
+creates a draft; update_kb_article preserves whatever publication state
+the article already had. To publish a draft, a human flips it in Front's
+UI. There is no programmatic publish path in this MCP.
+
+Locale: every KB read/write tool accepts an optional `locale` arg (e.g.
+'en', 'fr'). Omit for the workspace's default locale.
+
 ## Analytics
 
 Front's analytics endpoints are server-side asynchronous: a POST creates
@@ -485,6 +510,12 @@ _READ_ONLY_TOOLS = [
     "list_team_contact_groups",
     "list_teammate_contact_groups",
     "list_contacts_in_group",
+    "list_knowledge_bases",
+    "get_kb",
+    "list_kb_articles",
+    "list_kb_articles_in_category",
+    "get_kb_article",
+    "list_kb_categories",
 ]
 
 mcp.add_middleware(

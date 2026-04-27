@@ -17,8 +17,8 @@
 #      domain wiring status, full path/method/response info).
 #
 schema_version: 1
-generated_at: '2026-04-27T15:54:45+00:00'
-generated_from_commit: 48172d1a7373084ab7c2ddb083548c57c8940826
+generated_at: '2026-04-27T17:32:45+00:00'
+generated_from_commit: 4870f653ddef899c6412401a9148d38ed6d05065
 summary:
   list_endpoints_with_field_results:
     - accounts.list_account_contacts
@@ -248,6 +248,7 @@ summary:
     - conversations
     - drafts
     - inboxes
+    - knowledge_bases
     - messages
     - tags
     - teammates
@@ -1208,9 +1209,9 @@ tags:
     spec_tag: Knowledge Bases
     api_dir: frontapp_public_api_client/api/knowledge_bases
     helper:
-      built: false
-      path: null
-      class: null
+      built: true
+      path: frontapp_public_api_client/helpers/knowledge_bases.py
+      class: KnowledgeBases
     domain:
       built: false
       path: null

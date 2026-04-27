@@ -228,6 +228,71 @@ preferred name-to-id lookup at session start.
 | `list_assigned_conversations` | `GET /teammates/{id}/conversations` | Conversations currently assigned to this teammate. Returns `ConversationSummary`s. |
 | `update_teammate` | `PATCH /teammates/{id}` | Update username / first_name / last_name / is_available. Email and admin status are NOT changeable here. Two-step confirm. |
 
+## Knowledge Base
+
+Front's KB — articles and categories grouped under one or more KBs.
+Wrapped here for two distinct workflows: **retrieval** (find content to
+paraphrase in replies) and **contribute** (turn a conversation
+resolution into a new article).
+
+| Tool | Endpoint | Purpose |
+| ---- | -------- | ------- |
+| `list_knowledge_bases` | `GET /knowledge_bases` | Catalog of every KB. Returns id + name. |
+| `get_kb` | `GET /knowledge_bases/{id}` (`/content` variants for `with_content=True`) | Single KB detail. |
+| `list_kb_categories` | `GET /knowledge_bases/{id}/categories` | Cursor-paginated categories list. |
+| `list_kb_articles` | `GET /knowledge_bases/{id}/articles` | Cursor-paginated slim articles (no body). |
+| `list_kb_articles_in_category` | `GET /knowledge_base_categories/{id}/articles` | Slim articles scoped to one category. |
+| `get_kb_article` | `GET /knowledge_base_articles/{id}` (`/content` variants) | Full article body — defaults `with_content=True`. |
+| `create_kb_article` | `POST /knowledge_bases/{id}/articles[/locales/{locale}/articles]` | Create a NEW article AS A DRAFT. Two-step confirm. |
+| `update_kb_article` | `PATCH /knowledge_base_articles/{id}/content[/locales/{locale}/content]` | Edit subject/body/author. Cannot flip status. Two-step confirm. |
+| `create_kb_category` | `POST /knowledge_bases/{id}/categories[/locales/{locale}/categories]` | Two-step confirm. |
+| `update_kb_category` | `PATCH /knowledge_base_categories/{id}/content[/locales/{locale}/content]` | Two-step confirm. |
+
+### Drafts only — agents never publish
+
+`create_kb_article` always creates a `status: "draft"` article — there
+is no `status` parameter on the tool. `update_kb_article` cannot change
+the publication state either; the existing draft/published state is
+preserved. **A human flips drafts to published in Front's UI.**
+
+Mirrors ADR-0016's drafts-first outbound philosophy: agents draft,
+humans send/publish. The Python helper layer
+(`client.knowledge_bases`) does retain the `status` kwarg so library
+callers (Python scripts) can publish programmatically — the MCP tools
+are the agent-safety boundary, not the helper.
+
+### Locale
+
+Every KB tool accepts an optional `locale` arg (e.g. `"en"`, `"fr"`).
+Omit for the workspace's default locale.
+
+### Workflow recipe — "answer this customer with a KB article"
+
+```
+list_knowledge_bases() → [{id: "knb_main", name: "Public KB"}, ...]
+list_kb_articles(knowledge_base_id="knb_main", limit=50)
+  → [{id, subject, status}, ...]   # agent picks the relevant article by subject
+get_kb_article(article_id="kba_xyz", with_content=True)
+  → {subject, content: "<article body>", ...}
+# Agent paraphrases or quotes content into a draft reply via create_draft_reply.
+```
+
+### Workflow recipe — "this conversation resolved a novel issue; capture it"
+
+```
+list_knowledge_bases() → pick the right KB
+list_kb_categories(knowledge_base_id="knb_main") → pick a category
+create_kb_article(
+    knowledge_base_id="knb_main",
+    subject="How to reset 2FA when phone is lost",
+    content="<article body...>",
+    category_id="kbc_security",
+    confirm=True,  # after human approves the elicitation
+)
+  → {confirmed: true, article: {id: "kba_new", status: "draft", ...}}
+# Article lands as a draft in Front's UI; human reviews and publishes.
+```
+
 ## Analytics
 
 Front's analytics endpoints are server-side asynchronous: the POST returns

@@ -60,19 +60,20 @@ async with FrontappClient() as client:
 
 ## Available helpers today
 
-| Helper                  | Status     | Covers                                                                                                                                                               |
-| ----------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `client.conversations`  | ✅ shipped | list/get/search/update/reply/list_messages/list_comments/add_comment                                                                                                 |
-| `client.drafts`         | ✅ shipped | list_for_conversation/create_on_channel/create_reply/edit/delete                                                                                                     |
-| `client.contacts`       | ✅ shipped | list/get/search_by_email/list_for_team/list_for_teammate/list_conversations/list_notes/create (+team/teammate)/update/merge/delete/add_note/add_handle/delete_handle |
-| `client.contact_lists`  | ✅ shipped | list/list_for_team/list_for_teammate/list_members/create (+team/teammate)/delete/add_contacts/remove_contacts                                                        |
-| `client.contact_groups` | ✅ shipped | Same shape as contact_lists. **Front has deprecated this surface** — prefer contact_lists for new code                                                               |
-| `client.messages`       | ✅ shipped | get/seen_status/mark_seen                                                                                                                                            |
-| `client.tags`           | ✅ shipped | list (+ company/team/teammate scopes)/get/list_children/list_tagged_conversations/apply_to_conversation/remove_from_conversation/create/create_child/update/delete   |
-| `client.inboxes`        | ✅ shipped | list (+ team/teammate scopes)/get/list_conversations/list_channels/list_access/create (+ team)/grant_access/revoke_access                                            |
-| `client.teammates`      | ✅ shipped | list/get/list_inboxes/list_assigned_conversations/update                                                                                                             |
-| `client.attachments`    | ✅ shipped | download/stream + `attachments=[FileSpec(...)]` parameter on every draft / reply / comment helper                                                                    |
-| `client.analytics`      | ✅ shipped | create*report/get_report/run_report + create_export/get_export/run_export. The `run*\*` methods wrap the create-then-poll loop into a single call.                   |
+| Helper                   | Status     | Covers                                                                                                                                                                                                                                                                                                |
+| ------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client.conversations`   | ✅ shipped | list/get/search/update/reply/list_messages/list_comments/add_comment                                                                                                                                                                                                                                  |
+| `client.drafts`          | ✅ shipped | list_for_conversation/create_on_channel/create_reply/edit/delete                                                                                                                                                                                                                                      |
+| `client.contacts`        | ✅ shipped | list/get/search_by_email/list_for_team/list_for_teammate/list_conversations/list_notes/create (+team/teammate)/update/merge/delete/add_note/add_handle/delete_handle                                                                                                                                  |
+| `client.contact_lists`   | ✅ shipped | list/list_for_team/list_for_teammate/list_members/create (+team/teammate)/delete/add_contacts/remove_contacts                                                                                                                                                                                         |
+| `client.contact_groups`  | ✅ shipped | Same shape as contact_lists. **Front has deprecated this surface** — prefer contact_lists for new code                                                                                                                                                                                                |
+| `client.messages`        | ✅ shipped | get/seen_status/mark_seen                                                                                                                                                                                                                                                                             |
+| `client.tags`            | ✅ shipped | list (+ company/team/teammate scopes)/get/list_children/list_tagged_conversations/apply_to_conversation/remove_from_conversation/create/create_child/update/delete                                                                                                                                    |
+| `client.inboxes`         | ✅ shipped | list (+ team/teammate scopes)/get/list_conversations/list_channels/list_access/create (+ team)/grant_access/revoke_access                                                                                                                                                                             |
+| `client.teammates`       | ✅ shipped | list/get/list_inboxes/list_assigned_conversations/update                                                                                                                                                                                                                                              |
+| `client.attachments`     | ✅ shipped | download/stream + `attachments=[FileSpec(...)]` parameter on every draft / reply / comment helper                                                                                                                                                                                                     |
+| `client.analytics`       | ✅ shipped | create*report/get_report/run_report + create_export/get_export/run_export. The `run*\*` methods wrap the create-then-poll loop into a single call.                                                                                                                                                    |
+| `client.knowledge_bases` | ✅ shipped | list/get + list/iter articles + list/iter categories (with optional `with_content` and `locale` args) + create*article/update_article/create_category/update_category. Hides the `\_a*`infix and the locale-default vs locale-specified split (single`locale=None` kwarg routes to the right module). |
 
 Outbound replies go through `client.drafts.create_reply(...)` rather than
 `client.conversations.reply(...)` — the latter still exists at the helper level for
@@ -301,6 +302,43 @@ keeps running on Front; resume with `client.analytics.get_report(uid)`). It rais
 `APIError` if Front returns `status: "failed"`. The same shape applies to
 `run_export(body, ...)` for `/analytics/exports`, plus a `too_big` terminal status that
 maps to `APIError` with a date-range narrowing hint.
+
+### Read & contribute to a knowledge base
+
+The `client.knowledge_bases` helper covers retrieval (browse + read articles for
+paraphrasing into replies) and contribute (create new articles, update existing ones).
+
+```python
+async with FrontappClient() as client:
+    # Retrieval: pick a KB, walk its articles, fetch one in full.
+    kbs = await client.knowledge_bases.list()
+    async for slim in client.knowledge_bases.iter_articles(kbs[0].id):
+        if slim.slug == "how-to-reset-2fa":
+            article = await client.knowledge_bases.get_article(
+                slim.id, with_content=True
+            )
+            print(article.content)
+            break
+
+    # Contribute: file a new article as a draft.
+    new_article = await client.knowledge_bases.create_article(
+        kbs[0].id,
+        subject="How to reset 2FA when phone is lost",
+        content="<p>Step-by-step guide…</p>",
+        category_id="kbc_security",
+        # status defaults to "draft" — see policy note below.
+    )
+    print(new_article.id, new_article.status)  # "kba_new", "draft"
+```
+
+The `status` kwarg on `create_article` defaults to `"draft"` (matching the typical
+agent-authored-content pattern). Library callers can pass `status="published"`
+explicitly if they want to publish — but the MCP tool layer locks this down to drafts
+only (mirroring ADR-0016's drafts-first outbound philosophy applied to KB content). See
+issue \#83 for the full policy.
+
+The `locale=None` kwarg on every read/write method routes to Front's default-locale
+endpoint; pass `locale="fr"` (or another locale code) to hit the per-locale variant.
 
 ### Raw generated API for uncovered resources
 
