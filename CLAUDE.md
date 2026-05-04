@@ -147,6 +147,23 @@ Common mistakes to avoid:
   `scripts/pre-push-guard.sh` pre-commit hook blocks this. The right form for first-time
   pushes is `git push -u origin HEAD:refs/heads/<branch-name>`. `--no-verify` is
   forbidden — fix the push command instead.
+- **`uv.lock` drift you didn't cause** — when you start a branch off an older `main` and
+  a sibling-package release (e.g. `mcp-vX.Y.Z`) lands on `main` while you work, your
+  `uv.lock` will show modifications you didn't make once you sync or run `uv sync`.
+  Stage and commit it (`git add uv.lock`) bundled with your other work — don't try to
+  revert it. The lockfile is authoritative and CI re-resolves from `pyproject.toml`
+  anyway, so a stale lockfile causes spurious CI diffs.
+- **Generator/script edits without committing the regen** — when you edit
+  `scripts/vendor_spec.py`, `scripts/regenerate_client.py`, or
+  `scripts/generate_api_facts.py`, you must also run the corresponding regenerate task
+  and commit the regenerated output. `block-generated-edits.sh` blocks direct edits to
+  generated files but doesn't catch this case (the generator changes look unrelated). CI
+  will fail on `facts-check` or generated-client diff if you forget.
+- **Live Front API data must not enter the repo** — when testing against a real Front
+  workspace, never commit raw response fixtures, names, emails, or conversation bodies
+  from real customers. Sanitize to placeholders (`cnv_TEST`, `customer@example.com`,
+  generic message bodies) before saving as a test fixture or example. Front workspaces
+  contain customer PII and the published client is a public package.
 
 ## Using the LSP tool
 
