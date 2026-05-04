@@ -71,12 +71,12 @@ dev = [
   "pytest-mock>=3.14.0",
   "pytest-timeout>=2.4.0",
   "pytest-xdist>=3.6.1",
-  "tox>=4.25.0",
+  "tox>=4.53.1",
   # Code quality and linting
   "ruff>=0.15.12",
   "pre-commit>=4.5.0",
   # Build tools
-  "build>=1.2.0",
+  "build>=1.5.0",
   # YAML linting
   "yamllint>=1.37.0",
   # OpenAPI validation
@@ -114,8 +114,8 @@ dev = [
     "aiohttp>=3.13.3",
     "brotli>=1.2.0",
     "openapi-spec-validator>=0.8.5",
-    "poethepoet>=0.37.0",
-    "ty>=0.0.32",
+    "poethepoet>=0.45.0",
+    "ty>=0.0.34",
     "types-jsonschema>=4.25.1.20251009",
 ]
 
