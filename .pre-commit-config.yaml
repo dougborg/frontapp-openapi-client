@@ -7,6 +7,11 @@
 #
 # See issue #134 for background on why we use local hooks.
 
+# Make `pre-commit install` set up the pre-push hook too. Without this, the
+# pre-push hook would silently not run for contributors who only ran the bare
+# `pre-commit install` from the README. See block-push-to-main below.
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
   - repo: local
     hooks:
@@ -53,5 +58,15 @@ repos:
         name: pytest
         entry: uv run poe test
         language: system
+        pass_filenames: false
+        always_run: true
+
+      # Pre-push guard: block accidental pushes to main from a non-main branch.
+      # See scripts/pre-push-guard.sh and CLAUDE.md "Known Pitfalls".
+      - id: block-push-to-main
+        name: block direct push to main from a non-main branch
+        entry: scripts/pre-push-guard.sh
+        language: system
+        stages: [pre-push]
         pass_filenames: false
         always_run: true
