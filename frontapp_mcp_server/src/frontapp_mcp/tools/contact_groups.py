@@ -24,7 +24,7 @@ from frontapp_mcp.projections import (
     to_contact_summary,
 )
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import confirm_or_preview
+from frontapp_mcp.tools.schemas import DESTRUCTIVE, confirm_or_preview
 from frontapp_public_api_client.helpers.constants import (
     CONTACT_BUCKET_REMOVE_CAP,
     cap_error_message,
@@ -119,6 +119,7 @@ def register_tools(mcp: FastMCP) -> None:
             "create_team_contact_group when the team is known. Two-step "
             "confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_contact_group(
         context: Context,
@@ -141,6 +142,7 @@ def register_tools(mcp: FastMCP) -> None:
         description=(
             f"{_DEPRECATION_NOTE} Create a team-scoped contact group. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_team_contact_group(
         context: Context,
@@ -169,6 +171,7 @@ def register_tools(mcp: FastMCP) -> None:
             f"{_DEPRECATION_NOTE} Create a teammate-scoped (private) "
             "contact group. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_teammate_contact_group(
         context: Context,
@@ -198,6 +201,7 @@ def register_tools(mcp: FastMCP) -> None:
             "group and all memberships, but does NOT delete the underlying "
             "contacts. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def delete_contact_group(
         context: Context,
@@ -226,6 +230,7 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_ids accepts both 'crd_*' ids and Front resource "
             "aliases. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def add_contacts_to_group(
         context: Context,
@@ -262,6 +267,7 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_ids accepts both 'crd_*' ids and Front resource "
             "aliases. CAPPED at 50 contact_ids per call. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def remove_contacts_from_group(
         context: Context,

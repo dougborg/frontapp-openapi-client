@@ -26,6 +26,7 @@ from pydantic import Field
 from frontapp_mcp.projections import DraftSummary, to_draft_summary
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import (
+    DESTRUCTIVE,
     confirm_or_preview,
 )
 from frontapp_public_api_client.helpers.attachments import (
@@ -71,6 +72,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Two-step confirm: confirm=False returns a preview; confirm=True "
             "creates the draft (human still has to click send in Front)."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_draft_on_channel(
         context: Context,
@@ -142,6 +144,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Two-step confirm: confirm=False returns a preview; confirm=True "
             "creates the draft."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_draft_reply(
         context: Context,
@@ -227,6 +230,7 @@ def register_tools(mcp: FastMCP) -> None:
             "only changing metadata. Pass version (from a prior draft fetch) "
             "to avoid clobbering concurrent edits. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def edit_draft(
         context: Context,
@@ -306,6 +310,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Delete a draft by id. Two-step confirm — deleting clobbers any "
             "in-progress edits in Front."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def delete_draft(
         context: Context,

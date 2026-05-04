@@ -29,6 +29,7 @@ from frontapp_mcp.projections import (
 )
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import (
+    DESTRUCTIVE,
     confirm_or_preview,
 )
 
@@ -184,6 +185,7 @@ def register_tools(mcp: FastMCP) -> None:
             "list of {handle, source} dicts, where source is one of email, "
             "phone, custom, facebook, front_chat, intercom, twitter."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_contact(
         context: Context,
@@ -236,6 +238,7 @@ def register_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         name="create_team_contact",
         description="Create a contact owned by a team. Same shape as create_contact, scoped to a team_id.",
+        annotations=DESTRUCTIVE,
     )
     async def create_team_contact(
         context: Context,
@@ -276,6 +279,7 @@ def register_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         name="create_teammate_contact",
         description="Create a contact owned by a teammate. Scoped to a teammate_id.",
+        annotations=DESTRUCTIVE,
     )
     async def create_teammate_contact(
         context: Context,
@@ -316,6 +320,7 @@ def register_tools(mcp: FastMCP) -> None:
             "changes go through add_contact_handle / delete_contact_handle, "
             "NOT this tool — Front's PATCH body doesn't accept handles."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def update_contact(
         context: Context,
@@ -376,6 +381,7 @@ def register_tools(mcp: FastMCP) -> None:
             "the merged contacts are deleted. If target_contact_id is "
             "omitted, Front picks the target. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def merge_contacts(
         context: Context,
@@ -410,6 +416,7 @@ def register_tools(mcp: FastMCP) -> None:
             "DESTRUCTIVE: permanently delete a contact and all its handles. "
             "Cannot be undone. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def delete_contact(
         context: Context,
@@ -432,6 +439,7 @@ def register_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         name="add_contact_note",
         description="Add an internal teammate note to a contact (not visible to customer).",
+        annotations=DESTRUCTIVE,
     )
     async def add_contact_note(
         context: Context,
@@ -462,6 +470,7 @@ def register_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         name="add_contact_handle",
         description="Add a handle (email/phone/etc.) to an existing contact.",
+        annotations=DESTRUCTIVE,
     )
     async def add_contact_handle(
         context: Context,
@@ -497,6 +506,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Remove a handle from a contact. Pass force=true to delete the "
             "contact's last handle (would otherwise leave it unreachable)."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def delete_contact_handle(
         context: Context,

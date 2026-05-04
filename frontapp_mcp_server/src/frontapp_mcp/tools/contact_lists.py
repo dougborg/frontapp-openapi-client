@@ -20,7 +20,7 @@ from frontapp_mcp.projections import (
     to_contact_summary,
 )
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import confirm_or_preview
+from frontapp_mcp.tools.schemas import DESTRUCTIVE, confirm_or_preview
 from frontapp_public_api_client.helpers.constants import (
     CONTACT_BUCKET_REMOVE_CAP,
     cap_error_message,
@@ -111,6 +111,7 @@ def register_tools(mcp: FastMCP) -> None:
             "team. Two-step confirm. The new list's id is NOT returned by "
             "Front; follow up with list_contact_lists and match by name."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_contact_list(
         context: Context,
@@ -134,6 +135,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Create a team-scoped contact list. Preferred over "
             "create_contact_list when the team is known. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_team_contact_list(
         context: Context,
@@ -159,6 +161,7 @@ def register_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         name="create_teammate_contact_list",
         description="Create a teammate-scoped (private) contact list. Two-step confirm.",
+        annotations=DESTRUCTIVE,
     )
     async def create_teammate_contact_list(
         context: Context,
@@ -190,6 +193,7 @@ def register_tools(mcp: FastMCP) -> None:
             "memberships, but does NOT delete the underlying contacts — "
             "they remain in the workspace. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def delete_contact_list(
         context: Context,
@@ -218,6 +222,7 @@ def register_tools(mcp: FastMCP) -> None:
             "'crd_*' ids and Front resource aliases like "
             "'alt:email:foo@example.com'. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def add_contacts_to_contact_list(
         context: Context,
@@ -257,6 +262,7 @@ def register_tools(mcp: FastMCP) -> None:
             "call by Front's server-side validation — split larger "
             "removals into multiple calls. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def remove_contacts_from_contact_list(
         context: Context,

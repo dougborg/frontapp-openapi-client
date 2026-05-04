@@ -19,6 +19,7 @@ from pydantic import Field
 from frontapp_mcp.projections import ConversationSummary, to_summary
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import (
+    DESTRUCTIVE,
     confirm_or_preview,
 )
 
@@ -143,6 +144,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Update a conversation: status ('open'/'archived'/'deleted'/'spam'), "
             "assignee, inbox, or tag set. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def update_conversation(
         context: Context,
@@ -205,6 +207,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Add an internal comment to a conversation (visible to teammates "
             "only — does NOT reach the customer). Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def add_conversation_comment(
         context: Context,

@@ -20,6 +20,7 @@ from pydantic import Field
 from frontapp_mcp.projections import ConversationSummary, to_summary
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import (
+    DESTRUCTIVE,
     confirm_or_preview,
 )
 from frontapp_public_api_client.domain import Inbox, Teammate
@@ -97,6 +98,7 @@ def register_tools(mcp: FastMCP) -> None:
             "admin status are NOT changeable via this API — manage those "
             "in Front's admin UI. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def update_teammate(
         context: Context,

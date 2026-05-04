@@ -20,6 +20,7 @@ from pydantic import Field
 
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import (
+    DESTRUCTIVE,
     confirm_or_preview,
 )
 from frontapp_public_api_client.domain.converters import unwrap_unset
@@ -130,6 +131,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Optional teammate_id attributes the seen event to a "
             "specific 'tea_*' teammate. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def mark_message_seen(
         context: Context,
