@@ -77,7 +77,6 @@ class TestPreviewPath:
 
         assert result["confirmed"] is False
         assert "preview" in result
-        context.elicit.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -94,28 +93,6 @@ class TestUpdateNoChanges:
             context, contact_id="crd_a", confirm=True
         )
         assert result["result"] == "no_changes_requested"
-        # Should NOT call the helper or elicit when nothing changes.
-        context.elicit.assert_not_called()
-
-
-# ---------------------------------------------------------------------------
-# Decline path
-# ---------------------------------------------------------------------------
-
-
-class TestDeclinePath:
-    async def test_delete_contact_declined(self, contacts_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked after decline")
-        )
-
-        result = await contacts_tools["delete_contact"](
-            context, contact_id="crd_a", confirm=True
-        )
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
-        context.elicit.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

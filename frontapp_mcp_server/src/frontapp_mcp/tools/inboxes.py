@@ -161,12 +161,7 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_ids": teammate_ids,
             "is_public": is_public,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create workspace inbox '{name}'?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -201,12 +196,7 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_ids": teammate_ids,
             "is_public": is_public,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create team inbox '{name}' on team {team_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -234,14 +224,7 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_count": len(teammate_ids),
             "teammate_ids": teammate_ids,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Grant inbox {inbox_id} access to {len(teammate_ids)} teammate(s)?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -272,14 +255,7 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_count": len(teammate_ids),
             "teammate_ids": teammate_ids,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Revoke inbox {inbox_id} access from {len(teammate_ids)} teammate(s)?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

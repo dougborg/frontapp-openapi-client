@@ -153,12 +153,7 @@ def register_tools(mcp: FastMCP) -> None:
         if teammate_id:
             prompt += f" as teammate {teammate_id}"
         prompt += "?"
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=prompt,
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

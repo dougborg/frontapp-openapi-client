@@ -137,7 +137,6 @@ class TestUpdateConversation:
 
         assert result["confirmed"] is False
         assert result["preview"]["changes"] == {"status": "archived"}
-        context.elicit.assert_not_called()
         lifespan.client.conversations.update.assert_not_awaited()
 
     async def test_no_changes_short_circuits(self, conversations_tools):
@@ -152,43 +151,6 @@ class TestUpdateConversation:
 
         assert result["result"] == "no_changes_requested"
         assert result["confirmed"] is False
-        context.elicit.assert_not_called()
-
-    async def test_cancelled_does_not_call_helper(self, conversations_tools):
-        """User cancelled the elicitation (``action='decline'``) → CANCELLED."""
-        context, lifespan = create_mock_context(elicit_action="decline")
-        lifespan.client = AsyncMock()
-        lifespan.client.conversations.update = AsyncMock(
-            side_effect=AssertionError("helper invoked after cancel")
-        )
-
-        result = await conversations_tools["update_conversation"](
-            context, conversation_id="cnv_a", status="archived", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
-        context.elicit.assert_called_once()
-        lifespan.client.conversations.update.assert_not_awaited()
-
-    async def test_declined_does_not_call_helper(self, conversations_tools):
-        """User accepted the elicitation but unchecked confirm → DECLINED."""
-        context, lifespan = create_mock_context(
-            elicit_confirm=False, elicit_action="accept"
-        )
-        lifespan.client = AsyncMock()
-        lifespan.client.conversations.update = AsyncMock(
-            side_effect=AssertionError("helper invoked after decline")
-        )
-
-        result = await conversations_tools["update_conversation"](
-            context, conversation_id="cnv_a", status="archived", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "declined"
-        context.elicit.assert_called_once()
-        lifespan.client.conversations.update.assert_not_awaited()
 
     async def test_confirmed_calls_helper(self, conversations_tools):
         context, lifespan = create_mock_context()
@@ -256,40 +218,6 @@ class TestAddConversationComment:
             context, conversation_id="cnv_a", body="Short", confirm=False
         )
         assert result["preview"]["body_preview"] == "Short"
-
-    async def test_cancelled_does_not_call_helper(self, conversations_tools):
-        """User cancelled the elicitation (``action='decline'``) → CANCELLED."""
-        context, lifespan = create_mock_context(elicit_action="decline")
-        lifespan.client = AsyncMock()
-        lifespan.client.conversations.add_comment = AsyncMock(
-            side_effect=AssertionError("helper invoked after cancel")
-        )
-
-        result = await conversations_tools["add_conversation_comment"](
-            context, conversation_id="cnv_a", body="Note", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
-        lifespan.client.conversations.add_comment.assert_not_awaited()
-
-    async def test_declined_does_not_call_helper(self, conversations_tools):
-        """User accepted the elicitation but unchecked confirm → DECLINED."""
-        context, lifespan = create_mock_context(
-            elicit_confirm=False, elicit_action="accept"
-        )
-        lifespan.client = AsyncMock()
-        lifespan.client.conversations.add_comment = AsyncMock(
-            side_effect=AssertionError("helper invoked after decline")
-        )
-
-        result = await conversations_tools["add_conversation_comment"](
-            context, conversation_id="cnv_a", body="Note", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "declined"
-        lifespan.client.conversations.add_comment.assert_not_awaited()
 
     async def test_confirmed_calls_helper(self, conversations_tools):
         context, lifespan = create_mock_context()

@@ -19,11 +19,16 @@ decide:
 
 ## Decision
 
-Adopt the **Pydantic parameter annotations** pattern combined with **FastMCP
-elicitation** for destructive operations. Frontapp tools use per-parameter
+Adopt the **Pydantic parameter annotations** pattern combined with a **two-call
+preview/execute gate** for destructive operations. Frontapp tools use per-parameter
 `Annotated[T, Field(description=...)]` directly rather than a nested request model +
 `Unpack()` decorator — most tools have short argument lists and the per-parameter form
 reads more naturally in the `@mcp.tool(...)` decorator shape.
+
+The original revision of this ADR also relied on `ctx.elicit` for a server-side
+confirmation prompt. That layer was removed because elicitation is unreliable across MCP
+clients, notably broken in Claude Desktop. Per the MCP Tools spec, clients SHOULD
+prompt; servers SHOULD NOT.
 
 The `Unpack()` decorator infrastructure (`frontapp_mcp/unpack.py`) is kept in-repo as an
 option for future tools with wide or deeply-nested request bodies.
@@ -108,14 +113,7 @@ with a consistent shape:
     "confirmed": False,
 }
 
-# confirm=True, user cancelled elicitation
-{
-    "preview": {...},
-    "confirmed": False,
-    "result": "cancelled" | "declined",
-}
-
-# confirm=True, user approved, API succeeded
+# confirm=True, API succeeded
 {
     "confirmed": True,
     "status_code": 202,  # HTTP status from Front
@@ -136,12 +134,7 @@ Every mutation tool takes `confirm: bool = False` and runs the gate via the
 ```python
 preview = {"action": "...", "conversation_id": conversation_id, ...}
 
-gate = await confirm_or_preview(
-    context,
-    preview=preview,
-    confirm=confirm,
-    elicit_message=f"Send reply to conversation {conversation_id}?",
-)
+gate = confirm_or_preview(preview=preview, confirm=confirm)
 if gate is not None:
     return gate
 
@@ -151,28 +144,35 @@ return {"confirmed": True, "status_code": response.status_code}
 ```
 
 `confirm_or_preview` returns the dict the tool should bail with on the preview path
-(`confirm=False`) or declined elicitation, or `None` when the caller should proceed. The
-6-line `if not confirm: ... require_confirmation ... ConfirmationResult.CONFIRMED`
-cascade was duplicated across ~40 mutating tools before being extracted into this
-helper.
+(`confirm=False`), or `None` when the caller should proceed. The contract is
+**two-call**: the LLM first invokes the tool with `confirm=False` to get the preview,
+surfaces it to the user, and only re-invokes with `confirm=True` after the user has
+agreed.
 
-The pattern has two independent safety gates:
+The single safety gate is in-band:
 
 1. **Preview vs. execute**: `confirm=False` prevents accidental mutations from ambiguous
-   LLM tool selection (the LLM has to explicitly re-call with `confirm=True`).
-2. **Host elicitation**: `ctx.elicit` prompts the user even once the LLM has set
-   `confirm=True`, so a misaligned LLM can't unilaterally apply changes.
+   LLM tool selection. The LLM must show the preview to the user and explicitly re-call
+   with `confirm=True` once the user has agreed.
+
+Earlier revisions of this ADR also relied on `ctx.elicit` for a server-side confirmation
+prompt. That layer was removed because elicitation is unreliable across MCP clients
+(notably broken in Claude Desktop and several others — the elicit call never resolves,
+so the user never sees the prompt and the mutation never executes). Per the MCP Tools
+spec, **clients SHOULD prompt users; servers SHOULD NOT**. Spec-compliant clients should
+be configured to prompt for tools annotated with `destructiveHint=True`; that work is
+tracked separately.
 
 #### 5. Drafts-first outbound
 
-For customer-facing replies there is a **third** gate beyond preview + elicitation: the
-agent never sends, it only drafts. The Frontapp drafts vertical (`create_draft_reply`,
+For customer-facing replies there is a **second** gate beyond preview/execute: the agent
+never sends, it only drafts. The Frontapp drafts vertical (`create_draft_reply`,
 `create_draft_on_channel`, `edit_draft`, `delete_draft`) exposes the full reply surface,
 but Front's API has no programmatic `send_draft` — the human reviews the draft in
 Front's UI and clicks send themselves.
 
 The earlier `reply_to_conversation` tool (which sent immediately on `confirm=True`) was
-removed in the drafts vertical PR. Even a misaligned LLM that gets past elicitation
+removed in the drafts vertical PR. Even a misaligned LLM that gets past the preview gate
 cannot send to a customer; the strongest action it can take is creating a draft that a
 human still has to approve and dispatch.
 
@@ -186,52 +186,26 @@ rule is specifically for outbound messaging.
 
 #### 6. Shared schemas
 
-Common schemas live in `frontapp_mcp/tools/schemas.py`:
+The shared confirmation gate lives in `frontapp_mcp/tools/schemas.py`:
 
 ```python
 # frontapp_mcp/tools/schemas.py
-class ConfirmationSchema(BaseModel):
-    """Schema for user confirmation elicitation."""
-    confirm: bool = Field(..., description="Confirm the action (true to proceed)")
-
-
-class ConfirmationResult(StrEnum):
-    CONFIRMED = "confirmed"
-    CANCELLED = "cancelled"
-    DECLINED = "declined"
-
-
-async def require_confirmation(context: Context, message: str) -> ConfirmationResult:
-    elicit_result = await context.elicit(message, ConfirmationSchema)
-    if elicit_result.action != "accept":
-        return ConfirmationResult.CANCELLED
-    if not elicit_result.data.confirm:
-        return ConfirmationResult.DECLINED
-    return ConfirmationResult.CONFIRMED
-
-
-async def confirm_or_preview(
-    context: Context,
+def confirm_or_preview(
     *,
     preview: dict[str, Any],
     confirm: bool,
-    elicit_message: str,
 ) -> dict[str, Any] | None:
-    """Standard preview-then-elicit gate. Returns the response dict the
-    caller should return verbatim, or None when the caller should proceed.
+    """Two-call preview/execute gate. Returns the response dict the caller
+    should return verbatim on the preview path (`confirm=False`), or None
+    when the caller should proceed with the mutation.
     """
     if not confirm:
         return {"preview": preview, "confirmed": False}
-    result = await require_confirmation(context, elicit_message)
-    if result is not ConfirmationResult.CONFIRMED:
-        return {"preview": preview, "confirmed": False, "result": result.value}
     return None
 ```
 
 Every mutation tool imports `confirm_or_preview` and calls it once instead of
-hand-rolling the cascade. `ConfirmationResult` and `require_confirmation` are now
-internal details; tools only import them directly when they need to branch on `DECLINED`
-vs `CANCELLED` (rare).
+hand-rolling the cascade.
 
 ### Benefits
 
@@ -241,9 +215,9 @@ vs `CANCELLED` (rare).
 - **IDE support**: autocomplete and type checking work everywhere
 - **Testability**: mutation tools in preview mode (`confirm=False`) can be tested
   without any API mocks
-- **Consistency**: every mutation follows the same two-step confirm shape
-- **Safety**: destructive operations require both an LLM affirm (`confirm=True`) and a
-  user affirm (elicitation accept)
+- **Consistency**: every mutation follows the same two-call preview/execute shape
+- **Safety**: destructive operations require an explicit re-invocation with
+  `confirm=True` after the user has agreed to the preview
 
 ## Consequences
 
@@ -252,7 +226,7 @@ vs `CANCELLED` (rare).
 - Type-safe tool interfaces prevent runtime errors
 - Self-documenting parameters improve LLM tool selection and developer UX
 - Validation errors are clear and actionable
-- Elicitation prevents accidental destructive operations
+- Two-call preview/execute prevents accidental destructive operations
 - Shared helpers keep the confirm flow identical across tools
 
 ### Negative
@@ -261,12 +235,9 @@ vs `CANCELLED` (rare).
   by dropping to Unpack for such tools)
 - Two-step confirm means every mutation is at minimum a two-call flow, which is by
   design but trades latency for safety
-- Elicitation round-trips add a user interaction step
 
 ### Neutral
 
-- Currently 3 of 8 tools use elicitation (all three are mutations); future verticals are
-  expected to follow the same ratio
 - Preview dicts duplicate some argument structure, but the duplication is what lets
   users catch problems before they're applied
 
@@ -300,19 +271,15 @@ async def create_draft_reply(
 
 **Rejected**: no IDE support, no validation, no documentation.
 
-### Response-field confirmation (no elicitation)
+### Server-side elicitation (`ctx.elicit`)
 
-```python
-async def create_draft_reply(...) -> dict:
-    if not confirmed:
-        return {"status": "pending", "confirmation_required": True}
-    # else apply
-```
-
-**Rejected**: requires two full LLM round trips instead of one round trip plus host
-elicitation, and bypasses the MCP host's UI for preview/confirm. The current pattern
-lets Claude Desktop (and similar) show a proper dialog rather than surface a JSON field
-the LLM has to interpret.
+Earlier revisions of this ADR specified `ctx.elicit` as a second backstop after the
+preview step — the server would prompt the user for confirmation even after
+`confirm=True`. **Reverted**: elicitation is unreliable across MCP clients and is broken
+outright in Claude Desktop (the elicit call never resolves, so the user never sees the
+prompt and the mutation never executes). Per the MCP Tools spec, clients SHOULD prompt;
+servers SHOULD NOT. The recommended client-side cue is the `destructiveHint` annotation,
+tracked separately.
 
 ### Single confirm gate (no preview step)
 
@@ -324,7 +291,7 @@ the intended action before committing, without requiring a speculative API call.
 
 Live today across the conversations and drafts verticals:
 
-**Mutations** (two-step confirm + elicitation):
+**Mutations** (two-call preview/execute):
 
 - `create_draft_reply` / `create_draft_on_channel` / `edit_draft` / `delete_draft` — the
   drafts vertical (`tools/drafts.py`); customer-facing outbound always goes through
@@ -332,7 +299,7 @@ Live today across the conversations and drafts verticals:
 - `update_conversation` — archive/reopen, reassign, retag, move inbox
 - `add_conversation_comment` — internal teammate note
 
-**Reads** (no elicitation, cached 30s via `ResponseCachingMiddleware`):
+**Reads** (no confirm gate, cached 30s via `ResponseCachingMiddleware`):
 
 - `list_conversations`, `get_conversation`, `search_conversations`,
   `list_conversation_messages`, `list_conversation_comments`
@@ -344,4 +311,4 @@ follow the same pattern.
 
 - [ADR-0017: Automated Tool Documentation](0017-automated-tool-documentation.md)
 - [ADR-0011: Pydantic Domain Models](https://github.com/dougborg/frontapp-openapi-client/blob/main/frontapp_public_api_client/docs/adr/0011-pydantic-domain-models.md)
-- [FastMCP](https://github.com/jlowin/fastmcp) — elicitation API
+- [FastMCP](https://github.com/jlowin/fastmcp)

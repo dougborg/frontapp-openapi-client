@@ -60,7 +60,8 @@ Model:
   )
   → {"preview": {"action": "create_draft_reply", "body_preview": "…"}, "confirmed": False}
 
-  # 2. Create draft — confirm=True triggers ctx.elicit to ask the user to approve.
+  # 2. Create draft — only re-invoke with confirm=True after the user has agreed
+  #    to the preview from step 1.
   create_draft_reply(
     conversation_id="cnv_abc",
     body="Hi! We've shipped your replacement — tracking 1Z999AA10123456784.",
@@ -85,7 +86,7 @@ Model:
   )
   → {"preview": {...}, "confirmed": False}
 
-  # Apply — elicits approval
+  # Apply — re-invoke with confirm=True after the user has agreed
   update_conversation(..., confirm=True)
   → {"confirmed": True, "status_code": 200}
 ```
@@ -125,11 +126,14 @@ Every tool that changes data takes a `confirm: bool = False` parameter:
 
 1. **`confirm=False`** — returns a `preview` dict showing exactly what would be sent. No
    side effects, no rate-limit cost beyond the tool call itself.
-2. **`confirm=True`** — elicits explicit user approval via the MCP host's `ctx.elicit`
-   flow (e.g. a Claude Desktop dialog), _then_ executes.
+2. **`confirm=True`** — executes the mutation. The agent must surface the preview from
+   step 1 to the user and only re-invoke with `confirm=True` after the user has
+   explicitly agreed.
 
 This keeps the LLM from silently sending customer-facing messages, archiving active
-conversations, or tagging things without a human in the loop.
+conversations, or tagging things without a human in the loop. Spec-compliant MCP clients
+should also be configured to prompt before destructive tool calls; the `destructiveHint`
+annotation work is tracked separately.
 
 ## Front search syntax cheat sheet
 

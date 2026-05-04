@@ -1,7 +1,7 @@
 """Shared pytest fixtures for MCP server tests."""
 
 import os
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 import pytest_asyncio
@@ -41,49 +41,19 @@ async def frontapp_context():
     yield context
 
 
-def create_mock_context(
-    elicit_confirm: bool = True, *, elicit_action: str | None = None
-):
+def create_mock_context():
     """Build a mock FastMCP context for unit tests.
 
-    The three values of ``ConfirmationResult`` map to elicit-result shape:
-
-    - CONFIRMED: ``action='accept'`` + ``data.confirm=True``
-    - DECLINED:  ``action='accept'`` + ``data.confirm=False``
-    - CANCELLED: ``action != 'accept'`` (typically ``'decline'``)
-
-    Args:
-        elicit_confirm: If True, the elicitation models user-confirmation
-            (CONFIRMED). If False, by default the elicitation is cancelled
-            (action='decline' → CANCELLED) — that's the historical
-            behavior.
-        elicit_action: Override the ``action`` field explicitly. Pass
-            ``'accept'`` together with ``elicit_confirm=False`` to
-            exercise the DECLINED branch (where the elicitation succeeds
-            but the user un-checks the confirm flag).
-
-    Returns:
-        Tuple of (context, lifespan_context).
+    Returns a (context, lifespan_context) tuple where the lifespan is the
+    same mock the tool sees via ``context.request_context.lifespan_context``.
+    Test cases assign ``lifespan.client = AsyncMock()`` (or similar) to
+    stub the helpers the tool calls into.
     """
-    if elicit_action is None:
-        elicit_action = "accept" if elicit_confirm else "decline"
-
     context = MagicMock()
     mock_request_context = MagicMock()
     mock_lifespan_context = MagicMock()
     context.request_context = mock_request_context
     mock_request_context.lifespan_context = mock_lifespan_context
-
-    mock_elicit_result = MagicMock()
-    mock_elicit_result.action = elicit_action
-    if elicit_action == "accept":
-        mock_elicit_result.data = MagicMock()
-        mock_elicit_result.data.confirm = elicit_confirm
-    else:
-        mock_elicit_result.data = None
-
-    context.elicit = AsyncMock(return_value=mock_elicit_result)
-
     return context, mock_lifespan_context
 
 

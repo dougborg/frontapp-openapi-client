@@ -101,21 +101,6 @@ class TestMarkMessageSeen:
         assert result["confirmed"] is False
         assert result["preview"]["message_id"] == "msg_abc"
         assert result["preview"]["rate_limit"] == "10 req/msg/hour"
-        context.elicit.assert_not_called()
-
-    async def test_declined_does_not_call_helper(self, messages_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked after decline")
-        )
-
-        result = await messages_tools["mark_message_seen"](
-            context, message_id="msg_abc", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
-        context.elicit.assert_called_once()
 
     async def test_confirmed_calls_helper(self, messages_tools):
         context, lifespan = create_mock_context()

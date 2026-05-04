@@ -9,7 +9,7 @@ Concrete agent value: "reassign capacity to a team during a spike",
 "onboard new teammate Alice to the support team". Both follow the
 two-step ``confirm_or_preview`` pattern; the preview shows the count
 + ids of teammates being added/removed so the human sees what would
-happen before approving the elicitation.
+happen before re-invoking with ``confirm=True``.
 
 There is no ``create_team`` / ``delete_team`` in Front's API — teams
 are workspace-admin primitives created in Front's UI.
@@ -54,12 +54,7 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_count": len(teammate_ids),
             "teammate_ids": teammate_ids,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(f"Add {len(teammate_ids)} teammate(s) to team {team_id}?"),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -95,14 +90,7 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_count": len(teammate_ids),
             "teammate_ids": teammate_ids,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Remove {len(teammate_ids)} teammate(s) from team {team_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

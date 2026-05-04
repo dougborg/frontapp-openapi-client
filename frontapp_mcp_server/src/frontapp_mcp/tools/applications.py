@@ -85,12 +85,7 @@ def register_tools(mcp: FastMCP) -> None:
             "app_object_id": app_object_id,
             "app_object_ext_link": app_object_ext_link,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(f"Trigger '{event_type}' event on app {application_uid}?"),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

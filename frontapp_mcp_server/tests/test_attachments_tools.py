@@ -83,7 +83,6 @@ class TestDownloadAttachment:
             },
             "confirmed": False,
         }
-        context.elicit.assert_not_called()
 
     async def test_will_overwrite_flag_when_target_exists(
         self, attachments_tools, tmp_path: Path
@@ -101,7 +100,7 @@ class TestDownloadAttachment:
         assert result["preview"]["will_overwrite"] is True
 
     async def test_writes_bytes_when_confirmed(self, attachments_tools, tmp_path: Path):
-        context, lifespan = create_mock_context(elicit_confirm=True)
+        context, lifespan = create_mock_context()
 
         async def fake_stream(_url, *, chunk_size=65536):
             yield b"chunk-1-"
@@ -123,35 +122,11 @@ class TestDownloadAttachment:
             "size_bytes": len(b"chunk-1-chunk-2"),
         }
         assert target.read_bytes() == b"chunk-1-chunk-2"
-        context.elicit.assert_called_once()
-
-    async def test_declined_elicitation_does_not_write(
-        self, attachments_tools, tmp_path: Path
-    ):
-        context, lifespan = create_mock_context(
-            elicit_confirm=False, elicit_action="accept"
-        )
-        # If stream is invoked, the test should fail.
-        lifespan.client = AsyncMock()
-        lifespan.client.attachments.stream = AsyncMock(
-            side_effect=AssertionError("stream invoked on declined elicitation")
-        )
-
-        target = tmp_path / "saved.bin"
-        result = await attachments_tools["download_attachment"](
-            context,
-            attachment_url="https://api.frontapp.test/download/fil_x",
-            save_path=str(target),
-            confirm=True,
-        )
-        assert result["confirmed"] is False
-        assert result["result"] == "declined"
-        assert not target.exists()
 
     async def test_partial_write_cleaned_up_on_error(
         self, attachments_tools, tmp_path: Path
     ):
-        context, lifespan = create_mock_context(elicit_confirm=True)
+        context, lifespan = create_mock_context()
 
         async def fake_stream(_url, *, chunk_size=65536):
             yield b"first chunk"
@@ -181,7 +156,7 @@ class TestDraftAttachmentPaths:
     async def test_create_draft_on_channel_resolves_paths(
         self, drafts_tools, tmp_path: Path
     ):
-        context, lifespan = create_mock_context(elicit_confirm=True)
+        context, lifespan = create_mock_context()
         f1 = tmp_path / "doc.pdf"
         f1.write_bytes(b"%PDF-fake")
         f2 = tmp_path / "image.png"

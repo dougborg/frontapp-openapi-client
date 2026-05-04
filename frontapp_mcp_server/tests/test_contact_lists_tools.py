@@ -105,7 +105,6 @@ class TestPreviewPath:
 
         assert result["confirmed"] is False
         assert "preview" in result
-        context.elicit.assert_not_called()
 
     async def test_remove_over_50_returns_error_without_calling_elicit(
         self, lists_tools
@@ -123,7 +122,6 @@ class TestPreviewPath:
 
         assert result["confirmed"] is False
         assert "caps remove_contacts at 50" in result["error"]
-        context.elicit.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -160,16 +158,3 @@ class TestConfirmedExecution:
             "lst_a", ["crd_1", "crd_2"]
         )
         assert result["added_count"] == 2
-
-    async def test_declined_does_not_call_helper(self, lists_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked when declined")
-        )
-
-        result = await lists_tools["delete_contact_list"](
-            context, contact_list_id="lst_a", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"

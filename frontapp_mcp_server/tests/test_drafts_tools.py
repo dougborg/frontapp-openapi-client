@@ -58,8 +58,6 @@ class TestPreviewPath:
             },
             "confirmed": False,
         }
-        # elicit() is never invoked on the preview path.
-        context.elicit.assert_not_called()
 
     async def test_create_draft_reply_preview(self, drafts_tools):
         context, lifespan = create_mock_context()
@@ -111,30 +109,6 @@ class TestPreviewPath:
             "preview": {"action": "delete_draft", "draft_id": "msg_abc"},
             "confirmed": False,
         }
-
-
-# ---------------------------------------------------------------------------
-# Two-step confirm — declined elicitation
-# ---------------------------------------------------------------------------
-
-
-class TestDeclinedElicitation:
-    """When the user declines elicitation, the tool must NOT call the API."""
-
-    async def test_delete_draft_declined(self, drafts_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked after decline")
-        )
-
-        result = await drafts_tools["delete_draft"](
-            context, draft_id="msg_abc", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
-        # Elicitation WAS invoked (unlike the preview path).
-        context.elicit.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

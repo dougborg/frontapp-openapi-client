@@ -245,14 +245,7 @@ def register_tools(mcp: FastMCP) -> None:
             "locale": locale,
             "status": "draft",  # always — see module docstring
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Create draft KB article '{subject}' in {knowledge_base_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -301,12 +294,7 @@ def register_tools(mcp: FastMCP) -> None:
             "locale": locale,
             "note": "status unchanged — agents cannot flip draft/published",
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Update KB article {article_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -357,12 +345,7 @@ def register_tools(mcp: FastMCP) -> None:
             "description": description,
             "locale": locale,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create KB category '{name}' in {knowledge_base_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -403,12 +386,7 @@ def register_tools(mcp: FastMCP) -> None:
             "description": description,
             "locale": locale,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Update KB category {category_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

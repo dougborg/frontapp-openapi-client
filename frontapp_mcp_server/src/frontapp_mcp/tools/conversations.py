@@ -186,13 +186,7 @@ def register_tools(mcp: FastMCP) -> None:
                 "confirmed": False,
                 "result": "no_changes_requested",
             }
-        summary = ", ".join(f"{k}={v}" for k, v in changes.items())
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Update conversation {conversation_id}: {summary}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -230,12 +224,7 @@ def register_tools(mcp: FastMCP) -> None:
             "body_preview": body[:200] + ("…" if len(body) > 200 else ""),
             "author_id": author_id,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Add internal comment to conversation {conversation_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
