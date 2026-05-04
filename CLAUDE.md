@@ -141,6 +141,12 @@ Common mistakes to avoid:
   hand-written modules, extend the `typecheck` task path list in `pyproject.toml` to
   include them. Revisit the exclusion when ty hits 1.0 — tracked in
   [issue #8](https://github.com/dougborg/frontapp-openapi-client/issues/8).
+- **`git push -u origin <branch>` can land on main** — when a feature branch is created
+  via `git checkout -b <name> origin/main`, its upstream is `origin/main`, so a bare
+  `git push -u origin <name>` resolves to main and bypasses PR review. The
+  `scripts/pre-push-guard.sh` pre-commit hook blocks this. The right form for first-time
+  pushes is `git push -u origin HEAD:refs/heads/<branch-name>`. `--no-verify` is
+  forbidden — fix the push command instead.
 
 ## Using the LSP tool
 
