@@ -189,12 +189,7 @@ def register_tools(mcp: FastMCP) -> None:
             "tag_id": tag_id,
             "semantics": "delta — does not replace existing tags",
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Add tag {tag_id} to conversation {conversation_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -223,12 +218,7 @@ def register_tools(mcp: FastMCP) -> None:
             "tag_id": tag_id,
             "semantics": "delta — only removes this tag",
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Remove tag {tag_id} from conversation {conversation_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -271,12 +261,7 @@ def register_tools(mcp: FastMCP) -> None:
             "is_visible_in_conversation_lists": is_visible_in_conversation_lists,
             "scope": "workspace-wide",
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create workspace tag '{name}'?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -312,12 +297,7 @@ def register_tools(mcp: FastMCP) -> None:
             "name": name,
             "highlight": highlight,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create child tag '{name}' under {parent_tag_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -377,13 +357,7 @@ def register_tools(mcp: FastMCP) -> None:
                 "confirmed": False,
                 "result": "no_changes_requested",
             }
-        summary = ", ".join(f"{k}={v}" for k, v in changes.items())
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Update tag {tag_id}: {summary}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -418,14 +392,7 @@ def register_tools(mcp: FastMCP) -> None:
                 "currently has it. Cannot be undone."
             ),
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"PERMANENTLY DELETE tag {tag_id}? Removes from every conversation that had it."
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

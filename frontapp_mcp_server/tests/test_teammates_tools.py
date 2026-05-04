@@ -108,7 +108,6 @@ class TestUpdateTeammate:
 
         assert result["confirmed"] is False
         assert result["preview"]["changes"] == {"first_name": "Alicia"}
-        context.elicit.assert_not_called()
         lifespan.client.teammates.update.assert_not_awaited()
 
     async def test_no_changes_short_circuits(self, teammates_tools):
@@ -121,41 +120,6 @@ class TestUpdateTeammate:
 
         assert result["result"] == "no_changes_requested"
         assert result["confirmed"] is False
-        context.elicit.assert_not_called()
-
-    async def test_cancelled_does_not_call_helper(self, teammates_tools):
-        """User cancelled the elicitation (action='decline') → CANCELLED."""
-        context, lifespan = create_mock_context(elicit_action="decline")
-        lifespan.client = AsyncMock()
-        lifespan.client.teammates.update = AsyncMock(
-            side_effect=AssertionError("helper invoked after cancel")
-        )
-
-        result = await teammates_tools["update_teammate"](
-            context, teammate_id="tea_a", first_name="Alicia", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
-        lifespan.client.teammates.update.assert_not_awaited()
-
-    async def test_declined_does_not_call_helper(self, teammates_tools):
-        """User accepted but unchecked the confirm flag → DECLINED."""
-        context, lifespan = create_mock_context(
-            elicit_confirm=False, elicit_action="accept"
-        )
-        lifespan.client = AsyncMock()
-        lifespan.client.teammates.update = AsyncMock(
-            side_effect=AssertionError("helper invoked after decline")
-        )
-
-        result = await teammates_tools["update_teammate"](
-            context, teammate_id="tea_a", first_name="Alicia", confirm=True
-        )
-
-        assert result["confirmed"] is False
-        assert result["result"] == "declined"
-        lifespan.client.teammates.update.assert_not_awaited()
 
     async def test_confirmed_calls_helper(self, teammates_tools):
         context, lifespan = create_mock_context()

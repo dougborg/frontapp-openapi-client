@@ -92,7 +92,6 @@ class TestPreviewPath:
 
         assert result["confirmed"] is False
         assert "preview" in result
-        context.elicit.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +125,6 @@ class TestUpdateNoChanges:
 
         result = await tags_tools["update_tag"](context, tag_id="tag_a", confirm=True)
         assert result["result"] == "no_changes_requested"
-        context.elicit.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -187,23 +185,6 @@ class TestConfirmedExecution:
 
         lifespan.client.tags.delete.assert_awaited_once_with("tag_abc")
         assert result == {"confirmed": True, "deleted": True}
-
-
-# ---------------------------------------------------------------------------
-# Decline path
-# ---------------------------------------------------------------------------
-
-
-class TestDeclinePath:
-    async def test_delete_tag_declined(self, tags_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked after decline")
-        )
-
-        result = await tags_tools["delete_tag"](context, tag_id="tag_abc", confirm=True)
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
 
 
 # ---------------------------------------------------------------------------

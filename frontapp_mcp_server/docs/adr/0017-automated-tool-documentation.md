@@ -48,16 +48,17 @@ async def create_draft_reply(
     """Create a draft reply on an existing Front conversation.
 
     🟡 MEDIUM-RISK OPERATION: creates Front-side state, but the human
-    reviews the draft and clicks send themselves. Requires two-step
-    confirmation via ``ctx.elicit``.
+    reviews the draft and clicks send themselves. Two-step confirm: the
+    agent must surface the preview to the user before re-invoking with
+    ``confirm=True``.
 
     **Workflow**:
     1. Call with ``confirm=False`` — returns a preview of the draft. No
        side effects.
-    2. Call with ``confirm=True`` — elicits explicit user approval, then
-       POSTs to ``/conversations/{id}/drafts``. The draft appears in Front
-       for the human to review and send. There is no programmatic
-       ``send_draft``.
+    2. Call with ``confirm=True`` (after the user has agreed to the
+       preview) — POSTs to ``/conversations/{id}/drafts``. The draft
+       appears in Front for the human to review and send. There is no
+       programmatic ``send_draft``.
 
     **Related tools**:
     - ``edit_draft`` — full-replacement edit of an existing draft
@@ -70,7 +71,7 @@ async def create_draft_reply(
     - ``frontapp://help`` — full tool reference
 
     Args:
-        context: FastMCP context for services + elicitation
+        context: FastMCP context for services
         conversation_id: Front conversation id, e.g. ``"cnv_abc123"``
         body: Reply body (HTML or plain text)
         channel_id: Channel to send through, e.g. ``"cha_xyz"`` (required

@@ -166,7 +166,6 @@ class TestCreateArticleDraftsOnly:
         # The preview surfaces status: "draft" so the human sees what
         # publication state will result.
         assert result["preview"]["status"] == "draft"
-        context.elicit.assert_not_called()
 
     async def test_confirmed_calls_helper_with_draft_status(self, kb_tools):
         """The MCP layer's drafts-only policy: status='draft' is hardcoded
@@ -298,27 +297,3 @@ class TestCategoryMutations:
         assert call is not None
         assert call.kwargs["name"] == "Renamed"
         assert call.kwargs["description"] is None
-
-
-# ---------------------------------------------------------------------------
-# Decline path
-# ---------------------------------------------------------------------------
-
-
-class TestDeclinedElicitation:
-    async def test_create_article_declined_does_not_call_helper(self, kb_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked after decline")
-        )
-
-        result = await kb_tools["create_kb_article"](
-            context,
-            knowledge_base_id="knb_1",
-            subject="x",
-            content="y",
-            confirm=True,
-        )
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
-        context.elicit.assert_called_once()

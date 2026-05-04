@@ -51,7 +51,6 @@ class TestAddTeamMembers:
         assert result["confirmed"] is False
         assert result["preview"]["teammate_count"] == 2
         assert result["preview"]["teammate_ids"] == ["tea_a", "tea_b"]
-        context.elicit.assert_not_called()
 
     async def test_confirmed_calls_helper(self, teams_tools):
         context, lifespan = create_mock_context()
@@ -67,21 +66,6 @@ class TestAddTeamMembers:
         assert result["confirmed"] is True
         assert result["added_count"] == 1
         lifespan.client.teams.add_teammates.assert_awaited_once_with("tim_1", ["tea_a"])
-
-    async def test_declined_elicitation_does_not_call_helper(self, teams_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked after decline")
-        )
-
-        result = await teams_tools["add_team_members"](
-            context,
-            team_id="tim_1",
-            teammate_ids=["tea_a"],
-            confirm=True,
-        )
-        assert result["confirmed"] is False
-        context.elicit.assert_called_once()
 
 
 class TestRemoveTeamMembers:
@@ -138,7 +122,6 @@ class TestTriggerApplicationEvent:
         assert result["confirmed"] is False
         assert result["preview"]["event_type"] == "customer_replied"
         assert result["preview"]["app_object_id"] == "cnv_abc"
-        context.elicit.assert_not_called()
 
     async def test_confirmed_with_id_calls_helper(self, applications_tools):
         context, lifespan = create_mock_context()
@@ -176,18 +159,3 @@ class TestTriggerApplicationEvent:
         assert call is not None
         assert call.kwargs["app_object_ext_link"] == "https://example.com/x"
         assert call.kwargs["app_object_id"] is None
-
-    async def test_declined_does_not_call_helper(self, applications_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked after decline")
-        )
-
-        result = await applications_tools["trigger_application_event"](
-            context,
-            application_uid="app_xyz",
-            event_type="x",
-            app_object_id="cnv_y",
-            confirm=True,
-        )
-        assert result["confirmed"] is False

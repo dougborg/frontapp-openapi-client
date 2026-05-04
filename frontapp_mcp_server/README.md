@@ -14,8 +14,9 @@ and cursor pagination.
 - **Conversations vertical live today** — 8 tools: list / get / search / list_messages /
   list_comments / reply / update / add_comment. More verticals (contacts, messages,
   tags, inboxes, analytics) are tracked as GitHub issues.
-- **Two-step confirmation**: mutations require `confirm=true` and elicit explicit user
-  approval via `ctx.elicit`.
+- **Two-step confirmation**: mutations are gated behind `confirm=false` (preview only) →
+  `confirm=true` (execute). The agent must surface the preview to the user before
+  re-invoking with `confirm=true`.
 - **Built-in resilience**: automatic retries, 429 rate-limit handling with exponential
   backoff, and cursor-paginated list helpers inherited from the
   `frontapp-openapi-client` transport layer.

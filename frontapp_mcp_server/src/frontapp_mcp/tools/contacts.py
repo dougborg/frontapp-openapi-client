@@ -219,12 +219,7 @@ def register_tools(mcp: FastMCP) -> None:
             "group_names": group_names,
             "list_names": list_names,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create contact '{name}'?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -264,12 +259,7 @@ def register_tools(mcp: FastMCP) -> None:
             "name": name,
             "handles": handles,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create team contact on {team_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -306,12 +296,7 @@ def register_tools(mcp: FastMCP) -> None:
             "name": name,
             "handles": handles,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create teammate contact on {teammate_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -369,13 +354,7 @@ def register_tools(mcp: FastMCP) -> None:
                 "confirmed": False,
                 "result": "no_changes_requested",
             }
-        summary = ", ".join(f"{k}={v}" for k, v in changes.items())
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Update contact {contact_id}: {summary}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -416,15 +395,7 @@ def register_tools(mcp: FastMCP) -> None:
             "target_contact_id": target_contact_id,
             "warning": "IRREVERSIBLE: merged contacts are deleted; their conversations move to the target.",
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"IRREVERSIBLE: merge {len(contact_ids)} contacts "
-                f"(target={target_contact_id or 'auto'})?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -451,14 +422,7 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_id": contact_id,
             "warning": "PERMANENT: removes the contact and all its handles. Cannot be undone.",
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"PERMANENTLY DELETE contact {contact_id}? This deletes customer data."
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -486,12 +450,7 @@ def register_tools(mcp: FastMCP) -> None:
             "author_id": author_id,
             "body_preview": body[:200] + ("…" if len(body) > 200 else ""),
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Add internal note to contact {contact_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -523,12 +482,7 @@ def register_tools(mcp: FastMCP) -> None:
             "handle": handle,
             "source": source,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Add {source} handle '{handle}' to contact {contact_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -566,14 +520,7 @@ def register_tools(mcp: FastMCP) -> None:
             "source": source,
             "force": force,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Remove {source} handle '{handle}' from contact {contact_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

@@ -121,15 +121,7 @@ def register_tools(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         services = get_services(context)
         preview = {"action": "create_contact_list", "name": name}
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Create workspace-scoped contact list {name!r}? (Targets the "
-                "oldest active workspace.)"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -157,12 +149,7 @@ def register_tools(mcp: FastMCP) -> None:
             "team_id": team_id,
             "name": name,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create contact list {name!r} for team {team_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -189,14 +176,7 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_id": teammate_id,
             "name": name,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Create private contact list {name!r} for teammate {teammate_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -224,15 +204,7 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_list_id": contact_list_id,
             "note": "Dissolves the list; contacts NOT deleted.",
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Delete contact list {contact_list_id}? (Members are kept; "
-                "only the list is removed.)"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -265,14 +237,7 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_ids": contact_ids,
             "count": len(contact_ids),
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Add {len(contact_ids)} contact(s) to list {contact_list_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -320,14 +285,7 @@ def register_tools(mcp: FastMCP) -> None:
                 ),
                 "confirmed": False,
             }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Remove {len(contact_ids)} contact(s) from list {contact_list_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

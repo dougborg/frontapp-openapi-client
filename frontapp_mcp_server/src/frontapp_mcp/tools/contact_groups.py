@@ -129,12 +129,7 @@ def register_tools(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         services = get_services(context)
         preview = {"action": "create_contact_group", "name": name}
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create workspace-scoped contact group {name!r}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -161,12 +156,7 @@ def register_tools(mcp: FastMCP) -> None:
             "team_id": team_id,
             "name": name,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create contact group {name!r} for team {team_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -194,14 +184,7 @@ def register_tools(mcp: FastMCP) -> None:
             "teammate_id": teammate_id,
             "name": name,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Create private contact group {name!r} for teammate {teammate_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -229,14 +212,7 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_group_id": contact_group_id,
             "note": "Dissolves the group; contacts NOT deleted.",
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Delete contact group {contact_group_id}? (Members are kept.)"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -268,14 +244,7 @@ def register_tools(mcp: FastMCP) -> None:
             "contact_ids": contact_ids,
             "count": len(contact_ids),
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Add {len(contact_ids)} contact(s) to group {contact_group_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -321,14 +290,7 @@ def register_tools(mcp: FastMCP) -> None:
                 ),
                 "confirmed": False,
             }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=(
-                f"Remove {len(contact_ids)} contact(s) from group {contact_group_id}?"
-            ),
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

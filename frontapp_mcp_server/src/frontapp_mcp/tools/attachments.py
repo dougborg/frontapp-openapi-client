@@ -97,15 +97,7 @@ def register_tools(mcp: FastMCP) -> None:
             "parent_exists": True,
             "will_overwrite": path.exists(),
         }
-        message = f"Download attachment to {path}?" + (
-            " (will OVERWRITE existing file)" if path.exists() else ""
-        )
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=message,
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

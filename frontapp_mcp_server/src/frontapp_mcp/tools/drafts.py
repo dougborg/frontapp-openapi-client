@@ -6,8 +6,7 @@ programmatic ``send_draft`` — sending is always human-in-the-loop.
 
 All four mutation tools (create-on-channel, create-reply, edit, delete) use
 the standard two-step confirm pattern: call with ``confirm=False`` for a
-preview, ``confirm=True`` to execute (which also elicits explicit user
-approval via ``ctx.elicit``).
+preview, then re-invoke with ``confirm=True`` once the user has agreed.
 
 Attachments: every create/edit tool accepts an optional ``attachment_paths``
 parameter — a list of absolute filesystem paths. Each path is read at tool-
@@ -117,12 +116,7 @@ def register_tools(mcp: FastMCP) -> None:
             "mode": mode,
             "attachments": attachment_preview,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create draft on channel {channel_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -200,12 +194,7 @@ def register_tools(mcp: FastMCP) -> None:
             "mode": mode,
             "attachments": attachment_preview,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Create draft reply on conversation {conversation_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -292,12 +281,7 @@ def register_tools(mcp: FastMCP) -> None:
             "version": version,
             "attachments": attachment_preview,
         }
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Edit draft {draft_id}? This replaces the current draft body.",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 
@@ -330,12 +314,7 @@ def register_tools(mcp: FastMCP) -> None:
     ) -> dict[str, Any]:
         services = get_services(context)
         preview = {"action": "delete_draft", "draft_id": draft_id}
-        gate = await confirm_or_preview(
-            context,
-            preview=preview,
-            confirm=confirm,
-            elicit_message=f"Delete draft {draft_id}?",
-        )
+        gate = confirm_or_preview(preview=preview, confirm=confirm)
         if gate is not None:
             return gate
 

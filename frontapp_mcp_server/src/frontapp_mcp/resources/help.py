@@ -372,8 +372,9 @@ create_draft_reply(..., confirm=True)
 Every tool that changes data on the Front side takes `confirm: bool = False`.
 - `confirm=False` returns a dict with a `preview` key showing exactly what will
   be sent. No side effects.
-- `confirm=True` elicits explicit user approval via the MCP host's
-  `ctx.elicit` flow, then executes.
+- `confirm=True` executes the mutation. The agent is responsible for surfacing
+  the preview to the user and only re-invoking with `confirm=True` after
+  the user has agreed.
 
 ## Rate limits
 

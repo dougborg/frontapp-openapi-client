@@ -82,7 +82,6 @@ class TestPreviewPath:
 
         assert result["confirmed"] is False
         assert "preview" in result
-        context.elicit.assert_not_called()
 
 
 class TestPreviewIncludesTeammateCount:
@@ -153,17 +152,3 @@ class TestConfirmedExecution:
             "inb_a", teammate_ids=["tea_1"]
         )
         assert result == {"confirmed": True, "revoked": True}
-
-
-class TestDeclinePath:
-    async def test_grant_access_declined(self, inboxes_tools):
-        context, lifespan = create_mock_context(elicit_confirm=False)
-        lifespan.client = AsyncMock(
-            side_effect=AssertionError("client invoked after decline")
-        )
-
-        result = await inboxes_tools["grant_inbox_access"](
-            context, inbox_id="inb_a", teammate_ids=["tea_1"], confirm=True
-        )
-        assert result["confirmed"] is False
-        assert result["result"] == "cancelled"
