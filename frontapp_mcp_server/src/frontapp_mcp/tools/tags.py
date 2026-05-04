@@ -37,6 +37,7 @@ from frontapp_mcp.projections import (
 )
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import (
+    DESTRUCTIVE,
     confirm_or_preview,
 )
 from frontapp_public_api_client.helpers.tags import HighlightLiteral
@@ -175,6 +176,7 @@ def register_tools(mcp: FastMCP) -> None:
             "tags untouched. For full-set replacement use "
             "update_conversation(tag_ids=[...]) in the conversations vertical."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def add_tag_to_conversation(
         context: Context,
@@ -204,6 +206,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Remove a single tag from a conversation. DELTA — leaves "
             "other tags untouched."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def remove_tag_from_conversation(
         context: Context,
@@ -235,6 +238,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Create a workspace-scoped tag. WORKSPACE-WIDE — visible to "
             "every teammate immediately."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_tag(
         context: Context,
@@ -276,6 +280,7 @@ def register_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         name="create_child_tag",
         description="Create a child tag under an existing parent. WORKSPACE-WIDE.",
+        annotations=DESTRUCTIVE,
     )
     async def create_child_tag(
         context: Context,
@@ -316,6 +321,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Update mutable fields on a tag. WORKSPACE-WIDE — a rename "
             "ripples to every conversation instantly."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def update_tag(
         context: Context,
@@ -377,6 +383,7 @@ def register_tools(mcp: FastMCP) -> None:
             "DESTRUCTIVE: permanently delete a tag. Removes it from every "
             "conversation that had it. Irreversible. WORKSPACE-WIDE."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def delete_tag(
         context: Context,

@@ -1,10 +1,18 @@
-"""Shared schemas for Frontapp MCP tools.
+"""Shared schemas and annotations for Frontapp MCP tools.
 
 This module contains helpers shared across multiple tool modules to ensure
 consistency and avoid duplication.
 """
 
 from typing import Any
+
+from mcp.types import ToolAnnotations
+
+# Canonical destructive-mutation annotation. Apply to every @mcp.tool decorator
+# that takes a `confirm:` parameter so spec-compliant clients prompt the user
+# natively before invoking. This is the client-side complement to the in-band
+# two-call gate enforced by `confirm_or_preview` — see ADR-0016.
+DESTRUCTIVE = ToolAnnotations(destructiveHint=True)
 
 
 def confirm_or_preview(
@@ -21,8 +29,9 @@ def confirm_or_preview(
     The contract is **two-call**: the LLM first invokes the tool with
     ``confirm=False`` to get the preview, surfaces it to the user, and
     only re-invokes with ``confirm=True`` after the user agrees. Mutation
-    tools should also carry the MCP ``destructiveHint`` annotation so
-    spec-compliant clients prompt natively (tracked separately).
+    tools should also carry the MCP ``destructiveHint`` annotation
+    (via ``DESTRUCTIVE`` in this module) so spec-compliant clients
+    prompt natively.
 
     Why no server-side elicitation: ``ctx.elicit`` is unreliable across
     MCP clients (notably broken in Claude Desktop). Per the MCP Tools
@@ -52,4 +61,4 @@ def confirm_or_preview(
     return None
 
 
-__all__ = ["confirm_or_preview"]
+__all__ = ["DESTRUCTIVE", "confirm_or_preview"]

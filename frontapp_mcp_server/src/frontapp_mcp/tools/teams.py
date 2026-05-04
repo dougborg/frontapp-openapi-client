@@ -23,7 +23,7 @@ from fastmcp import Context, FastMCP
 from pydantic import Field
 
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import confirm_or_preview
+from frontapp_mcp.tools.schemas import DESTRUCTIVE, confirm_or_preview
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -38,6 +38,7 @@ def register_tools(mcp: FastMCP) -> None:
             "frontapp://teams to translate a team name into a "
             "`tim_*` id and frontapp://teammates for `tea_*` ids."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def add_team_members(
         context: Context,
@@ -74,6 +75,7 @@ def register_tools(mcp: FastMCP) -> None:
             "from their last team typically leaves them workspace-"
             "scoped only — verify with the user if that's intended."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def remove_team_members(
         context: Context,

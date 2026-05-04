@@ -22,7 +22,7 @@ from fastmcp import Context, FastMCP
 from pydantic import Field
 
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import confirm_or_preview
+from frontapp_mcp.tools.schemas import DESTRUCTIVE, confirm_or_preview
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -40,6 +40,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Two-step confirm because the event may trigger workflows "
             "that mutate conversation state."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def trigger_application_event(
         context: Context,

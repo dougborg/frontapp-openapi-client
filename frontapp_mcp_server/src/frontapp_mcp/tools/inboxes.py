@@ -27,7 +27,7 @@ from frontapp_mcp.projections import (
     to_summary,
 )
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import confirm_or_preview
+from frontapp_mcp.tools.schemas import DESTRUCTIVE, confirm_or_preview
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -140,6 +140,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Create a workspace-scoped inbox. Channels still need to be "
             "wired up separately. WORKSPACE-WIDE."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_inbox(
         context: Context,
@@ -173,6 +174,7 @@ def register_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         name="create_team_inbox",
         description="Create an inbox owned by a team (`team_id` like 'tim_abc').",
+        annotations=DESTRUCTIVE,
     )
     async def create_team_inbox(
         context: Context,
@@ -208,6 +210,7 @@ def register_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         name="grant_inbox_access",
         description="Grant inbox access to one or more teammates.",
+        annotations=DESTRUCTIVE,
     )
     async def grant_inbox_access(
         context: Context,
@@ -239,6 +242,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Revoke inbox access from one or more teammates. The named "
             "teammates lose visibility into this inbox immediately."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def revoke_inbox_access(
         context: Context,

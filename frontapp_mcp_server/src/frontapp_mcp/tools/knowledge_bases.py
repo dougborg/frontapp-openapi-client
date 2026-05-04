@@ -39,7 +39,7 @@ from frontapp_mcp.projections import (
     to_kb_ref,
 )
 from frontapp_mcp.services import get_services
-from frontapp_mcp.tools.schemas import confirm_or_preview
+from frontapp_mcp.tools.schemas import DESTRUCTIVE, confirm_or_preview
 
 
 def _content_preview(content: str | None, max_chars: int = 200) -> str | None:
@@ -209,6 +209,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Two-step confirm: confirm=False returns a preview; "
             "confirm=True creates the draft."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_kb_article(
         context: Context,
@@ -269,6 +270,7 @@ def register_tools(mcp: FastMCP) -> None:
             "already has. (To publish a draft, a human flips it in "
             "Front's UI.) Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def update_kb_article(
         context: Context,
@@ -317,6 +319,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Create a new category within a knowledge base. Categories "
             "organize articles. Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def create_kb_category(
         context: Context,
@@ -364,6 +367,7 @@ def register_tools(mcp: FastMCP) -> None:
             "Update an existing KB category (name and/or description). "
             "Two-step confirm."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def update_kb_category(
         context: Context,

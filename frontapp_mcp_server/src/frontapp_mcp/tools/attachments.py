@@ -24,6 +24,7 @@ from pydantic import Field
 
 from frontapp_mcp.services import get_services
 from frontapp_mcp.tools.schemas import (
+    DESTRUCTIVE,
     confirm_or_preview,
 )
 
@@ -41,6 +42,7 @@ def register_tools(mcp: FastMCP) -> None:
             "the file will be written; confirm=True performs the download. "
             "Returns the saved path and byte count."
         ),
+        annotations=DESTRUCTIVE,
     )
     async def download_attachment(
         context: Context,

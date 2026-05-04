@@ -376,6 +376,12 @@ Every tool that changes data on the Front side takes `confirm: bool = False`.
   the preview to the user and only re-invoking with `confirm=True` after
   the user has agreed.
 
+Mutation tools also carry the MCP `destructiveHint=true` annotation so
+spec-compliant clients (Claude Desktop with appropriate settings, Cline,
+Cursor MCP integration, and others) prompt the user before invoking. The
+in-band `confirm=False` preview remains the canonical contract — the
+annotation is a client-side complement, not a replacement.
+
 ## Rate limits
 
 Front enforces per-endpoint rate limits documented in its API reference. The
