@@ -764,7 +764,7 @@ wheels = [
 
 [[package]]
 name = "frontapp-mcp-server"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "frontapp_mcp_server" }
 dependencies = [
     { name = "aiosqlite" },
@@ -791,7 +791,7 @@ requires-dist = [
 
 [[package]]
 name = "frontapp-openapi-client"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
