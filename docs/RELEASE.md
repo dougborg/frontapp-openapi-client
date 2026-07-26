@@ -11,8 +11,9 @@ release PR:
 1. **frontapp-client** (component `ts`) — the TypeScript client, in
    `packages/frontapp-client/`
 
-Configuration lives in `release-please-config.json` and `.release-please-manifest.json` at
-the repo root. (Not linked: they sit outside the docs tree, and mkdocs runs in strict mode.)
+Configuration lives in `release-please-config.json` and `.release-please-manifest.json`
+at the repo root. (Not linked: they sit outside the docs tree, and mkdocs runs in strict
+mode.)
 
 ## How releases work
 
