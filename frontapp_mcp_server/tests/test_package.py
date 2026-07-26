@@ -5,7 +5,7 @@ def test_package_import():
     """Test that the main package can be imported."""
     import frontapp_mcp
 
-    # Version is dynamically updated by semantic-release, just check format
+    # Version is dynamically updated by release-please, just check format
     assert frontapp_mcp.__version__  # Not empty
     assert "." in frontapp_mcp.__version__  # Has version separators
 
