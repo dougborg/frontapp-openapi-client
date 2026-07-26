@@ -81,7 +81,7 @@ jobs:
             exit 0
           fi
           git config user.name "dougborg-release-please[bot]"
-          git config user.email "dougborg-release-please[bot]@users.noreply.github.com"
+          git config user.email "309159260+dougborg-release-please[bot]@users.noreply.github.com"
           git add uv.lock frontapp_mcp_server/pyproject.toml
           git commit -m "chore(release): sync uv.lock and MCP client pin"
           git push origin "HEAD:$HEAD_REF"
