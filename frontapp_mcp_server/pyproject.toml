@@ -34,7 +34,7 @@ classifiers = [
 ]
 dependencies = [
     "fastmcp>=2.13.0",
-    "frontapp-openapi-client>=0.51.0",
+    "frontapp-openapi-client>=0.1.0",
     "prefab-ui>=0.19,<0.20",
     "pydantic>=2.12.0",
     "python-dotenv>=1.0.0",
@@ -75,50 +75,6 @@ markers = [
     "integration: Integration tests requiring API key",
 ]
 
-[tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-dist_path = "dist/"
-upload_to_pypi = false
-upload_to_repository = false
-remove_dist = false
-commit_author = "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
-commit_message = "chore(release): mcp v{version}"
-build_command = "pnpm exec prettier --write CHANGELOG.md"
-major_on_zero = false
-allow_zero_version = true
-tag_format = "mcp-v{version}"
-
-[tool.semantic_release.commit_parser_options]
-allowed_tags = [
-  "build",
-  "chore",
-  "ci",
-  "docs",
-  "feat",
-  "fix",
-  "perf",
-  "style",
-  "refactor",
-  "test",
-]
-minor_tags = ["feat"]
-patch_tags = ["fix", "perf"]
-# Only process commits with (mcp) scope
-# Commits with (client) scope or no scope are handled by the client config
-default_bump_level = 0
-
-[tool.semantic_release.changelog]
-exclude_commit_patterns = []
-mode = "update"
-
-[tool.semantic_release.changelog.default_templates]
-changelog_file = "CHANGELOG.md"
-
-[tool.semantic_release.branches.main]
-match = "main"
-prerelease_token = "alpha"
-prerelease = false
-
-[tool.semantic_release.publish]
-dist_glob_patterns = ["dist/*"]
-upload_to_vcs_release = true
+# Versioning, changelog generation, and tagging are handled by release-please
+# (see release-please-config.json and .release-please-manifest.json at the repo
+# root) rather than python-semantic-release. See docs/RELEASE.md.

@@ -40,7 +40,6 @@ docs/                                # Shared/monorepo documentation
 ├── index.md                         # Home page
 ├── CONTRIBUTING.md                  # Contributing guidelines
 ├── CODE_OF_CONDUCT.md              # Code of conduct
-├── MONOREPO_SEMANTIC_RELEASE.md    # Semantic release guide
 ├── UV_USAGE.md                     # uv package manager guide
 ├── PYPI_SETUP.md                   # PyPI publishing setup
 ├── RELEASE.md                      # Release documentation

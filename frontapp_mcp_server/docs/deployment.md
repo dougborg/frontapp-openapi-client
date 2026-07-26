@@ -1,76 +1,42 @@
 # MCP Server Deployment Guide
 
-This document describes how the Frontapp MCP Server is released and published to PyPI
-using **automated semantic-release**.
-
-## Overview
-
-Releases are **fully automated** using monorepo semantic-release. You don't manually
-update version numbers or publish to PyPI - the CI/CD pipeline handles everything based
-on conventional commits.
+This document describes how the Frontapp MCP Server is released and published to PyPI.
+For the full mechanics (release-please, the release PR, tag-triggered publishing), see
+[docs/RELEASE.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/RELEASE.md) -
+this page covers what's specific to the MCP package.
 
 ## How Releases Work
 
-### Automated Release Process
+Releases are automated using **release-please** in manifest mode, one aggregated release
+PR per set of changes across all three packages in this repo. In short:
 
-When a PR is merged to `main` with MCP-related changes:
+1. Commits touching `frontapp_mcp_server/` accumulate on release-please's release PR,
+   which bumps `frontapp_mcp_server/pyproject.toml`'s version and updates
+   `frontapp_mcp_server/CHANGELOG.md`
+1. Merging that PR creates the `mcp-v{version}` tag and a **draft** GitHub Release at
+   the merge commit
+1. The tag push triggers `.github/workflows/publish.yml`'s `publish-mcp` job, which
+   builds the package, publishes to PyPI via OIDC, attaches the build artifacts to the
+   draft release, and publishes the release
+1. `publish-mcp-docker` then builds and pushes a multi-arch image to
+   `ghcr.io/dougborg/frontapp-mcp-server`
 
-1. **CI Tests Run**: All quality checks, tests, and security scans must pass
-1. **Semantic-Release Analysis**: Analyzes commits with `(mcp)` scope since last release
-1. **Version Calculation**: Determines next version based on commit types:
-   - `feat(mcp):` → MINOR bump (0.1.0 → 0.2.0)
-   - `fix(mcp):` → PATCH bump (0.1.0 → 0.1.1)
-   - `feat(mcp)!:` → MAJOR bump (0.1.0 → 1.0.0)
-1. **Automatic Updates**:
-   - Version updated in `pyproject.toml`
-   - Changelog generated/updated
-   - Git commit and tag created (`mcp-v{version}`)
-   - Changes pushed to main
-1. **Build and Publish**:
-   - Package built with `uv build`
-   - Published to PyPI using Trusted Publisher (OIDC, no tokens)
-   - GitHub release created with auto-generated notes
+Which commit types bump the version:
 
-## For Developers
+| Commit Type | Example                    | Release? | Version Bump        |
+| ----------- | -------------------------- | -------- | ------------------- |
+| `feat`      | Add new order tool         | ✅       | MINOR (0.1.0→0.2.0) |
+| `fix`       | Fix auth error             | ✅       | PATCH (0.1.0→0.1.1) |
+| `perf`      | Optimize query performance | ✅       | PATCH (0.1.0→0.1.1) |
+| `feat!`     | Breaking API change        | ✅       | MAJOR (0.1.0→1.0.0) |
+| `docs`      | Update documentation       | ❌       | No release          |
+| `test`      | Add unit tests             | ❌       | No release          |
+| `chore`     | Update dependencies        | ❌       | No release          |
 
-### How to Trigger a Release
-
-**Just write good commit messages with the `(mcp)` scope:**
-
-```bash
-# Feature (minor version bump)
-git commit -m "feat(mcp): add search_products tool"
-
-# Bug fix (patch version bump)
-git commit -m "fix(mcp): correct stock level calculation"
-
-# Breaking change (major version bump)
-git commit -m "feat(mcp)!: redesign tool request models
-
-BREAKING CHANGE: Tool request parameters now require explicit types"
-
-# No release (documentation only)
-git commit -m "docs(mcp): update README examples"
-```
-
-**That's it!** Merge your PR and the release happens automatically.
-
-### Which Commits Trigger Releases?
-
-| Commit Type   | Example                    | Release? | Version Bump        |
-| ------------- | -------------------------- | -------- | ------------------- |
-| `feat(mcp):`  | Add new order tool         | ✅       | MINOR (0.1.0→0.2.0) |
-| `fix(mcp):`   | Fix auth error             | ✅       | PATCH (0.1.0→0.1.1) |
-| `perf(mcp):`  | Optimize query performance | ✅       | PATCH (0.1.0→0.1.1) |
-| `feat(mcp)!:` | Breaking API change        | ✅       | MAJOR (0.1.0→1.0.0) |
-| `docs(mcp):`  | Update documentation       | ❌       | No release          |
-| `test(mcp):`  | Add unit tests             | ❌       | No release          |
-| `chore(mcp):` | Update dependencies        | ❌       | No release          |
-| `feat:` (no   | Feature without scope      | ❌       | Releases client     |
-| scope)        |                            |          | instead             |
-
-**IMPORTANT**: Always use the `(mcp)` scope for MCP server changes! Without it, the
-client package will be released instead.
+Unlike the old per-package semantic-release setup, whether a commit bumps the MCP
+package no longer depends on a `(mcp)` commit _scope_ - it depends on whether the commit
+**touches files under `frontapp_mcp_server/`**. A `(mcp)` scope is still good practice
+for changelog readability, but it isn't load-bearing anymore.
 
 ## Verify a Release
 
@@ -177,140 +143,26 @@ deactivate
 rm -rf /tmp/test-local
 ```
 
-## Emergency Manual Release
+## If a Release or Publish Fails
 
-If the automated workflow fails, you can trigger a manual release:
+See the Troubleshooting section of
+[docs/RELEASE.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/RELEASE.md#troubleshooting)
+for the general flow. The most common MCP-specific case: the `publish-mcp` job fails its
+PyPI-publish step because the PyPI Trusted Publisher for `frontapp-mcp-server` (workflow
+`publish.yml`, job `publish-mcp`) hasn't been configured yet. Configure it, then re-run
+the failed workflow run - the tag and draft release already exist, so publishing picks
+up from there without creating a duplicate.
 
-### Option 1: Re-run GitHub Workflow
+## PyPI Trusted Publisher
 
-```bash
-# Re-run the most recent workflow
-gh workflow run release.yml
-
-# Or check workflow runs and re-run a specific one
-gh run list --workflow=release.yml
-gh run rerun <run-id> --failed
-```
-
-### Option 2: Manual Tag (Last Resort)
-
-Only use if semantic-release is completely broken:
-
-```bash
-# WARNING: This bypasses semantic-release and version management!
-# Only use in emergencies after coordinating with maintainers
-
-# Manually update version in pyproject.toml first
-# Then create and push tag
-git tag mcp-v0.1.0
-git push origin mcp-v0.1.0
-
-# This triggers the backup release-mcp.yml workflow
-```
-
-**Note**: Manual tags bypass changelog generation and version file updates. Use
-sparingly.
-
-## Troubleshooting
-
-### Release Not Triggered
-
-**Symptom**: PR merged but no release created
-
-**Causes**:
-
-1. No `feat(mcp):` or `fix(mcp):` commits since last release
-1. Forgot the `(mcp)` scope - released client instead
-1. CI tests failed - release only runs after tests pass
-
-**Solutions**:
-
-- Check commit messages: `git log --oneline main`
-- Verify scope is present: `git log --grep="(mcp)" main`
-- Check GitHub Actions for failures
-
-### Wrong Package Released
-
-**Symptom**: Client package released instead of MCP server
-
-**Cause**: Missing `(mcp)` scope in commit message
-
-**Solution**: Use `feat(mcp):` or `fix(mcp):` for all MCP changes
-
-### PyPI Publish Failed
-
-**Symptom**: Release created but PyPI publish failed
-
-**Causes**:
-
-1. PyPI Trusted Publisher misconfigured
-1. Version already exists on PyPI (can't overwrite)
-1. PyPI service outage
-
-**Solutions**:
-
-1. Check PyPI Trusted Publisher configuration (no environment, correct repo/workflow)
-1. Check if version exists: https://pypi.org/project/frontapp-mcp-server/#history
-1. Check PyPI status: https://status.python.org/
-1. Re-run the workflow: `gh run rerun <run-id> --failed`
-
-### Tests Failed in CI
-
-**Symptom**: PR checks failing, blocking release
-
-**Solutions**:
-
-1. Run tests locally: `uv run pytest tests/`
-1. Check test output in GitHub Actions
-1. Fix the issue and push new commit
-1. Ensure commit uses `(mcp)` scope for release
-
-### Version Conflict
-
-**Symptom**: "Version X.Y.Z already exists on PyPI"
-
-**Cause**: PyPI doesn't allow re-uploading the same version
-
-**Solutions**:
-
-1. This shouldn't happen with semantic-release (it always increments)
-1. If it does, check if someone manually published that version
-1. Force next version with additional commit: `fix(mcp): force version bump`
-
-## Release Workflow Details
-
-### Semantic-Release Configuration
-
-Located in `frontapp_mcp_server/pyproject.toml`:
-
-```toml
-[tool.semantic_release]
-version_toml = ["frontapp_mcp_server/pyproject.toml:project.version"]
-tag_format = "mcp-v{version}"
-commit_message = "chore(release): mcp v{version}"
-build_command = "cd frontapp_mcp_server && uv build"
-# Only processes commits with (mcp) scope
-```
-
-### GitHub Workflow
-
-Located in `.github/workflows/release.yml`:
-
-- **Trigger**: Every push to `main` branch
-- **Jobs**:
-  1. `test` - Runs full CI pipeline
-  1. `release-mcp` - Semantic-release for MCP server
-  1. `publish-mcp-pypi` - Publishes to PyPI if released
-
-### PyPI Trusted Publisher
-
-Configured at: https://pypi.org/manage/project/frontapp-mcp-server/settings/publishing/
+To be configured at:
+https://pypi.org/manage/project/frontapp-mcp-server/settings/publishing/
 
 - **Owner**: `dougborg`
 - **Repository**: `frontapp-openapi-client`
-- **Workflow**: `release.yml`
-- **Job**: `publish-mcp-pypi`
-- **Environment**: (none)
+- **Workflow**: `publish.yml`
+- **Job**: `publish-mcp`
+- **Environment**: `pypi-mcp`
 
 ## Version Numbering
 
@@ -318,9 +170,10 @@ This project uses semantic versioning with pre-release identifiers:
 
 ### Version Format: `MAJOR.MINOR.PATCH[-prerelease]`
 
-- **MAJOR**: Breaking changes (`feat(mcp)!:` or `BREAKING CHANGE:`)
-- **MINOR**: New features (`feat(mcp):`)
-- **PATCH**: Bug fixes (`fix(mcp):`, `perf(mcp):`)
+- **MAJOR**: Breaking changes (`feat!:` or `BREAKING CHANGE:` touching
+  `frontapp_mcp_server/`)
+- **MINOR**: New features (`feat:` touching `frontapp_mcp_server/`)
+- **PATCH**: Bug fixes (`fix:`, `perf:` touching `frontapp_mcp_server/`)
 
 ### Pre-release Phases:
 
@@ -331,47 +184,28 @@ This project uses semantic versioning with pre-release identifiers:
 
 **Current Phase**: Alpha - API may change between versions
 
-### Example Version Progression:
-
-```
-0.1.0a1  (initial release)
-  ↓ feat(mcp): add search
-0.2.0a1  (new feature added)
-  ↓ fix(mcp): auth error
-0.2.1a1  (bug fix)
-  ↓ feat(mcp): sales orders
-0.3.0a1  (new feature)
-  ↓ ready for beta
-0.3.0b1  (beta testing)
-  ↓ fix(mcp): critical bug
-0.3.1b1  (bug fix in beta)
-  ↓ ready for release
-0.3.1    (stable release)
-```
-
 ## Checklist for Contributors
 
 Before submitting a PR that will trigger a release:
 
 - [ ] All tests pass locally: `uv run pytest tests/`
-- [ ] Commit messages use `(mcp)` scope
 - [ ] Commit messages follow conventional commits
 - [ ] README updated if adding new features
 - [ ] Integration tests added/updated if needed
 - [ ] Breaking changes documented in commit body (if any)
 
-After PR is merged:
+After the release PR is merged:
 
-- [ ] Check GitHub Actions for successful release
+- [ ] Check GitHub Actions for a successful `publish.yml` run
 - [ ] Verify new version on PyPI
 - [ ] Test installation from PyPI
 - [ ] Check GitHub Release notes
 
 ## Related Documentation
 
-- **Monorepo Semantic-Release**:
-  [docs/MONOREPO_SEMANTIC_RELEASE.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/MONOREPO_SEMANTIC_RELEASE.md) -
-  Comprehensive guide
+- **Release Process**:
+  [docs/RELEASE.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/RELEASE.md) -
+  Full release-please flow across all three packages
 - **Contributing**:
   [docs/CONTRIBUTING.md](https://github.com/dougborg/frontapp-openapi-client/blob/main/docs/CONTRIBUTING.md) -
   Commit message format

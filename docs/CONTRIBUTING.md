@@ -274,15 +274,19 @@ uv run python scripts/regenerate_client.py
 
 ## Release Process
 
-Releases are fully automated using python-semantic-release. See [RELEASE.md](RELEASE.md)
-for complete documentation.
+Releases are automated using
+[release-please](https://github.com/googleapis/release-please) in manifest mode. See
+[RELEASE.md](RELEASE.md) for complete documentation.
 
 **Quick summary for contributors:**
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/) format
-- `feat:` commits trigger minor version bump (0.x.0)
-- `fix:` commits trigger patch version bump (0.0.x)
-- Releases happen automatically when PR is merged to `main`
+- `feat:` commits trigger a minor version bump (0.x.0); `fix:`/`perf:` trigger a patch
+  bump (0.0.x); which package(s) bump depends on which paths your commit touches
+- Merging a normal PR to `main` updates (or opens) release-please's aggregated release
+  PR — it does not publish anything by itself
+- Merging _that_ release PR is what creates tags, GitHub Releases, and triggers
+  publishing
 
 ## Getting Help
 

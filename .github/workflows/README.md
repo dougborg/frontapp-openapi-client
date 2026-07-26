@@ -41,42 +41,65 @@ This directory contains the CI/CD workflows for the Frontapp OpenAPI Client proj
 **Note:** This workflow only runs when documentation files change (docs/\*\*,
 mkdocs.yml, etc.) to avoid unnecessary builds.
 
-### [release.yml](release.yml)
+### [release-please.yml](release-please.yml)
 
-**Trigger:**
+**Trigger:** Push to `main` branch
 
-- Push to `main` branch
-- Manual workflow dispatch
+**Purpose:** The only workflow that watches `main` for release purposes. Opens or
+updates **one aggregated release PR** covering all three packages
+(`separate-pull-requests: false` in `release-please-config.json`); once that PR is
+merged, creates a tag + draft GitHub Release per changed package
+(`client-v*`/`mcp-v*`/`ts-v*`) at the merge commit. Never pushes to `main` itself.
 
-**Purpose:** Automated releases using semantic versioning for both packages
+**Permissions:** `contents: write`, `pull-requests: write`
+
+**Note:** See [docs/RELEASE.md](../../docs/RELEASE.md) for the full flow. Configuration:
+[`release-please-config.json`](../../release-please-config.json) and
+[`.release-please-manifest.json`](../../.release-please-manifest.json) at the repo root.
+
+### [release-pr-prepare.yml](release-pr-prepare.yml)
+
+**Trigger:** `pull_request` (opened/synchronize/reopened) against `main`, filtered to
+release-please's own branch (`release-please--*`)
+
+**Purpose:** Glue that keeps the release PR internally consistent - resyncs `uv.lock` to
+the versions release-please just bumped, and keeps
+`frontapp_mcp_server/pyproject.toml`'s `frontapp-openapi-client>=X` floor equal to the
+client version the PR proposes (fixes #165, and keeps it fixed going forward). Both land
+as a commit on the release PR branch, never on `main`.
+
+**Permissions:** `contents: write`
+
+### [publish.yml](publish.yml)
+
+**Trigger:** Push of a `client-v*`, `mcp-v*`, or `ts-v*` tag - i.e. only after a
+release-please release PR merges. Never triggered by a `main` push.
+
+**Purpose:** The only workflow that builds and ships artifacts.
 
 **Jobs:**
 
-1. **test**: Run full CI pipeline
-1. **release-client**: Create client package release
-   - Uses Python Semantic Release
-   - Creates `client-v*` tags
-   - Builds distribution packages
-1. **release-mcp**: Create MCP server package release
-   - Uses Python Semantic Release
-   - Creates `mcp-v*` tags
-   - Builds distribution packages
-1. **publish-client-pypi**: Publish client to PyPI (only if client released)
-   - Uses trusted publishing (OIDC)
-   - Includes package attestations
-1. **publish-mcp-pypi**: Publish MCP to PyPI (only if MCP released)
-   - Uses trusted publishing (OIDC)
-   - Includes package attestations
-1. **publish-mcp-docker**: Publish MCP Docker image to GHCR (only if MCP released)
+1. **publish-client** (`client-v*`): build with `uv build`, publish to PyPI via OIDC,
+   attach dist artifacts to the still-draft release, publish the release
+1. **publish-mcp** (`mcp-v*`): same, for the MCP server package
+1. **publish-mcp-docker** (`mcp-v*`, needs `publish-mcp`): build and push a multi-arch
+   image to `ghcr.io/dougborg/frontapp-mcp-server`
+1. **publish-ts** (`ts-v*`): build with `pnpm`, publish to npm via OIDC, attach the
+   packed tarball to the still-draft release, publish the release
 
-**Permissions:**
+Each publish job builds its assets and publishes to the registry **before** attaching
+assets to the release and flipping it out of draft - draft releases accept asset
+uploads, published releases are
+[immutable](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+and permanently reject them.
 
-- test: `contents: read`
-- release-\*: `contents: write`, `id-token: write`
-- publish-\*: `id-token: write`
+**Permissions:** `id-token: write` + `contents: write` per publish-\* job;
+`contents: read` + `packages: write` for `publish-mcp-docker`
 
-**Note:** This workflow supports monorepo releases using commit scopes. See
-[MONOREPO_SEMANTIC_RELEASE.md](../../docs/MONOREPO_SEMANTIC_RELEASE.md) for details.
+**Prerequisite:** PyPI Trusted Publishers for `frontapp-openapi-client` and
+`frontapp-mcp-server`, and an npm Trusted Publisher for `frontapp-client`, must be
+registered before these jobs can succeed - see
+[docs/RELEASE.md](../../docs/RELEASE.md#manual-prerequisites-before-the-first-real-release).
 
 ### [security.yml](security.yml)
 
@@ -91,37 +114,6 @@ mkdocs.yml, etc.) to avoid unnecessary builds.
 - License compliance checks
 
 **Permissions:** `contents: read`, `security-events: write`
-
-### [update-mcp-dependency.yml](update-mcp-dependency.yml)
-
-**Trigger:** After successful completion of Release workflow
-
-**Purpose:** Automatically update MCP's client dependency when a new client version is
-released
-
-**Steps:**
-
-- Check for new `client-v*` tags created in the Release workflow
-- Extract the new client version number
-- Update `frontapp_mcp_server/pyproject.toml` dependency specification
-- Update `uv.lock` file
-- Create a PR with conventional commit message
-  `feat(mcp): update client dependency to vX.Y.Z`
-
-**Permissions:** `contents: write`, `pull-requests: write`
-
-**How it works:**
-
-1. Detects if Release workflow created a new `client-v*` tag
-1. Compares tag timestamp with workflow start time to confirm it's new
-1. Checks current MCP dependency version
-1. Skips if dependency is already up to date
-1. Updates dependency and creates PR for review
-1. When PR is merged, triggers new MCP release via `feat(mcp):` commit
-
-See
-[Automated Dependency Management](../../docs/MONOREPO_SEMANTIC_RELEASE.md#automated-dependency-management)
-for details.
 
 ### [copilot-setup-steps.yml](copilot-setup-steps.yml)
 
@@ -140,64 +132,59 @@ for details.
 ```mermaid
 graph TD
     A[Push to main] --> B[CI checks]
-    A --> C[Release workflow]
+    A --> C[release-please.yml]
     A --> D[Docs workflow]
 
-    B --> E{Tests pass?}
-    E -->|Yes| F[Continue]
-    E -->|No| G[Fail]
+    C --> E{Release-worthy commits since last release?}
+    E -->|Yes| F[Open/update aggregated release PR]
+    E -->|Release PR just merged| G[Create tags + draft Releases]
+    E -->|No| H[No-op]
 
-    C --> H{Semantic Release}
-    H -->|Client changes| I[Create Client Release]
-    H -->|MCP changes| J[Create MCP Release]
-    H -->|No changes| K[Skip]
+    G --> I[client-v* tag]
+    G --> J[mcp-v* tag]
+    G --> K[ts-v* tag]
 
-    I --> L[Publish Client to PyPI]
-    I --> M[Trigger Update MCP Dependency]
+    I --> L[publish.yml: publish-client]
+    J --> M[publish.yml: publish-mcp]
+    K --> N[publish.yml: publish-ts]
 
-    J --> N[Publish MCP to PyPI]
-    J --> O[Publish MCP to GHCR]
+    M --> O[publish.yml: publish-mcp-docker]
 
-    M --> P{Dependency outdated?}
-    P -->|Yes| Q[Create PR: feat mcp: update client]
-    P -->|No| R[Skip]
+    F --> P[release-pr-prepare.yml]
+    P --> Q[uv.lock + MCP client pin synced on PR branch]
 
-    Q --> S[Merge PR]
-    S --> T[Trigger MCP Release]
-
-    D --> U{Docs changed?}
-    U -->|Yes| V[Build & Deploy]
-    U -->|No| W[Skip]
+    D --> R{Docs changed?}
+    R -->|Yes| S[Build & Deploy]
+    R -->|No| T[Skip]
 
     style A fill:#e1f5ff
-    style I fill:#d4edda
-    style J fill:#d4edda
+    style F fill:#fff3cd
+    style G fill:#d4edda
     style L fill:#d4edda
+    style M fill:#d4edda
     style N fill:#d4edda
     style O fill:#d4edda
-    style V fill:#d4edda
-    style Q fill:#fff3cd
+    style S fill:#d4edda
 ```
 
 ## Configuration
 
-### Secrets Required
+### Secrets and Variables Required
 
 - `GITHUB_TOKEN` - Automatically provided by GitHub Actions
-- PyPI publishing uses Trusted Publishers (no manual tokens needed)
+- `vars.RELEASE_PLEASE_APP_ID` / `secrets.RELEASE_PLEASE_APP_PRIVATE_KEY` - GitHub App
+  credentials for the `dougborg-release-please` App (ID 4392719), used to open/update
+  the release PR and to push the `uv.lock`/MCP-pin sync commit to it
+- PyPI/npm publishing uses Trusted Publishers (OIDC) - no manual tokens. **Not yet
+  registered** for any of the three packages; see
+  [docs/RELEASE.md](../../docs/RELEASE.md#manual-prerequisites-before-the-first-real-release)
 
 ### Environments
 
-- **PyPI Release** - Protected environment for PyPI publishing
-  - URL: https://pypi.org/p/frontapp-openapi-client
-- **github-pages** - GitHub Pages deployment environment
-
-### Branch Protection
-
-- `main` branch requires:
-  - CI checks to pass
-  - Up-to-date branches
-  - No direct pushes (PRs only)
+`publish.yml` scopes each registry publish to a GitHub Environment (`pypi-client`,
+`pypi-mcp`, `npm-ts`) - the recommended way to scope OIDC trust for Trusted Publishing.
+These aren't required to exist for the workflow YAML to be valid; GitHub creates an
+environment automatically the first time a job references it.
 
 ## Local Testing
 
@@ -209,10 +196,11 @@ act pull_request -W .github/workflows/ci.yml
 
 # Test docs build (without deploy)
 act workflow_dispatch -W .github/workflows/docs.yml
-
-# Test release (dry-run)
-act push -W .github/workflows/release.yml
 ```
+
+`release-please.yml` and `publish.yml` are not practical to run under `act` - they
+depend on the GitHub App token minting action and, for `publish.yml`, on OIDC-based
+registry auth that only works inside real GitHub Actions runs.
 
 ## Maintenance
 
@@ -230,47 +218,21 @@ When adding new workflows:
 
 1. Create the workflow file
 1. Update this README
-1. Test locally with `act`
+1. Test locally with `act` where practical
 1. Create a PR for review
 1. Update branch protection rules if needed
 
 ## Troubleshooting
 
-### Common Issues
-
-**Dependency update PR not created:**
-
-- Check that Release workflow completed successfully
-- Verify a new `client-v*` tag was created
-- Check if MCP dependency is already up to date
-- Review update-mcp-dependency workflow logs
-- Ensure `SEMANTIC_RELEASE_TOKEN` has `pull-requests: write` permission
-
-**MCP release not triggering after dependency update:**
-
-- Ensure the dependency update PR was merged to `main`
-- Check that PR commit message follows format:
-  `feat(mcp): update client dependency to vX.Y.Z`
-- Review release workflow logs for MCP changes detection
-- Verify semantic-release configuration in `frontapp_mcp_server/pyproject.toml`
+See [docs/RELEASE.md](../../docs/RELEASE.md#troubleshooting) for release-specific
+troubleshooting (no release PR appearing, stale `uv.lock`/pin, publish auth failures,
+releases stuck in draft).
 
 **Docs not deploying:**
 
 - Check that `docs/**` files were actually changed
 - Verify GitHub Pages is enabled in repository settings
 - Check workflow logs for build errors
-
-**Release not creating:**
-
-- Ensure commits follow conventional commit format
-- Check semantic-release configuration in `pyproject.toml`
-- Review workflow logs for PSR errors
-
-**PyPI publish failing:**
-
-- Verify Trusted Publisher is configured in PyPI
-- Check that release was actually created
-- Review PyPI environment protection rules
 
 ### Debug Mode
 
@@ -287,5 +249,5 @@ ACTIONS_RUNNER_DEBUG=true
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [uv Documentation](https://docs.astral.sh/uv/)
-- [Python Semantic Release](https://python-semantic-release.readthedocs.io/)
+- [release-please](https://github.com/googleapis/release-please)
 - [MkDocs](https://www.mkdocs.org/)

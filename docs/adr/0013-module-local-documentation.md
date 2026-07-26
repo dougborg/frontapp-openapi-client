@@ -75,7 +75,6 @@ frontapp-openapi-client/
 │   ├── index.md                       # Landing page
 │   ├── CONTRIBUTING.md                # Shared contribution guide
 │   ├── CODE_OF_CONDUCT.md             # Code of conduct
-│   ├── MONOREPO_SEMANTIC_RELEASE.md   # Shared release guide
 │   ├── UV_USAGE.md                    # Shared tooling
 │   ├── PYPI_SETUP.md                  # PyPI publishing
 │   ├── RELEASE.md                     # Release process

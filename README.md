@@ -301,7 +301,8 @@ uv run poe check                          # format + lint + typecheck + test
 
 ### Commit Standards
 
-Conventional commits drive per-package semantic-release versioning:
+Conventional commits drive per-package release-please versioning (bump type from the
+commit type; which package(s) bump from which paths the commit touches):
 
 ```bash
 git commit -m "feat(client): add contacts helper"
@@ -313,7 +314,7 @@ git commit -m "docs: update quick-start"
 
 Use `!` for breaking changes: `feat(client)!: drop Python 3.11 support`.
 
-See [MONOREPO_SEMANTIC_RELEASE.md](docs/MONOREPO_SEMANTIC_RELEASE.md) for details.
+See [RELEASE.md](docs/RELEASE.md) for details.
 
 ## Acknowledgements
 

@@ -1,5 +1,6 @@
 # Build output
 dist/
+dist-npm/
 
 # Node.js
 node_modules/
