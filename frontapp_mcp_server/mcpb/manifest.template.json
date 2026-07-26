@@ -1,0 +1,54 @@
+{
+  "manifest_version": "0.4",
+  "name": "frontapp-mcp-server",
+  "display_name": "Frontapp",
+  "version": "__VERSION__",
+  "description": "MCP server for the Front shared-inbox API — search conversations, read messages, and draft replies from Claude Desktop.",
+  "long_description": "Exposes Front's Core API (conversations, messages, comments, drafts) as MCP tools. Includes cursor-paginated list/search, full message and comment read tools, two-step confirmation on every mutation, and a drafts-first outbound flow (agents draft, humans send from Front's UI). Transport layer handles retries, 429 rate limits, and cursor pagination.",
+  "author": {
+    "name": "Doug Borg",
+    "email": "dougborg@dougborg.org",
+    "url": "https://github.com/dougborg"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dougborg/frontapp-openapi-client.git"
+  },
+  "homepage": "https://github.com/dougborg/frontapp-openapi-client",
+  "documentation": "https://dougborg.github.io/frontapp-openapi-client/",
+  "support": "https://github.com/dougborg/frontapp-openapi-client/issues",
+  "license": "MIT",
+  "keywords": ["frontapp", "front", "conversations", "mcp", "claude", "shared-inbox"],
+  "server": {
+    "type": "uv",
+    "entry_point": "src/frontapp_mcp/__main__.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "frontapp-mcp-server"
+      ],
+      "env": {
+        "FRONTAPP_API_KEY": "${user_config.api_key}"
+      }
+    }
+  },
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["darwin", "linux", "win32"],
+    "runtimes": {
+      "python": ">=3.12,<4.0"
+    }
+  },
+  "user_config": {
+    "api_key": {
+      "type": "string",
+      "title": "Frontapp API Key",
+      "description": "Front API token. Create one at Front → Settings → Developers → API tokens.",
+      "required": true,
+      "sensitive": true
+    }
+  }
+}
