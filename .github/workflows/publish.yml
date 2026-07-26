@@ -1,0 +1,210 @@
+name: Publish
+
+# The only workflow that builds and ships artifacts. Triggered exclusively
+# by the tags release-please creates when its release PR merges
+# (client-v*, mcp-v*, ts-v*). Nothing here ever pushes to main.
+#
+# release-please creates each GitHub Release as a DRAFT (see
+# release-please-config.json "draft": true). Draft releases accept asset
+# uploads; once published they become immutable and reject further
+# uploads (https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases).
+# So every job here builds its assets, publishes to the registry, THEN
+# uploads assets to the still-draft release, and only then flips it to
+# published - assets and registry publish always land before the release
+# is finalized.
+#
+# PREREQUISITE: PyPI Trusted Publishers must be registered for both
+# frontapp-openapi-client and frontapp-mcp-server (client + mcp jobs
+# below), and an npm Trusted Publisher for frontapp-client (ts job),
+# before any of these jobs can succeed. None exist yet as of this
+# workflow being added - see the PR description.
+
+on:
+  push:
+    tags:
+      - 'client-v*'
+      - 'mcp-v*'
+      - 'ts-v*'
+
+permissions: {}
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish-client:
+    name: Publish client to PyPI
+    if: startsWith(github.ref_name, 'client-v')
+    runs-on: ubuntu-latest
+    environment: pypi-client
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.14"
+
+      - name: Build client package
+        run: uv build
+
+      - name: Publish client to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
+
+      - name: Attach build artifacts to draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" dist/* --clobber
+
+      - name: Publish the (now immutable) release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --draft=false
+
+  publish-mcp:
+    name: Publish MCP server to PyPI
+    if: startsWith(github.ref_name, 'mcp-v')
+    runs-on: ubuntu-latest
+    environment: pypi-mcp
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.14"
+
+      - name: Build MCP package
+        # uv build is workspace-aware: even invoked for a single member package it
+        # writes to the workspace root's dist/, not frontapp_mcp_server/dist/.
+        run: uv build --package frontapp-mcp-server
+
+      - name: Publish MCP server to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true
+
+      - name: Attach build artifacts to draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" dist/* --clobber
+
+      - name: Publish the (now immutable) release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --draft=false
+
+  publish-mcp-docker:
+    name: Publish MCP Docker image
+    needs: publish-mcp
+    if: startsWith(github.ref_name, 'mcp-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Determine MCP version for tagging
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#mcp-v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/frontapp-mcp-server
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}},value=${{ steps.version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontapp_mcp_server
+          file: ./frontapp_mcp_server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  publish-ts:
+    name: Publish TS client to npm
+    if: startsWith(github.ref_name, 'ts-v')
+    runs-on: ubuntu-latest
+    environment: npm-ts
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: packages/frontapp-client
+        run: pnpm run build
+
+      - name: Pack npm tarball for release asset
+        working-directory: packages/frontapp-client
+        run: pnpm pack --pack-destination dist-npm
+
+      - name: Publish to npm via OIDC Trusted Publisher
+        working-directory: packages/frontapp-client
+        env:
+          NPM_CONFIG_PROVENANCE: "true"
+        run: pnpm publish --no-git-checks --access public
+
+      - name: Attach npm tarball to draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.ref_name }}" packages/frontapp-client/dist-npm/*.tgz --clobber
+
+      - name: Publish the (now immutable) release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --draft=false
